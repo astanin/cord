@@ -1,0 +1,23 @@
+Iterative L"oser f"ur schwach besetzte Matrizen in C++
+
+Beispielcode in example/ (wo sonst?)
+weitere Info unter www/index.html
+
+Christian Badura, 16.07.98
+
+--
+
+The code has been slightly modified: all routines use
+Matrix::mult(const double*,double*) method instead of
+stand alone mult(const Matrix&,const double*,double*) function.
+See example of matrix interface in matrix.h.
+
+Also: modern style C++ includes (without .h), changed cout to std::cout,
+endl to std::endl. The code builds with G++-4.1 without warnings.
+
+P.S. I am not sure about code's license. Examples not updated.
+
+Sergey Astanin, 22.03.07
+
+--
+

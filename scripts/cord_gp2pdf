@@ -1,0 +1,17 @@
+#!/bin/sh
+
+# expects cord_plots.rb to be in $PATH
+
+if [ $# -lt 1 ]; then
+	echo usage:
+	echo     $(echo $0|sed 's/.*\///g') datafile1.gp \[ datafile2.gp ... \]
+	exit -1
+fi
+
+while [ $# -gt 0 ]; do
+	f=$1
+	shift
+	cord_plots.rb "$f" && \
+		rm -f figures_out/*.{aux,tex,log,txt} figures_out/*_figure.pdf;
+done
+

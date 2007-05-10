@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# expecting cord is in the PATH
+
+if [ $# -lt 1 ]; then
+	echo usage:
+	echo     $(echo $0|sed 's/.*\///g') datafile1.hdf \[ datafile2.hdf ... \]
+	exit -1
+fi
+
+while [ $# -gt 0 ]; do
+	f=$1
+	shift
+        if [ ! \( -f ${f%.hdf}.gp -a \( ${f%.hdf}.gp -nt $f \) \) ]; then
+                cord --hdf2gp -i "$f";
+        fi
+done
+
+

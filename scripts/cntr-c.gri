@@ -1,0 +1,46 @@
+# axes
+#set x size 6.0
+#set y size 6.0
+set x axis 0.0 2.0 0.2
+set y axis 0.0 2.0 0.2
+draw axes
+
+# read phi
+# open tmp
+open "cat GPFILENAME|gp2gri.sh|"
+read columns x=1 y=2 z=3
+close
+set x grid 0 2.0 /90
+set y grid 0 2.0 /105
+convert columns to grid
+convert grid to image # box 4 1 10 7 
+set image range 0.0 1.0
+#set image colorscale rgb 1.0 0.894 0.882 0.60 rgb 0.804 0.361 0.361 1.0 increment 0.1
+set image colorscale rgb 0.2 0.2 0.7 1.00 rgb 1.0 1.0 0.5 0.0 increment 0.1
+#set image grayscale black 1.5 white 0.75 increment 0.05
+set image missing value color to rgb 1 0 0
+draw image
+#draw image palette axisleft box 2.0 6.0 3.0 16.0
+# phi isolevels
+#set font size 8
+#set line width rapidograph 6x0
+#draw contour 0.75 1.0 0.05
+
+# read psi
+#open tmp
+open "cat GPFILENAME|gp2gri.sh|"
+read columns x=1 y=2 z=5
+close
+# tumour tissue/host tissue interface
+set x grid 0 2.0 /90
+set y grid 0 2.0 /105
+# Use default method (Barnes)
+convert columns to grid
+set font size 10
+set line width rapidograph 3x0
+draw contour 0.0 unlabelled
+
+# title
+#set font size 12
+#draw title "Oxygen level and tumour boundary TIMESTAMP"
+

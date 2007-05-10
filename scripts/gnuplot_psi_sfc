@@ -1,0 +1,8 @@
+set xlabel 'x'
+set ylabel 'y'
+set zlabel 'psi'
+set title '%title%'
+set output 'filename.png'
+set terminal png
+splot [][][] 'filename' u 1:2:7 w l t 'psi @ %title%'
+

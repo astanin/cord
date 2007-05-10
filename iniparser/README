@@ -1,0 +1,22 @@
+
+Welcome to iniParser!
+
+This modules offers parsing of ini files from the C level.
+See a complete documentation in HTML format, from this directory
+open the file html/index.html with any HTML-capable browser.
+
+Enjoy!
+
+N.Devillard
+Thu Nov 17 12:31:42 CET 2005
+--
+
+This is version 2.16 based code. The header files have been modified to be
+C++-compatible:
+	extern "C" { /* */ } wrappers
+	const modifiers for immutable (char *) function arguments
+
+S.Astanin
+Mon Mar 19 18:13:19 UTC 2007
+--
+
