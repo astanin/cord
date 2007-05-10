@@ -28,6 +28,10 @@
 using std::ios_base;
 using std::ofstream;
 
+// string case conversion
+#include <string>
+#include <algorithm>
+#include <cctype>
 
 #include <popt.h>
 #include <iniparser.h>
@@ -46,8 +50,7 @@ string
 dbg_stamp(double t) {
 	using namespace std;
 	ostringstream ss;
-	ss << "DEBUG: t=" << setw(10) << setiosflags(ios_base::left)
-		<< t << ": ";
+	ss << "t=" << setw(10) << setiosflags(ios_base::left) << t << ": ";
 	return ss.str();
 }
 
@@ -145,6 +148,11 @@ read_solvers_config(dictionary *ini) {
 		"method:poisson_solver_gmres_restart", gmres_restart_after);
 }
 
+// string case conversion
+struct ToLower {
+	char operator()(char const c) { return std::tolower(c); }
+};
+
 void
 read_params(dictionary *ini, Params& p) {
 	if (!ini) {
@@ -176,6 +184,16 @@ read_params(dictionary *ini, Params& p) {
 	p.dt=iniparser_getdouble(ini,"method:time_step",p.dt);
 	p.eval_t=iniparser_getdouble(ini,"method:time_eval",p.eval_t);
 	p.dump_every=iniparser_getdouble(ini,"method:dump_period",p.dump_every);
+	// nutrient equation type
+	string c_eq(iniparser_getstring(ini,"params:nutrient_equation",""));
+	std::transform(c_eq.begin(),c_eq.end(),c_eq.begin(),ToLower());
+	if (c_eq == "poisson") {
+		p.c_equation=Params::EQ_POISSON;
+	} else if (c_eq == "diffusion") {
+		p.c_equation=Params::EQ_DIFFUSION;
+	} else {
+		// do not change default value
+	}
 }
 
 void
@@ -208,6 +226,7 @@ int init_params(Params& p, int argc, const char *argv[]) {
 	char *ifile=(char*)0;
 	char *ofile=(char*)0;
 #endif
+	char *c_eq=(char*)0;
 	int arg_val_hidden_arg=(POPT_ARG_VAL|POPT_ARGFLAG_ONEDASH)
 					&(~POPT_ARGFLAG_SHOW_DEFAULT);
 	int onedash=POPT_ARGFLAG_ONEDASH;
@@ -295,6 +314,8 @@ int init_params(Params& p, int argc, const char *argv[]) {
 		{ "host-stretch", 0, POPT_ARG_DOUBLE|onedash, &p.hs1, 0,
 			"host stress: sigma=hs1*(phi-phi0), for phi<phi0",
 			"hs1"},
+		{ "nutrient-equation", 0, POPT_ARG_STRING|onedash, &c_eq, 0,
+			"equation type: Poisson | diffusion", "type"},
 		{ "consumption", 0, POPT_ARG_DOUBLE|onedash,
 			&p.consumption_c, 0,
 			"basic nutrient consumption rate", "alpha" },
@@ -332,6 +353,19 @@ int init_params(Params& p, int argc, const char *argv[]) {
 		}
 #endif
 		poptFreeContext(con);
+		if (c_eq) {
+			string s(c_eq);
+			std::transform(s.begin(),s.end(),s.begin(),ToLower());
+			if (s == "poisson") {
+				p.c_equation=Params::EQ_POISSON;
+			} else if (s == "diffusion") {
+				p.c_equation=Params::EQ_DIFFUSION;
+			} else {
+				cerr << "-nutrient-equation=" << c_eq
+					<< ": wrong equation type\n";
+				return 1;
+			}
+		}
 		return 0;
 	}
 }

@@ -74,6 +74,10 @@ public:
 /// set of command line parameters
 class Params {
 public:
+	typedef enum {
+		EQ_POISSON=0,
+		EQ_DIFFUSION=1
+	} eq_type;
 #ifdef HAVE_LIBHDF5
 	int hdf2dx; ///< whether convert to OpenDX format or not
 	int hdf2gp; ///< whether convert to gnuplot format or not
@@ -102,6 +106,7 @@ public:
 	double gconsumption_c; ///< growth-related nutrient/oxygen consumption
 	BCSet phi_bc; ///< boundary conditions for phi
 	BCSet c_bc; ///< boundary conditions for c
+	eq_type c_equation; ///< type of equation for c
 	/// default parameters
 	Params() :
 #ifdef HAVE_LIBHDF5
@@ -118,7 +123,8 @@ public:
 			BC::createDirichletBC(this->phi_stress_free),
 			BC::createNeumannBC(),BC::createNeumannBC()),
 		c_bc(BC::createNeumannBC(),BC::createNeumannBC(),
-			BC::createDirichletBC(1.0),BC::createNeumannBC())
+			BC::createDirichletBC(1.0),BC::createNeumannBC()),
+		c_equation(EQ_POISSON)
 		{}
 };
 

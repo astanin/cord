@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(cord, 0.3.4, sergey.astanin@polito.it)
+AC_INIT(cord, 0.3.5, sergey.astanin@polito.it)
 AC_CONFIG_SRCDIR([amesh2d.h])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE

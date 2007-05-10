@@ -508,6 +508,10 @@ throw(MeshException) {
 			"growth-related nutrient consumption rate not defined");
 	}
 	try {
+		if (p.c_equation != Params::EQ_POISSON) {
+			throw MeshException(
+				"unsupported nutrient equation type");
+		}
 		AMesh2D *m2;
 		if (
 #ifdef HAVE_LIBUMFPACK

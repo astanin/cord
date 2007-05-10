@@ -75,6 +75,12 @@ print_model_params(const DMesh& m, const Params& p,
 		<<m.get_attr("consumption_c")<<"\n";
 	cerr<<"\tgrowth-related nutrient consumption: "
 		<<m.get_attr("gconsumption_c")<<"\n";
+	cerr<<"\tnutrient equation: ";
+	switch(p.c_equation) {
+		case Params::EQ_POISSON: cerr << "Poisson\n"; break;
+		case Params::EQ_DIFFUSION: cerr << "diffusion\n"; break;
+		default: cerr << "unknown\n"; break;
+	}
 #ifdef HAVE_LIBHDF5
 	if (p.inputfile.empty()) {
 #endif
