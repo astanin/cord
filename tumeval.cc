@@ -23,7 +23,7 @@
 #include <iostream>
 #include <gsl/gsl_integration.h>
 #include "gfm.h"
-#include "pradi.h"
+#include "rdsolve.h"
 
 using std::cerr;
 using std::string;
@@ -411,17 +411,9 @@ throw(MeshException) {
 			<< "\n";
 	}
 	// ADI
-	if (rand()%2) { // choose sequence of directions: 50% x,y - 50% y,x
-		m2.reset(step_peaceman_rachford_adi_x
-			(p.phi_bc, 0.5*dt, *m2, var, "phi_pseudo_D", ""));
-		m2.reset(step_peaceman_rachford_adi_y
-			(p.phi_bc, 0.5*dt, *m2, var, "phi_pseudo_D", ""));
-	} else {
-		m2.reset(step_peaceman_rachford_adi_y
-			(p.phi_bc, 0.5*dt, *m2, var, "phi_pseudo_D", ""));
-		m2.reset(step_peaceman_rachford_adi_x
-			(p.phi_bc, 0.5*dt, *m2, var, "phi_pseudo_D", ""));
-	}
+	m2.reset(reaction_diffusion_step(p.phi_bc,dt,*m2,var,
+			"phi_pseudo_D","",RDS_ADI));
+	m2->remove_function_ifdef("phi_pseudo_D");
 	return m2.release();
 	} catch(MeshException& e) {
 		ostringstream ss;
