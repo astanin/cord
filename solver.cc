@@ -111,7 +111,7 @@ solve(const Params& p, const AMesh2D& initial) {
 		// level set (interface tracking)
 		m2.reset(step_level_set(eff_dt,*m2));
 		// nutrient (eliptic)
-		m2.reset(eval_nutrient(p,*m2,poisson_solver_accuracy));
+		m2.reset(eval_nutrient(p,*m2,poisson_solver_accuracy,eff_dt));
 		// done all sub steps
 		m2->inc_time(eff_dt);
 		m1.reset(m2->clone());

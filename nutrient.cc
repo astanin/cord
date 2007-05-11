@@ -21,7 +21,7 @@
 #include <iostream>
 #include "nutrient.h"
 #include "global.h"
-#include "pradi.h"
+#include "rdsolve.h"
 #include "growth.h"
 #include "meshenum.h"
 
@@ -401,28 +401,29 @@ throw(MeshException) {
 	eval_nutrient_set_boundaries(p.c_bc,*m2);
 	return m2.release();
 }
+void
+eval_nutrient_init_consumption(AMesh2D& m, string const consumption) {
+	m.add_function_ifndef(consumption);
+	// initialize consumption variable
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	for (int i=0; i<xdim ; ++i) {
+		for (int j=0; j<ydim ; ++j) {
+			m.set(consumption,i,j,consumption_term(m,i,j));
+		}
+	}
+}
 
 AMesh2D*
 eval_nutrient_iteratively_step_implicit(const Params& p, double const dt,
 	const AMesh2D& m)
 throw(MeshException) {
 	auto_ptr<AMesh2D> m2(m.clone());
-	m2->add_function_ifndef("consumption");
-	// initialize consumption variable
-	int xdim=m.get_xdim();
-	int ydim=m.get_ydim();
-	for (int i=0; i<xdim ; ++i) {
-		for (int j=0; j<ydim ; ++j) {
-			m2->set("consumption",i,j,consumption_term(m,i,j));
-		}
-	}
+	eval_nutrient_init_consumption(*m2,"q_tmp");
 	// ADI
-	m2.reset(step_peaceman_rachford_adi_x
-		(p.c_bc, 0.5*dt, *m2, "c", "", "consumption"));
-	m2.reset(step_peaceman_rachford_adi_y
-		(p.c_bc, 0.5*dt, *m2, "c", "", "consumption"));
+	m2.reset(reaction_diffusion_step(p.c_bc,dt,*m2,"c","","q_tmp",RDS_ADI));
 	// finishing
-	m2->remove_function_ifdef("consumption");
+	m2->remove_function_ifdef("q_tmp");
 	return m2.release();
 }
 
@@ -487,7 +488,43 @@ throw(MeshException) {
 }
 
 AMesh2D*
-eval_nutrient(const Params& p, const AMesh2D& m1, double const epsilon)
+eval_nutrient_diffusion(Params const& p, double const dt, AMesh2D const& m1)
+throw(MeshException) {
+	auto_ptr<AMesh2D> m2(m1.clone());
+	eval_nutrient_init_consumption(*m2,"q_tmp");
+	m2->remove_function_ifdef("D_c_tmp");
+	m2->add_function("D_c_tmp",1.0);
+	m2.reset(reaction_diffusion_step(p.c_bc,dt,*m2,"c","D_c_tmp","q_tmp"));
+	m2->remove_function_ifdef("q_tmp");
+	m2->remove_function_ifdef("D_c_tmp");
+	return m2.release();
+}
+
+AMesh2D*
+eval_nutrient_poisson(Params const& p, AMesh2D const& m1, double const epsilon)
+throw(MeshException) {
+	AMesh2D *m2;
+	if (
+#ifdef HAVE_LIBUMFPACK
+		poisson_solver == SOLVER_UMFPACK ||
+#endif
+		poisson_solver == SOLVER_CG ||
+		poisson_solver == SOLVER_GMRES ||
+		poisson_solver == SOLVER_BICG ||
+		poisson_solver == SOLVER_BICGSTAB) {
+		m2=eval_nutrient_directly(p, m1);
+	} else if (poisson_solver == SOLVER_ITERATIVE_IMPLICIT ||
+		poisson_solver == SOLVER_ITERATIVE_EXPLICIT) {
+		m2=eval_nutrient_iteratively(p, m1, epsilon);
+	} else {
+		throw MeshException("eval_nutrient: unknown method");
+	}
+	return m2;
+}
+
+AMesh2D*
+eval_nutrient(const Params& p, const AMesh2D& m1,
+	double const epsilon, double const dt)
 throw(MeshException) {
 	if (!m1.defined("c")) {
 		throw MeshException("eval_nutrient: c not defined");
@@ -507,27 +544,14 @@ throw(MeshException) {
 			"growth-related nutrient consumption rate not defined");
 	}
 	try {
-		if (p.c_equation != Params::EQ_POISSON) {
-			throw MeshException(
-				"unsupported nutrient equation type");
-		}
-		AMesh2D *m2;
-		if (
-#ifdef HAVE_LIBUMFPACK
-			poisson_solver == SOLVER_UMFPACK ||
-#endif
-			poisson_solver == SOLVER_CG ||
-			poisson_solver == SOLVER_GMRES ||
-			poisson_solver == SOLVER_BICG ||
-			poisson_solver == SOLVER_BICGSTAB) {
-			m2=eval_nutrient_directly(p, m1);
-		} else if (poisson_solver == SOLVER_ITERATIVE_IMPLICIT ||
-			poisson_solver == SOLVER_ITERATIVE_EXPLICIT) {
-			m2=eval_nutrient_iteratively(p, m1, epsilon);
+		if (p.c_equation == Params::EQ_POISSON) {
+			return eval_nutrient_poisson(p,m1,epsilon);
+		} else if (p.c_equation == Params::EQ_DIFFUSION) {
+			return eval_nutrient_diffusion(p,dt,m1);
 		} else {
-			throw MeshException("eval_nutrient: unknown method");
+			throw MeshException("eval_nutrient: "
+				"unsupported nutrient equation");
 		}
-		return m2;
 	} catch (MeshException& e) {
 		ostringstream ss;
 		ss << "eval_nutrient: " << e.what();

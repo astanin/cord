@@ -36,7 +36,8 @@
  * The method is C-style rather than class. It evaluates
  * \nabla^2 c - \alpha c \Phi = 0 */
 AMesh2D*
-eval_nutrient(const Params& p, const AMesh2D& m1, double const epsilon=1e-3)
+eval_nutrient(const Params& p, const AMesh2D& m1,
+	double const epsilon=1e-3, double const dt=0.0)
 throw(MeshException);
 
 #endif
