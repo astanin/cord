@@ -30,47 +30,6 @@
 
 using std::string;
 
-typedef BoundaryCondition BC;
-
-class BCSet {
-private:
-	BoundaryCondition condition[4];
-public:
-	enum {
-		NORTH=0,
-		EAST=1,
-		SOUTH=2,
-		WEST=3
-	} BOUNDARIES;
-
-	BCSet(BoundaryCondition const north, BoundaryCondition const east,
-		BoundaryCondition const south, BoundaryCondition const west) {
-		condition[NORTH]=north;
-		condition[EAST]=east;
-		condition[SOUTH]=south;
-		condition[WEST]=west;
-	}
-	BoundaryCondition get_north() const { return condition[NORTH];}
-	void set_north(BoundaryCondition const bc) { condition[NORTH]=bc; }
-	BoundaryCondition get_east() const {return condition[EAST];}
-	void set_east(BoundaryCondition const bc) { condition[EAST]=bc; }
-	BoundaryCondition get_south() const {return condition[SOUTH];}
-	void set_south(BoundaryCondition const bc) { condition[SOUTH]=bc; }
-	BoundaryCondition get_west() const {return condition[WEST];}
-	void set_west(BoundaryCondition const bc) { condition[WEST]=bc; }
-	void set_bc(const string side, BoundaryCondition const bc) {
-		if (side == "north") {
-			set_north(bc);
-		} else if (side == "east") {
-			set_east(bc);
-		} else if (side == "south") {
-			set_south(bc);
-		} else if (side == "west") {
-			set_west(bc);
-		}
-	}
-};
-
 /// set of command line parameters
 class Params {
 public:
