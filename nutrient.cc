@@ -71,7 +71,6 @@ double
 consumption_rate(AMesh2D const& m, int const i, int const j)
 throw(MeshException) {
 	double consume=0.0;
-	double Hpsi;
 	if (m.get("psi",i,j) > 0) { // tumour point
 		consume=m.get("phi",i,j)*m.get_attr("consumption_c");
 		double g=growth_term(m,i,j);
