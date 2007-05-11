@@ -203,8 +203,22 @@ AC_ARG_ENABLE([more-warnings],
 	[W_FLAGS="-Wall -Woverloaded-virtual -pedantic" EXTRA_W_FLAGS="-W -Wconversion -Wshadow -Wpointer-arith -Wcast-qual -Wcast-align -Wwrite-strings -fshort-enums -fno-common"],)
 CXXFLAGS="${CXXFLAGS} ${W_FLAGS} ${EXTRA_W_FLAGS}"
 
+use_isofix=yes
+AC_ARG_ENABLE([isofix],
+	AC_HELP_STRING([--enable-isofix],
+		[force spacial isotropy of ADI method]),
+	[use_isofix=$enable_isofix]
+)
+if test "$use_isofix" == "yes" ; then
+	AC_DEFINE([ENABLE_ADI_ISO_FIX],[(1)],
+		[Force spatial isotropy of ADI method])
+fi
+
 INSTALL_PREFIX=${prefix}
-CONFDIR=${prefix}/share/${PACKAGE}
+if test "x$INSTALL_PREFIX" == "xNONE" ; then
+	INSTALL_PREFIX="/usr/local"
+fi
+CONFDIR=${INSTALL_PREFIX}/share/${PACKAGE}
 AC_DEFINE_UNQUOTED([PREFIX],["$INSTALL_PREFIX"],[Installation prefix])
 AC_DEFINE_UNQUOTED([CONFDIR],["$CONFDIR"],[Default config file location])
 
