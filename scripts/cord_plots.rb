@@ -220,6 +220,11 @@ class CordPlots
 		@c=Dtable.new(@xdim,@ydim)
 		@phi=Dtable.new(@xdim,@ydim)
 		@psi=Dtable.new(@xdim,@ydim)
+		# read variable names and positions
+		vars=f.readline.split.collect { |v| v.sub('#','') }
+		idxs=Hash.new
+		vars.each { |v| idxs[v]=vars.index(v) }
+		# read data
 		k=0
 		f.each_line do |l| 
 			l=l.strip
@@ -228,10 +233,9 @@ class CordPlots
 				i=k.divmod(@ydim)[0]
 				j=k.divmod(@ydim)[1]
 				a=l.split
-				# c is a[2], phi is a[3], psi is a[6]
-				@c[j,i]  =a[2].to_f
-				@phi[j,i]=a[3].to_f
-				@psi[j,i]=a[6].to_f
+				@c[j,i]  =a[idxs["c"]].to_f
+				@phi[j,i]=a[idxs["phi"]].to_f
+				@psi[j,i]=a[idxs["psi"]].to_f
 				k=k.next
 			end
 		end
