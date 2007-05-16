@@ -28,13 +28,25 @@
 
 using std::auto_ptr;
 
+double growth_term(double const phi, double const c,
+	double const psi=1.0, double const gamma=1.0) {
+	double Hpsi=(psi>0)?1.0:0.0;
+	return Hpsi*gamma*phi*(1-phi)*c;
+}
+
+double death_term(double const phi, double const c,
+	double const phi0, double const c0,
+	double const psi=1.0, double const gamma=1.0) {
+	double Hpsi=(psi>0)?1.0:0.0;
+	return Hpsi*gamma*phi*(1-phi)*c0;
+}
+
 double
 growth_term(AMesh2D const& m, int const i, int const j, const string& fid) {
 	double phi=m.get(fid,i,j);
 	double c=m.get("c",i,j);
-	double c_critical=m.get_attr("c_critical");
-	double Hpsi=(m.get("psi",i,j)>0)?1.0:0.0;
-	return phi*(1.0-phi)*(c-c_critical)*Hpsi;
+	double psi=m.get("psi",i,j);
+	return growth_term(phi,c,psi);
 }
 
 /** right hand side function for GSL ode-solver
@@ -45,11 +57,11 @@ growth_term(AMesh2D const& m, int const i, int const j, const string& fid) {
  * params[1] := c   (nutrient concentration)
  * params[2] := c_critical  (critical value of c) */
 int rhs_f(double t, const double y[], double dydt[], void *params) {
-	double gamma=*(((double*)(params))+0);
-	double c=*(((double*)(params))+1);
-	double c_critical=*(((double*)(params))+2);
-	double Hpsi=*(((double*)(params))+3);
-	dydt[0]=gamma*y[0]*(1.0-y[0])*(c-c_critical)*Hpsi;
+	double c=*(((double*)(params))+0);
+	double phi0=*(((double*)(params))+1);
+	double c0=*(((double*)(params))+2);
+	double psi=*(((double*)(params))+3);
+	dydt[0]=growth_term(y[0],c,psi)-death_term(y[0],c,phi0,c0,psi);
 	return 0;
 }
 
@@ -65,7 +77,7 @@ throw(MeshException) {
 		throw MeshException("step_growth_death: c not defined");
 	}
 	auto_ptr<AMesh2D> m2(m1.clone());
-	double params[4]={1.0, 0.0, 0.0, 1.0}; // gamma, c, c critical, H(psi)
+	double params[4];
 	gsl_odeiv_system sys;
 	sys.function=rhs_f;
 	sys.jacobian=0;
@@ -81,10 +93,10 @@ throw(MeshException) {
 		for (int j=0; j<m1.get_ydim(); ++j) {
 			double err=0.0;
 			double phi=m1.get(fid,i,j);
-			params[0]=1.0; // non-dimensional model
-			params[1]=m1.get("c",i,j);
+			params[0]=m1.get("c",i,j);
+			params[1]=m1.get_attr("phi0");
 			params[2]=m1.get_attr("c_critical");
-			params[3]=(m1.get("psi",i,j)>0)?1.0:0.0;//Heaviside(psi)
+			params[3]=m1.get("psi",i,j);
 			gsl_odeiv_step_reset(step);
 			gsl_odeiv_step_apply(step, m1.get_time(), 
 					dt, &phi, &err, 0, 0, &sys);
