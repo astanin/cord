@@ -1,0 +1,96 @@
+#!/bin/sh
+
+if [ $# -lt 1 ]; then
+	echo usage:
+	echo     $(echo $0|sed 's/.*\///g') datafile1.gp \[ datafile2.gp ... \]
+	exit -1
+fi
+
+function plot_c {
+	f=$1;
+	fo="${f%.gp}-c.eps";
+	gri -b -output "$fo" << ENDGRI
+set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
+set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
+draw axes
+# c
+open "cat $f|grep -v ^# | perl -p -e 's/^[ \t]*\n//'|"
+read columns x=1 y=2 z=$NC
+close
+set x grid $XMIN $XMAX /$XSIZE
+set y grid $YMIN $YMAX /$YSIZE
+convert columns to grid
+set font size 10
+set line width rapidograph 6x0
+draw contour
+# psi
+open "cat $f|grep -v ^# | perl -p -e 's/^[ \t]*\n//'|"
+read columns x=1 y=2 z=$NPSI
+close
+set x grid $XMIN $XMAX /$XSIZE
+set y grid $YMIN $YMAX /$YSIZE
+convert columns to grid
+set line width rapidograph 1
+draw contour 0.0 unlabelled
+ENDGRI
+}
+
+function plot_phi {
+	f=$1
+	f=$1;
+	fo="${f%.gp}-phi.eps";
+	gri -b -output "$fo" << ENDGRI
+set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
+set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
+draw axes
+# c
+open "cat $f|grep -v ^# | perl -p -e 's/^[ \t]*\n//'|"
+read columns x=1 y=2 z=$NPHI
+close
+set x grid $XMIN $XMAX /$XSIZE
+set y grid $YMIN $YMAX /$YSIZE
+convert columns to grid
+set font size 10
+set line width rapidograph 6x0
+draw contour
+# psi
+open "cat $f|grep -v ^# | perl -p -e 's/^[ \t]*\n//'|"
+read columns x=1 y=2 z=$NPSI
+close
+set x grid $XMIN $XMAX /$XSIZE
+set y grid $YMIN $YMAX /$YSIZE
+convert columns to grid
+set line width rapidograph 1
+draw contour 0.0 unlabelled
+ENDGRI
+}
+
+while [ $# -gt 0 ]; do
+	f=$1;
+	shift;
+	TIME=$(head -1 $f|tail -1|awk '{print $2}'|\
+		perl -e 'while(<>){printf("%g\n",$_);}');
+	XSIZE=$(head -2 $f|tail -1|awk '{print $2}');
+	YSIZE=$(head -2 $f|tail -1|awk '{print $3}');
+	XMIN=$(head -3 $f|tail -1|awk '{print $2}'|\
+		perl -e 'while(<>){printf("%g\n",$_);}');
+	XMAX=$(head -3 $f|tail -1|awk '{print $NF}'|\
+		perl -e 'while(<>){printf("%g\n",$_);}');
+	YMIN=$(head -4 $f|tail -1|awk '{print $2}'|\
+		perl -e 'while(<>){printf("%g\n",$_);}');
+	YMAX=$(head -4 $f|tail -1|awk '{print $NF}'|\
+		perl -e 'while(<>){printf("%g\n",$_);}');
+	VARS=$(head -5 $f|tail -1|sed 's/#//g');
+	NC=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
+		foreach $v(@vars){if("c" eq $v){print $i+1,"\n";}++$i;};');
+	NPHI=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
+		foreach $v(@vars){if("phi" eq $v){print $i+1,"\n";}++$i;};');
+	NPSI=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
+		foreach $v(@vars){if("psi" eq $v){print $i+1,"\n";}++$i;};');
+	echo "time=$TIME";
+	echo "size=${XSIZE}x${YSIZE} [$XMIN:$XMAX]x[$YMIN:$YMAX]";
+	echo "vars: C[$NC] PHI[$NPHI] PSI[$NPSI]";
+	plot_c $f;
+	plot_phi $f;
+done
+

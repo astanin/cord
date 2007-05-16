@@ -1,0 +1,15 @@
+#!/bin/sh
+
+if [ $# -le 1 ]; then
+	echo usage:
+	echo crop_eps2jpg image1.eps \[ image2.eps ... \]
+	exit -1
+fi
+
+while [ $# -gt 0 ]; do
+	f=$1 ;
+	convert -quality 90 -density 128 "$f" "${f%.eps}.jpg" ;
+	shift ;
+done
+
+
