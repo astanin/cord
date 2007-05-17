@@ -36,6 +36,10 @@ Tumour cord growth model
 	library run this script:
 	$ cord_gp2pdf *.gp
 
+	To produce visualizations from Gnuplot (.gp) files using GRI
+	plotting tool run this script:
+	$ cord_gp2eps *.gp
+
 Requirements
 	
 	This programme depends on the following libraries:

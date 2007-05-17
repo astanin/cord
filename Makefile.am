@@ -11,7 +11,7 @@ confdir = $(datadir)/$(PACKAGE)
 docdir = $(datadir)/doc/$(PACKAGE)
 
 bin_PROGRAMS = cord
-bin_SCRIPTS = scripts/cord_hdf2gp scripts/cord_hdf2dx scripts/cord_gp2pdf scripts/cord_pdf2jpg scripts/cord_plots.rb
+bin_SCRIPTS = scripts/cord_hdf2gp scripts/cord_hdf2dx scripts/cord_gp2pdf scripts/cord_pdf2jpg scripts/cord_plots.rb scripts/cord_gp2eps scripts/cord_eps2jpg
 cord_SOURCES = cord.cc dmesh.cc dmeshops.cc pradi.cc solver.cc tumeval.cc growth.cc nutrient.cc spmat.cc utils.cc rdsolve.cc
 conf_DATA = cord.ini
 doc_DATA = README NEWS COPYING AUTHORS

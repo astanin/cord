@@ -1,15 +1,18 @@
 #!/bin/sh
 
+MODE=mono
+TITLE=no
+
 if [ $# -lt 1 ]; then
 	echo usage:
-	echo     $(echo $0|sed 's/.*\///g') datafile1.gp \[ datafile2.gp ... \]
+	echo     $(echo $0|sed 's/.*\///g') \[-color\|-mono\] \[-withtitle\] datafile1.gp \[ datafile2.gp ... \]
 	exit -1
 fi
 
 function plot_c {
 	f=$1;
-	fo="${f%.gp}-c.eps";
-	gri -b -output "$fo" << ENDGRI
+	fo=$(echo $TIME|perl -e 'while(<>){printf("Oxygen_%07.0f.eps",10*$_);}');
+	gri -b -c0 -output "$fo" << ENDGRI
 set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
 set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
 draw axes
@@ -20,9 +23,7 @@ close
 set x grid $XMIN $XMAX /$XSIZE
 set y grid $YMIN $YMAX /$YSIZE
 convert columns to grid
-set font size 10
-set line width rapidograph 6x0
-draw contour
+${PLOT_C_DATA}
 # psi
 open "cat $f|grep -v ^# | perl -p -e 's/^[ \t]*\n//'|"
 read columns x=1 y=2 z=$NPSI
@@ -32,27 +33,25 @@ set y grid $YMIN $YMAX /$YSIZE
 convert columns to grid
 set line width rapidograph 1
 draw contour 0.0 unlabelled
+${DRAW_C_TITLE}
 ENDGRI
 }
 
 function plot_phi {
 	f=$1
-	f=$1;
-	fo="${f%.gp}-phi.eps";
-	gri -b -output "$fo" << ENDGRI
+	fo=$(echo $TIME|perl -e 'while(<>){printf("Phi_%07.0f.eps",10*$_);}');
+	gri -b -c0 -output "$fo" << ENDGRI
 set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
 set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
 draw axes
-# c
+# phi
 open "cat $f|grep -v ^# | perl -p -e 's/^[ \t]*\n//'|"
 read columns x=1 y=2 z=$NPHI
 close
 set x grid $XMIN $XMAX /$XSIZE
 set y grid $YMIN $YMAX /$YSIZE
 convert columns to grid
-set font size 10
-set line width rapidograph 6x0
-draw contour
+${PLOT_PHI_DATA}
 # psi
 open "cat $f|grep -v ^# | perl -p -e 's/^[ \t]*\n//'|"
 read columns x=1 y=2 z=$NPSI
@@ -62,12 +61,27 @@ set y grid $YMIN $YMAX /$YSIZE
 convert columns to grid
 set line width rapidograph 1
 draw contour 0.0 unlabelled
+${DRAW_PHI_TITLE}
 ENDGRI
 }
 
 while [ $# -gt 0 ]; do
 	f=$1;
 	shift;
+	opt=$f;
+	if [ "x$opt" == "x-color" ]; then
+		echo "enabled color mode";
+		MODE=color
+		continue;
+	elif [ "x$opt" == "x-mono" ]; then
+		echo "enabled monochrome mode";
+		MODE=mono
+		continue;
+	elif [ "x$opt" == "x-withtitle" ]; then
+		echo "enabled title";
+		TITLE=yes
+		continue;
+	fi
 	TIME=$(head -1 $f|tail -1|awk '{print $2}'|\
 		perl -e 'while(<>){printf("%g\n",$_);}');
 	XSIZE=$(head -2 $f|tail -1|awk '{print $2}');
@@ -90,6 +104,50 @@ while [ $# -gt 0 ]; do
 	echo "time=$TIME";
 	echo "size=${XSIZE}x${YSIZE} [$XMIN:$XMAX]x[$YMIN:$YMAX]";
 	echo "vars: C[$NC] PHI[$NPHI] PSI[$NPSI]";
+
+	if [ "x$MODE" == "xmono" ]; then
+	PLOT_C_DATA=$(cat << END
+set font size 9
+set line width rapidograph 6x0
+draw contour
+END);
+	PLOT_PHI_DATA=$(cat << END
+set font size 9
+set line width rapidograph 6x0
+draw contour
+END);
+	else # colormode
+	PLOT_C_DATA=$(cat << END
+convert grid to image
+set image range 0.0 1.0
+set image colorscale rgb 0.2 0.2 0.7 1.00 rgb 1.0 1.0 0.5 0.0 increment 0.1
+set image missing value color to rgb 1 0 0
+draw image
+draw image palette axisleft left 0.0 right 1.0 box 3.5 6.0 4.5 16.0
+END);
+	PLOT_PHI_DATA=$(cat << END
+convert grid to image
+set image missing value color to rgb 0 1 0
+set image colorscale rgb 1.0 0.894 0.882 0.6 rgb 0.604 0.161 0.161 0.9 increment 0.025
+set image range 0.6 0.9
+draw image
+draw image palette axisleft left 0.6 right 0.9 box 3.5 6 4.5 16
+END);
+	fi
+	if [ "x$TITLE" != "xno" ]; then
+		TS=$(echo $TIME|perl -e "while(<>){printf('t=%5.1f',\$_);}");
+		DRAW_C_TITLE=$(cat << END
+set font size 12
+draw title "Oxygen, $TS"
+END);
+		DRAW_PHI_TITLE=$(cat << END
+set font size 12
+draw title "Packing density, $TS"
+END);
+	else
+		DRAW_C_TITLE=""
+		DRAW_PHI_TITLE=""
+	fi
 	plot_c $f;
 	plot_phi $f;
 done
