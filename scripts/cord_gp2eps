@@ -17,20 +17,18 @@ set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
 set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
 draw axes
 # c
-open "cat $f|grep -v ^# | perl -p -e 's/^[ \t]*\n//'|"
-read columns x=1 y=2 z=$NC
-close
 set x grid $XMIN $XMAX /$XSIZE
 set y grid $YMIN $YMAX /$YSIZE
-convert columns to grid
+open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NC],\" \"; } else { print \"\n\";} }'|"
+read grid data $YSIZE $XSIZE bycolumns
+close
 ${PLOT_C_DATA}
 # psi
-open "cat $f|grep -v ^# | perl -p -e 's/^[ \t]*\n//'|"
-read columns x=1 y=2 z=$NPSI
-close
 set x grid $XMIN $XMAX /$XSIZE
 set y grid $YMIN $YMAX /$YSIZE
-convert columns to grid
+open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NPSI],\" \"; } else { print \"\n\";} }'|"
+read grid data $YSIZE $XSIZE bycolumns
+close
 set line width rapidograph 1
 draw contour 0.0 unlabelled
 ${DRAW_C_TITLE}
@@ -45,20 +43,18 @@ set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
 set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
 draw axes
 # phi
-open "cat $f|grep -v ^# | perl -p -e 's/^[ \t]*\n//'|"
-read columns x=1 y=2 z=$NPHI
-close
 set x grid $XMIN $XMAX /$XSIZE
 set y grid $YMIN $YMAX /$YSIZE
-convert columns to grid
+open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NPHI],\" \"; } else { print \"\n\";} }'|"
+read grid data $YSIZE $XSIZE bycolumns
+close
 ${PLOT_PHI_DATA}
 # psi
-open "cat $f|grep -v ^# | perl -p -e 's/^[ \t]*\n//'|"
-read columns x=1 y=2 z=$NPSI
-close
 set x grid $XMIN $XMAX /$XSIZE
 set y grid $YMIN $YMAX /$YSIZE
-convert columns to grid
+open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NPSI],\" \"; } else { print \"\n\";} }'|"
+read grid data $YSIZE $XSIZE bycolumns
+close
 set line width rapidograph 1
 draw contour 0.0 unlabelled
 ${DRAW_PHI_TITLE}
@@ -96,11 +92,11 @@ while [ $# -gt 0 ]; do
 		perl -e 'while(<>){printf("%g\n",$_);}');
 	VARS=$(head -5 $f|tail -1|sed 's/#//g');
 	NC=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
-		foreach $v(@vars){if("c" eq $v){print $i+1,"\n";}++$i;};');
+		foreach $v(@vars){if("c" eq $v){print $i,"\n";}++$i;};');
 	NPHI=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
-		foreach $v(@vars){if("phi" eq $v){print $i+1,"\n";}++$i;};');
+		foreach $v(@vars){if("phi" eq $v){print $i,"\n";}++$i;};');
 	NPSI=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
-		foreach $v(@vars){if("psi" eq $v){print $i+1,"\n";}++$i;};');
+		foreach $v(@vars){if("psi" eq $v){print $i,"\n";}++$i;};');
 	echo "time=$TIME";
 	echo "size=${XSIZE}x${YSIZE} [$XMIN:$XMAX]x[$YMIN:$YMAX]";
 	echo "vars: C[$NC] PHI[$NPHI] PSI[$NPSI]";
