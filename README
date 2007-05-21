@@ -32,13 +32,14 @@ Tumour cord growth model
 	Gnuplot (.gp) files may be generated from HDF files like this:
 	$ cord_hdf2gp *.hdf
 
-	To produce visualizations from Gnuplot (.gp) files using Tioga
-	library run this script:
+	To produce visualizations from Gnuplot (.gp) files using Tioga:
 	$ cord_gp2pdf *.gp
 
-	To produce visualizations from Gnuplot (.gp) files using GRI
-	plotting tool run this script:
-	$ cord_gp2eps *.gp
+	To produce visualizations from Gnuplot (.gp) files using GRI:
+	$ cord_gp2eps -gri *.gp
+
+	To produce visualizations from Gnuplot (.gp) files using gnuplot:
+	$ cord_gp2eps -gnuplot *.gp
 
 Requirements
 	
