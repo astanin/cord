@@ -158,6 +158,9 @@ read_solvers_config(dictionary *ini) {
 	Method::it().p_solver_relax_max_iters=iniparser_getint(ini,
 		"method:poisson_solver_relax_max_iterations",
 		Method::it().p_solver_relax_max_iters);
+	Method::it().level_set_reset=iniparser_getboolean(ini,
+		"method:level_set_reset",
+		Method::it().level_set_reset);
 }
 
 // string case conversion

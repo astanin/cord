@@ -121,6 +121,8 @@ struct MethodParams {
 	double p_solver_accuracy;
 	double p_solver_relax_step;
 	int p_solver_relax_max_iters;
+	/// level set method
+	bool level_set_reset;
 	/// default methods
 	MethodParams() :
 		sle_solver(SLES_CG),
@@ -131,7 +133,8 @@ struct MethodParams {
 		p_solver(PS_SLE),
 		p_solver_accuracy(1e-5),
 		p_solver_relax_step(-1),
-		p_solver_relax_max_iters(5000)
+		p_solver_relax_max_iters(5000),
+		level_set_reset(true)
 		{} 
 };
 
