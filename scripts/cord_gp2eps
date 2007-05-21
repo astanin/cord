@@ -159,7 +159,7 @@ unset key
 ${PLOT_PSI_TITLE}
 set output "$fo"
 ${PLOT_MODE}
-splot [][][-0.5:+2] "$f" u 1:2:$((NPSI+1)) w l
+splot "$f" u 1:2:$((NPSI+1)) w l
 END
 }
 
@@ -204,6 +204,7 @@ while [ $# -gt 0 ]; do
 			continue;
 		elif [ "x$opt" == "x-gri" ]; then
 			PLOTTER=gri
+			continue;
 		else
 			echo "unknown option: $opt"
 			usage
