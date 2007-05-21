@@ -491,6 +491,88 @@ throw(MeshException) {
 	}
 }
 
+double level_set_function_reset_step(AMesh2D& m,
+	string const& var, string const& dvar) {
+	using namespace blitz;
+	m.remove_function_ifdef(dvar);
+	m.add_function_ifndef(dvar,0.0);
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	double dx=m.get_dx();
+	double dy=m.get_dy();
+	for (int i=1; i<(xdim-1); ++i) {
+		for (int j=1; j<(ydim-1); ++j) {
+			double dpx=m.get(var,i+1,j)-m.get(var,i,j);
+			double dmx=m.get(var,i,j)-m.get(var,i-1,j);
+			double dpy=m.get(var,i,j+1)-m.get(var,i,j);
+			double dmy=m.get(var,i,j)-m.get(var,i,j-1);
+			// grad(psi2)
+			double gx=0.5*(dpx+fabs(dpx)+dmx-fabs(dmx))/dx;
+			double gy=0.5*(dpy+fabs(dpy)+dmy-fabs(dmy))/dy;
+			// d(psi2)/dt
+			double dpsi2=m.get("Spsi",i,j)*(1-sqrt(gx*gx+gy*gy));
+			m.set(dvar,i,j,dpsi2);
+		}
+	}
+	double maxdvar=max(fabs(m[dvar]));
+	double dt=0.2*(dx+dy)/maxdvar;
+	for (int i=1; i<(xdim-1); ++i) {
+		for (int j=1; j<(ydim-1); ++j) {
+			m.set(var,i,j,m.get(var,i,j)+dt*m.get(dvar,i,j));
+		}
+	}
+	// zero flux on all boundaries
+	for (int i=1; i<(xdim-1); ++i) {
+		m.set(var,i,0,m.get(var,i,1));
+		m.set(var,i,ydim-1,m.get(var,i,ydim-2));
+	}
+	for (int j=1; j<(ydim-1); ++j) {
+		m.set(var,0,j,m.get(var,1,j));
+		m.set(var,xdim-1,j,m.get(var,xdim-2,j));
+	}
+	// avoid extremums in corner points
+	m.set(var,0,0,0.5*(m.get(var,1,0)+m.get(var,0,1)));
+	m.set(var,xdim-1,0,0.5*(m.get(var,xdim-2,0)+m.get(var,xdim-1,1)));
+	m.set(var,0,ydim-1,0.5*(m.get(var,1,ydim-1)+m.get(var,0,ydim-2)));
+	m.set(var,xdim-1,ydim-1,0.5*(m.get(var,xdim-2,ydim-1)+m.get(var,xdim-1,ydim-2)));
+	m.remove_function_ifdef(dvar);
+	return maxdvar;
+}
+
+/** find steady state solution of
+ * d psi2 / dt = S(psi) (1- |grad(psi2)|), S(psi) = psi/\sqrt{psi^2+h_x^2+h_y^2}
+ */
+int level_set_function_reset(AMesh2D& m) {
+	m.remove_function_ifdef("psi2");
+	m.add_function_ifndef("psi2");
+	m.remove_function_ifdef("Spsi");
+	m.add_function_ifndef("Spsi");
+	double psi;
+	// eps is heuristic parameter
+	double eps=16*(m.get_dx()*m.get_dx()+m.get_dy()*m.get_dy());
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	for (int i=0; i<xdim; ++i) {
+		for (int j=0; j<ydim; ++j) {
+			psi=m.get("psi",i,j);
+			m.set("Spsi",i,j,psi/sqrt(psi*psi+eps));
+		}
+	}
+	int count=0;
+	do {
+		eps=level_set_function_reset_step(m,"psi2","dpsi2_dt");
+		++count;
+	} while (eps < Method::it().sle_solver_accuracy);
+	for (int i=0; i<xdim; ++i) {
+		for (int j=0; j<ydim; ++j) {
+			m.set("psi",i,j,m.get("psi2",i,j));
+		}
+	}
+	m.remove_function_ifdef("psi2");
+	m.remove_function_ifdef("Spsi");
+	return count;
+}
+
 /** time step for dpsi/dt - div(psi*v) = 0
  *  with uniform boundary condition for psi (zero flux);
  *  WARNING: this implementation works for uniform rectangular grid only */
@@ -514,13 +596,21 @@ throw(MeshException) {
 	if (verbose > 1) { // extra verbose
 		cerr << dbg_stamp(m1.get_time())
 			<< "step_level_set: "
-			<< " dt=" << dt
-			// << " vmax=" << vmax
-			// << " dtmax=" << dtmax
+			<< "dt=" << dt
 			<< " subdt=" << subdt << "\n";
 	}
 	for (int i=0; i<nsubsteps; ++i) {
 		substep_level_set(subdt,*m2);
+	}
+	if (Method::it().level_set_reset) {
+		int count;
+		count=level_set_function_reset(*m2);
+		if (verbose > 1) {
+			cerr << dbg_stamp(m1.get_time())
+				<< "step_level_set: "
+				"reset in " << count
+				<< " iters\n";
+		}
 	}
 	return m2.release();
 	} catch (MeshException& e) {
