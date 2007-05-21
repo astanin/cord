@@ -1,9 +1,0 @@
-set view 15,20
-set xlabel 'x'
-set ylabel 'y'
-set zlabel 'v'
-set title '%title%'
-set output 'filename.png'
-set terminal png
-splot [-0.01:1][-0.01:1][*:*] 'filename' u 1:2:6 w l t 'vx', 'filename' u 1:2:7 w l t 'vy'
-

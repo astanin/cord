@@ -1,12 +1,17 @@
 #!/bin/sh
 
+PLOTTER=gri
 MODE=mono
 TITLE=no
 
-if [ $# -lt 1 ]; then
+function usage {
 	echo usage:
-	echo     $(echo $0|sed 's/.*\///g') \[-color\|-mono\] \[-withtitle\] datafile1.gp \[ datafile2.gp ... \]
+	echo     $(echo $0|sed 's/.*\///g') \[-gri\|-gnuplot\] \[-mono\|-color\] \[-withtitle\] datafile1.gp \[ datafile2.gp ... \]
 	exit -1
+}
+
+if [ $# -lt 1 ]; then
+	usage
 fi
 
 function plot_c {
@@ -61,46 +66,8 @@ ${DRAW_PHI_TITLE}
 ENDGRI
 }
 
-while [ $# -gt 0 ]; do
-	f=$1;
-	shift;
-	opt=$f;
-	if [ "x$opt" == "x-color" ]; then
-		echo "enabled color mode";
-		MODE=color
-		continue;
-	elif [ "x$opt" == "x-mono" ]; then
-		echo "enabled monochrome mode";
-		MODE=mono
-		continue;
-	elif [ "x$opt" == "x-withtitle" ]; then
-		echo "enabled title";
-		TITLE=yes
-		continue;
-	fi
-	TIME=$(head -1 $f|tail -1|awk '{print $2}'|\
-		perl -e 'while(<>){printf("%g\n",$_);}');
-	XSIZE=$(head -2 $f|tail -1|awk '{print $2}');
-	YSIZE=$(head -2 $f|tail -1|awk '{print $3}');
-	XMIN=$(head -3 $f|tail -1|awk '{print $2}'|\
-		perl -e 'while(<>){printf("%g\n",$_);}');
-	XMAX=$(head -3 $f|tail -1|awk '{print $NF}'|\
-		perl -e 'while(<>){printf("%g\n",$_);}');
-	YMIN=$(head -4 $f|tail -1|awk '{print $2}'|\
-		perl -e 'while(<>){printf("%g\n",$_);}');
-	YMAX=$(head -4 $f|tail -1|awk '{print $NF}'|\
-		perl -e 'while(<>){printf("%g\n",$_);}');
-	VARS=$(head -5 $f|tail -1|sed 's/#//g');
-	NC=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
-		foreach $v(@vars){if("c" eq $v){print $i,"\n";}++$i;};');
-	NPHI=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
-		foreach $v(@vars){if("phi" eq $v){print $i,"\n";}++$i;};');
-	NPSI=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
-		foreach $v(@vars){if("psi" eq $v){print $i,"\n";}++$i;};');
-	echo "time=$TIME";
-	echo "size=${XSIZE}x${YSIZE} [$XMIN:$XMAX]x[$YMIN:$YMAX]";
-	echo "vars: C[$NC] PHI[$NPHI] PSI[$NPSI]";
-
+function gri_plot {
+	f=$1
 	if [ "x$MODE" == "xmono" ]; then
 	PLOT_C_DATA=$(cat << END
 set font size 9
@@ -146,5 +113,133 @@ END);
 	fi
 	plot_c $f;
 	plot_phi $f;
+}
+
+function gnuplot_plot_c {
+	f=$1
+	fo=$(echo $TIME|perl -e 'while(<>){printf("Oxygen_%07.0f.eps",10*$_);}');
+	gnuplot << END
+set view 45,135
+set xlabel "x"
+set ylabel "y"
+unset zlabel
+unset key
+${PLOT_C_TITLE}
+set output "$fo"
+${PLOT_MODE}
+splot "$f" u 1:2:$((NC+1)) w l
+END
+}
+
+function gnuplot_plot_phi {
+	f=$1
+	fo=$(echo $TIME|perl -e 'while(<>){printf("Phi_%07.0f.eps",10*$_);}');
+	gnuplot << END
+set view 45,135
+set xlabel "x"
+set ylabel "y"
+unset zlabel
+unset key
+${PLOT_PHI_TITLE}
+set output "$fo"
+${PLOT_MODE}
+splot "$f" u 1:2:$((NPHI+1)) w l
+END
+}
+
+function gnuplot_plot_psi {
+	f=$1
+	fo=$(echo $TIME|perl -e 'while(<>){printf("Phase_%07.0f.eps",10*$_);}');
+	gnuplot << END
+set view 45,135
+set xlabel "x"
+set ylabel "y"
+unset zlabel
+unset key
+${PLOT_PSI_TITLE}
+set output "$fo"
+${PLOT_MODE}
+splot [][][-0.5:+2] "$f" u 1:2:$((NPSI+1)) w l
+END
+}
+
+function gnuplot_plot {
+	f=$1
+	if [ "x$MODE" == "xcolor" ]; then
+		PLOT_MODE="set terminal post eps 14 color"
+	else
+		PLOT_MODE="set terminal post eps 14"
+	fi
+	if [ "x$TITLE" != "xno" ]; then
+		TS=$(echo $TIME|perl -e "while(<>){printf('t=%5.1f',\$_);}");
+		PLOT_C_TITLE="set title \"Oxygen, $TS\""
+		PLOT_PHI_TITLE="set title \"Packing density, $TS\""
+		PLOT_PSI_TITLE="set title \"Level set function, $TS\""
+	else
+		PLOT_C_TITLE=""
+		PLOT_PHI_TITLE=""
+		PLOT_PSI_TITLE=""
+	fi
+	gnuplot_plot_c $f
+	gnuplot_plot_phi $f
+	gnuplot_plot_psi $f
+}
+
+while [ $# -gt 0 ]; do
+	f=$1;
+	shift;
+	opt=$f;
+	if [ "x${opt:0:1}" == "x-" ]; then
+		if [ "x$opt" == "x-color" ]; then
+			MODE=color
+			continue;
+		elif [ "x$opt" == "x-mono" ]; then
+			MODE=mono
+			continue;
+		elif [ "x$opt" == "x-withtitle" ]; then
+			TITLE=yes
+			continue;
+		elif [ "x$opt" == "x-gnuplot" ]; then
+			PLOTTER=gnuplot
+			continue;
+		elif [ "x$opt" == "x-gri" ]; then
+			PLOTTER=gri
+		else
+			echo "unknown option: $opt"
+			usage
+			break
+		fi
+	fi
+	TIME=$(head -1 $f|tail -1|awk '{print $2}'|\
+		perl -e 'while(<>){printf("%g\n",$_);}');
+	XSIZE=$(head -2 $f|tail -1|awk '{print $2}');
+	YSIZE=$(head -2 $f|tail -1|awk '{print $3}');
+	XMIN=$(head -3 $f|tail -1|awk '{print $2}'|\
+		perl -e 'while(<>){printf("%g\n",$_);}');
+	XMAX=$(head -3 $f|tail -1|awk '{print $NF}'|\
+		perl -e 'while(<>){printf("%g\n",$_);}');
+	YMIN=$(head -4 $f|tail -1|awk '{print $2}'|\
+		perl -e 'while(<>){printf("%g\n",$_);}');
+	YMAX=$(head -4 $f|tail -1|awk '{print $NF}'|\
+		perl -e 'while(<>){printf("%g\n",$_);}');
+	VARS=$(head -5 $f|tail -1|sed 's/#//g');
+	NC=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
+		foreach $v(@vars){if("c" eq $v){print $i,"\n";}++$i;};');
+	NPHI=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
+		foreach $v(@vars){if("phi" eq $v){print $i,"\n";}++$i;};');
+	NPSI=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
+		foreach $v(@vars){if("psi" eq $v){print $i,"\n";}++$i;};');
+	echo "time=$TIME";
+	echo "size=${XSIZE}x${YSIZE} [$XMIN:$XMAX]x[$YMIN:$YMAX]";
+	echo "vars: C[$NC] PHI[$NPHI] PSI[$NPSI]";
+
+	if [ "x$PLOTTER" == "xgnuplot" ] ; then
+		gnuplot_plot $f
+	elif [ "x$PLOTTER" == "xgri" ] ; then
+		gri_plot $f
+	else
+		echo "unknown plotter: $PLOTTER"
+		break
+	fi
 done
 

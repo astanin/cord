@@ -1,9 +1,0 @@
-set view 30,45
-set xlabel 'x'
-set ylabel 'y'
-set zlabel 'c'
-set title '%title%'
-set output 'filename.png'
-set terminal png
-splot [][][] 'filename' u 1:2:3 w l t 'c (nutrient)'
-
