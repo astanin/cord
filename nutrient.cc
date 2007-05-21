@@ -21,6 +21,7 @@
 #include <iostream>
 #include "nutrient.h"
 #include "global.h"
+#include "utils.h"
 #include "rdsolve.h"
 #include "growth.h"
 #include "meshenum.h"
@@ -43,19 +44,6 @@ using std::auto_ptr;
 extern int verbose;
 
 string dbg_stamp(double t);
-
-/// norm-I: max(abs(f))
-double norm_1(AMesh2D const& m, string const fid) {
-	using namespace blitz;
-	return max(fabs(m[fid]));
-}
-
-/// norm-II: sum(abs(f))
-double norm_2(AMesh2D const& m, string const fid) {
-	using namespace blitz;
-	double norm=sum(fabs(m[fid]));
-	return norm;
-}
 
 double
 best_dt(AMesh2D const& m) throw(MeshException) {

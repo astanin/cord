@@ -68,5 +68,8 @@ dump_mesh(AMesh2D& m, int timestamp);
 double get_y_size(const AMesh2D& m);
 double get_x_size(const AMesh2D& m);
 
+double norm_1(AMesh2D const& m, string const fid);
+double norm_2(AMesh2D const& m, string const fid);
+
 #endif
 

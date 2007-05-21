@@ -661,3 +661,16 @@ double get_y_size(const AMesh2D& m) {
 	}
 }
 
+/// norm-I: max(abs(f))
+double norm_1(AMesh2D const& m, string const fid) {
+	using namespace blitz;
+	return max(fabs(m[fid]));
+}
+
+/// norm-II: sum(abs(f))
+double norm_2(AMesh2D const& m, string const fid) {
+	using namespace blitz;
+	double norm=sum(fabs(m[fid]));
+	return norm;
+}
+
