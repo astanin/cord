@@ -29,31 +29,4 @@ extern int verbose; ///< print verbose output if @c verbose > 0
 
 extern int show_version; ///< print version info
 
-extern int use_euler_explicit; ///< use Euler explicit method instead of ADI
-
-typedef enum {
-	SOLVER_UMFPACK = 0,
-	SOLVER_ITERATIVE_EXPLICIT = 1,
-	SOLVER_ITERATIVE_IMPLICIT = 2,
-	SOLVER_CG = 3,
-	SOLVER_BICG = 4,
-	SOLVER_BICGSTAB =5,
-	SOLVER_GMRES = 6
-} poisson_solver_method;
-
-/// method used to solve Poisson equation
-extern poisson_solver_method poisson_solver;
-
-/// time step for iterative Poisson solvers (automatic if less than zero)
-extern double poisson_solver_iteration_step;
-
-/// accuracy of the convergence condition of Poisson equation solver
-extern double poisson_solver_accuracy;
-
-/// maximum number of iterations in iterative method
-extern int poisson_solver_max_iterations; 
-
-/// number of GMRES iterations before method restart
-extern int gmres_restart_after;
-
 #endif

@@ -18,6 +18,7 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
+#include "global.h"
 #include "solver.h"
 #include "tumeval.h"
 #include "growth.h"
@@ -52,8 +53,10 @@ eval_tissue(const Params& p, double const dt, const AMesh2D& m1,
 	// growth-death (ODE)
 	auto_ptr<AMesh2D> tmp(step_growth_death(dt,m1,density_var));
 	AMesh2D* m2;
-	if (use_euler_explicit) {
+	if (Method::it().rd_solver==MP::RDS_EXPLICIT) {
 		m2=step_euler_explicit(p, dt, *tmp, density_var);
+	} else if (Method::it().rd_solver==MP::RDS_IMPLICIT) {
+		throw MeshException("eval_tissue: RDS_IMPLICIT not implemented");
 	} else {
 		m2=phi_step_adi(p, dt, *tmp, density_var);
 	}
@@ -111,7 +114,7 @@ solve(const Params& p, const AMesh2D& initial) {
 		// level set (interface tracking)
 		m2.reset(step_level_set(eff_dt,*m2));
 		// nutrient (eliptic)
-		m2.reset(eval_nutrient(p,*m2,poisson_solver_accuracy,eff_dt));
+		m2.reset(eval_nutrient(p,*m2,Method::it().p_solver_accuracy,eff_dt));
 		// done all sub steps
 		m2->inc_time(eff_dt);
 		m1.reset(m2->clone());

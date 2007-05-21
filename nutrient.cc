@@ -267,32 +267,33 @@ throw(MeshException) {
 		}
 		auto_ptr<ASparseMatrix> pA;
 #ifdef HAVE_LIBUMFPACK
-		if (poisson_solver == SOLVER_UMFPACK) {
+		if (Method::it().sle_solver == MP::SLES_UMFPACK) {
 			pA.reset(new UMFPACKMatrix(kenum.size(),kenum.size()));
 		} else
 #endif
-		if (poisson_solver == SOLVER_CG) {
+		if (Method::it().sle_solver == MP::SLES_CG) {
 			pA.reset(new LSolverMatrix(kenum.size(), c,
-				poisson_solver_accuracy,
-				poisson_solver_max_iterations,
+				Method::it().p_solver_accuracy,
+				Method::it().sle_solver_max_iters,
 				LSolverMatrix::CG));
-		} else if (poisson_solver == SOLVER_BICG) {
+		} else if (Method::it().sle_solver == MP::SLES_BICG) {
 			pA.reset(new LSolverMatrix(kenum.size(), c,
-				poisson_solver_accuracy,
-				poisson_solver_max_iterations,
+				Method::it().p_solver_accuracy,
+				Method::it().sle_solver_max_iters,
 				LSolverMatrix::BICG));
-		} else if (poisson_solver == SOLVER_BICGSTAB) {
+		} else if (Method::it().sle_solver == MP::SLES_BICGSTAB) {
 			pA.reset(new LSolverMatrix(kenum.size(), c,
-				poisson_solver_accuracy,
-				poisson_solver_max_iterations,
+				Method::it().p_solver_accuracy,
+				Method::it().sle_solver_max_iters,
 				LSolverMatrix::BICGstab));
-		} else if (poisson_solver == SOLVER_GMRES) {
+		} else if (Method::it().sle_solver == MP::SLES_GMRES) {
 			pA.reset(new LSolverMatrix(kenum.size(), c,
-				poisson_solver_accuracy,
-				poisson_solver_max_iterations,
-				LSolverMatrix::GMRES, gmres_restart_after));
+				Method::it().p_solver_accuracy,
+				Method::it().sle_solver_max_iters,
+				LSolverMatrix::GMRES,
+				Method::it().sle_solver_gmres_restart_after));
 		} else {
-			throw MeshException("unknown poisson_solver");
+			throw MeshException("unknown Method::it().sle_solver");
 		}
 		vector<double> rhs(kenum.size());// right hand side vector
 		eval_nutrient_build_sle_matrix(*m2,p.c_bc,*pA,rhs,kenum);
@@ -421,7 +422,7 @@ throw(MeshException) {
 	auto_ptr<AMesh2D> m2(m.clone());
 	eval_nutrient_init_consumption(*m2,"q_tmp");
 	// ADI
-	m2.reset(reaction_diffusion_step(p.c_bc,dt,*m2,"c","","q_tmp",RDS_ADI));
+	m2.reset(reaction_diffusion_step(p.c_bc,dt,*m2,"c","","q_tmp",MP::RDS_ADI));
 	// finishing
 	m2->remove_function_ifdef("q_tmp");
 	return m2.release();
@@ -434,8 +435,8 @@ throw(MeshException) {
 	try {
 	auto_ptr<AMesh2D> m2(m.clone());
 	double dt;
-	if (poisson_solver_iteration_step < 0) { // automatic time step
-		if (poisson_solver == SOLVER_ITERATIVE_EXPLICIT) {
+	if (Method::it().p_solver_relax_step < 0) { // automatic time step
+		if (Method::it().rd_solver == MP::RDS_EXPLICIT) {
 			dt=best_dt(*m2);
 		} else { // implicit
 			double dx=m.get_dx();
@@ -443,23 +444,18 @@ throw(MeshException) {
 			dt=10.0*(dx*dx+dy*dy); // heuristic
 		}
 	} else {
-		dt=poisson_solver_iteration_step;
+		dt=Method::it().p_solver_relax_step;
 	}
 	if (verbose > 1) { // extra verbose
 		cerr << dbg_stamp(m.get_time())
-			<< "eval_nutrient_iteratively: dt=" << dt;
-		if (poisson_solver == SOLVER_ITERATIVE_EXPLICIT) {
-			cerr << " explicit method" << "\n";
-		} else {
-			cerr << " implicit method" << "\n";
-		}
+			<< "eval_nutrient_iteratively: dt=" << dt << "\n";
 	}
 	// iterative method here
 	double res=0.0;
 	res=eval_nutrient_residual(*m2);
 	int iter=0;
-	while ((res > epsilon) && (iter <= poisson_solver_max_iterations)) {
-		if (poisson_solver == SOLVER_ITERATIVE_EXPLICIT) {
+	while ((res>epsilon) && (iter<=Method::it().p_solver_relax_max_iters)) {
+		if (Method::it().rd_solver == MP::RDS_EXPLICIT) {
 			m2.reset(
 			eval_nutrient_iteratively_step_explicit(p,dt,*m2));
 		} else {
@@ -504,17 +500,9 @@ AMesh2D*
 eval_nutrient_poisson(Params const& p, AMesh2D const& m1, double const epsilon)
 throw(MeshException) {
 	AMesh2D *m2;
-	if (
-#ifdef HAVE_LIBUMFPACK
-		poisson_solver == SOLVER_UMFPACK ||
-#endif
-		poisson_solver == SOLVER_CG ||
-		poisson_solver == SOLVER_GMRES ||
-		poisson_solver == SOLVER_BICG ||
-		poisson_solver == SOLVER_BICGSTAB) {
+	if (Method::it().p_solver == MP::PS_SLE) {
 		m2=eval_nutrient_directly(p, m1);
-	} else if (poisson_solver == SOLVER_ITERATIVE_IMPLICIT ||
-		poisson_solver == SOLVER_ITERATIVE_EXPLICIT) {
+	} else if (Method::it().p_solver == MP::PS_RELAX) {
 		m2=eval_nutrient_iteratively(p, m1, epsilon);
 	} else {
 		throw MeshException("eval_nutrient: unknown method");

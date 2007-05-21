@@ -110,42 +110,54 @@ read_boundary_condition(dictionary *ini, Params& p, const string side) {
 void
 read_solvers_config(dictionary *ini) {
 	string s;
-	// Poisson solver
-	s=iniparser_getstring(ini,"method:poisson_solver","notfound");
+	// SLE solver
+	s=iniparser_getstring(ini,"method:linear_solver","n/a");
 #ifdef HAVE_LIBUMFPACK
 	if (s == "umfpack") {
-		poisson_solver=SOLVER_UMFPACK;
+		Method::it().sle_solver=MP::SLES_UMFPACK;
 	} else
 #endif
-		if ((s == "gmres") || (s == "notfound")) {
-		poisson_solver=SOLVER_GMRES;
+	if (s == "gmres") {
+		Method::it().sle_solver=MP::SLES_GMRES;
 	} else if (s == "cg") {
-		poisson_solver=SOLVER_CG;
+		Method::it().sle_solver=MP::SLES_CG;
 	} else if (s == "bicg") {
-		poisson_solver=SOLVER_BICG;
+		Method::it().sle_solver=MP::SLES_BICG;
 	} else if (s == "bicgstab") {
-		poisson_solver=SOLVER_BICGSTAB;
-	} else if (s == "relax-explicit") {
-		poisson_solver=SOLVER_ITERATIVE_EXPLICIT;
-	} else if (s == "relax-adi") {
-		poisson_solver=SOLVER_ITERATIVE_IMPLICIT;
-	} else {
-		if (verbose) {
-			cerr << "Unknown method " << s
-				<< ", using GMRES instead\n";
-		}
-		poisson_solver=SOLVER_GMRES;
+		Method::it().sle_solver=MP::SLES_BICGSTAB;
 	}
-	poisson_solver_iteration_step=iniparser_getdouble(ini,
-		"method:poisson_solver_iteration_step",
-		poisson_solver_iteration_step);
-	poisson_solver_accuracy=iniparser_getdouble(ini,
-		"method:poisson_solver_accuracy",poisson_solver_accuracy);
-	poisson_solver_max_iterations=iniparser_getint(ini,
-		"method:poisson_solver_max_iterations",
-		poisson_solver_max_iterations);
-	gmres_restart_after=iniparser_getint(ini,
-		"method:poisson_solver_gmres_restart", gmres_restart_after);
+	Method::it().sle_solver_accuracy=iniparser_getdouble(ini,
+		"method:linear_solver_accuracy",
+		Method::it().sle_solver_accuracy);
+	Method::it().sle_solver_max_iters=iniparser_getint(ini,
+		"method:linear_solver_max_iterations",
+		Method::it().sle_solver_max_iters);
+	Method::it().sle_solver_gmres_restart_after=iniparser_getint(ini,
+		"method:gmres_restart_after",
+		Method::it().sle_solver_gmres_restart_after);
+	s=iniparser_getstring(ini,"method:reaction_diffusion_solver","n/a");
+	if (s == "adi") {
+		Method::it().rd_solver=MP::RDS_ADI;
+	} else if (s == "implicit") {
+		Method::it().rd_solver==MP::RDS_IMPLICIT;
+	} else if (s == "explicit") {
+		Method::it().rd_solver==MP::RDS_EXPLICIT;
+	}
+	s=iniparser_getstring(ini,"method:poisson_solver","n/a");
+	if (s == "relax") {
+		Method::it().p_solver=MP::PS_RELAX;
+	} else if (s == "sle") {
+		Method::it().p_solver=MP::PS_SLE;
+	}
+	Method::it().p_solver_accuracy=iniparser_getdouble(ini,
+		"method:poisson_solver_accuracy",
+		Method::it().p_solver_accuracy);
+	Method::it().p_solver_relax_step=iniparser_getdouble(ini,
+		"method:poisson_solver_relax_step",
+		Method::it().p_solver_relax_step);
+	Method::it().p_solver_relax_max_iters=iniparser_getint(ini,
+		"method:poisson_solver_relax_max_iterations",
+		Method::it().p_solver_relax_max_iters);
 }
 
 // string case conversion
@@ -241,33 +253,6 @@ int init_params(Params& p, int argc, const char *argv[]) {
 		{ "save", 'o', POPT_ARG_STRING|onedash, &ofile, 0,
 			"save the final state as HDF5 file","filename.hdf"},
 #endif // ifdef HAVE_LIBHDF5
-		{ "phi-explicit", 0, arg_val_hidden_arg, &use_euler_explicit, 1,
-			"use Euler explicit method for PDE (not PR ADI)", 0 },
-		{ "phi-adi", 0, arg_val_hidden_arg, &use_euler_explicit, 0,
-			"use Peaceman--Rachford ADI method for PDE", 0 },
-#ifdef HAVE_LIBUMFPACK
-		{ "use-umfpack", 0, arg_val_hidden_arg,
-			&poisson_solver, SOLVER_UMFPACK,
-			"solve Poisson equation directly (UMFPACK)", 0 },
-#endif // ifdef HAVE_LIBUMFPACK
-		{ "use-cg", 0, arg_val_hidden_arg,
-			&poisson_solver, SOLVER_CG,
-			"solve Poisson equation with CG", 0 },
-		{ "use-bicg", 0, arg_val_hidden_arg,
-			&poisson_solver, SOLVER_BICG,
-			"solve Poisson equation with BiCG", 0 },
-		{ "use-bicgstab", 0, arg_val_hidden_arg,
-			&poisson_solver, SOLVER_BICGSTAB,
-			"solve Poisson equation with stabilized BiCG", 0 },
-		{ "use-gmres", 0, arg_val_hidden_arg,
-			&poisson_solver, SOLVER_GMRES,
-			"solve Poisson equation with GMRES", 0 },
-		{ "use-relax-adi", 0, arg_val_hidden_arg,
-			&poisson_solver, SOLVER_ITERATIVE_IMPLICIT,
-			"solve Poisson equation iteratively (ADI)",0},
-		{ "use-relax-explicit", 0, arg_val_hidden_arg,
-			&poisson_solver, SOLVER_ITERATIVE_EXPLICIT,
-			"solve Poisson equation iteratively (explicit)",0},
 		{ "dt", 'd', POPT_ARG_DOUBLE|onedash, &p.dt, 0,
 			"evaluate with specified time step", "timestep" },
 		{ "period", 't', POPT_ARG_DOUBLE|onedash,

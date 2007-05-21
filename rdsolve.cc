@@ -66,18 +66,19 @@ throw(MeshException) {
 AMesh2D*
 reaction_diffusion_step(BCSet const& bcs, double dt,
 	AMesh2D const& m1, string const var,
-	string const Dvar, string const Rvar, rd_solver solver)
+	string const Dvar, string const Rvar,
+	MP::rd_solver_t solver)
 throw(MeshException) {
 	auto_ptr<AMesh2D> m2(0);
 	switch(solver) {
-	case RDS_EXPLICIT:
+	case MP::RDS_EXPLICIT:
 		throw MeshException("reaction_diffusion_step: "
 			"RDS_EXPLICIT not implemented");
 		break;
-	case RDS_ADI:
+	case MP::RDS_ADI:
 		m2.reset(rd_step_adi(bcs,dt,m1,var,Dvar,Rvar));
 		break;
-	case RDS_IMPLICIT:
+	case MP::RDS_IMPLICIT:
 		throw MeshException("reaction_diffusion_step: "
 			"RDS_IMPLICIT not implemented");
 		break;
@@ -91,7 +92,8 @@ throw(MeshException) {
 AMesh2D*
 reaction_diffusion_step(BCSet const& bcs, double dt,
 	AMesh2D const& m1, string const var,
-	double const D, double const R, rd_solver solver)
+	double const D, double const R,
+	MP::rd_solver_t solver)
 throw(MeshException) {
 	auto_ptr<AMesh2D> m2(m1.clone());
 	m2->remove_function_ifdef("Dvar_tmp");

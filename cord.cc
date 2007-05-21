@@ -40,12 +40,6 @@ using std::ios_base;
 // global flags
 int show_version=0;
 int verbose=0;
-int use_euler_explicit=0;
-poisson_solver_method poisson_solver=SOLVER_GMRES;
-double poisson_solver_accuracy=1e-5;
-double poisson_solver_iteration_step=-1;
-int poisson_solver_max_iterations=5000;
-int gmres_restart_after = 1000;
 
 void
 print_model_params(const DMesh& m, const Params& p,
@@ -112,34 +106,50 @@ print_model_params(const DMesh& m, const Params& p,
 	cerr<<"\t\twest: c: "<<type_name.at(p.c_bc.get_west().get_type())
 		<<" level=" << p.c_bc.get_west().c() << "\n";
 	cerr<<"\tNumerical methods:\n";
-	cerr<<"\t\tphi: ";
-	if (use_euler_explicit) {
+	cerr<<"\t\treaction-diffusion solver: ";
+	switch (Method::it().rd_solver) {
+	case MethodParams::RDS_IMPLICIT:
+		cerr << "Euler implicit\n";
+		break;
+	case MethodParams::RDS_ADI:
+		cerr << "alternative directions implicit\n";
+		break;
+	case MethodParams::RDS_EXPLICIT:
 		cerr << "Euler explicit\n";
-	} else {
-		cerr << "Peaceman--Rachford alternative directions implicit\n";
+		break;
+	default:
+		cerr << "unknown\n";
+		break;
 	}
-	cerr<<"\t\tc: ";
-	switch(poisson_solver) {
-	case SOLVER_UMFPACK:
+	cerr << "\t\tPoisson solver: ";
+	switch (Method::it().p_solver) {
+	case MethodParams::PS_RELAX:
+		cerr << "relaxation to the steady state solution\n";
+		break;
+	case MethodParams::PS_SLE:
+		cerr << "solution of the SLE\n";
+		break;
+	default:
+		cerr << "unknown\n";
+		break;
+	}
+	cerr << "\t\tSLE solver: ";
+	switch(Method::it().sle_solver) {
+	case MethodParams::SLES_UMFPACK:
 		cerr<<"direct solution with UMFPACK\n";
 		break;
-	case SOLVER_ITERATIVE_EXPLICIT:
-		cerr<<"iterating to steady state (explicit Euler)\n";
+	case MethodParams::SLES_CG:
+		cerr<<"CG\n";
 		break;
-	case SOLVER_ITERATIVE_IMPLICIT:
-		cerr<<"iterating to steady state (Peaceman--Rachford ADI)\n";
+	case MethodParams::SLES_BICG:
+		cerr<<"BICG\n";
 		break;
-	case SOLVER_CG:
-		cerr<<"iterative solution of linear system (CG)\n";
+	case MethodParams::SLES_BICGSTAB:
+		cerr<<"BICGstab\n";
 		break;
-	case SOLVER_BICG:
-		cerr<<"iterative solution of linear system (BiCG)\n";
-		break;
-	case SOLVER_BICGSTAB:
-		cerr<<"iterative solution of linear system (BiCG stabilized)\n";
-		break;
-	case SOLVER_GMRES:
-		cerr<<"iterative solution of linear system (GMRES)\n";
+	case MethodParams::SLES_GMRES:
+		cerr<<"GMRES (reset after "
+			<< Method::it().sle_solver_gmres_restart_after <<")\n";
 		break;
 	default:
 		cerr<<"unknown\n";

@@ -412,7 +412,7 @@ throw(MeshException) {
 	}
 	// ADI
 	m2.reset(reaction_diffusion_step(p.phi_bc,dt,*m2,var,
-			"phi_pseudo_D","",RDS_ADI));
+			"phi_pseudo_D","",MP::RDS_ADI));
 	m2->remove_function_ifdef("phi_pseudo_D");
 	return m2.release();
 	} catch(MeshException& e) {

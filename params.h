@@ -30,6 +30,8 @@
 
 using std::string;
 
+#include "singleton.h" 
+
 /// set of command line parameters
 class Params {
 public:
@@ -86,6 +88,55 @@ public:
 		c_equation(EQ_POISSON)
 		{}
 };
+
+struct MethodParams {
+	/// solver method for systems of linear equations
+	typedef enum {
+		SLES_UMFPACK,
+		SLES_CG,
+		SLES_BICG,
+		SLES_BICGSTAB,
+		SLES_GMRES
+	} sle_solver_t;
+	/// solver method for reaction-diffusion equation
+	typedef enum {
+		RDS_EXPLICIT,
+		RDS_ADI,
+		RDS_IMPLICIT
+	} rd_solver_t;
+	/// solver method for Poisson equation
+	typedef enum {
+		PS_RELAX,
+		PS_SLE
+	} p_solver_t;
+	/// SLE solver
+	sle_solver_t sle_solver;
+	double sle_solver_accuracy;
+	int sle_solver_max_iters;
+	int sle_solver_gmres_restart_after;
+	/// reaction-diffusion solver
+	rd_solver_t rd_solver;
+	/// Poisson solver
+	p_solver_t p_solver;
+	double p_solver_accuracy;
+	double p_solver_relax_step;
+	int p_solver_relax_max_iters;
+	/// default methods
+	MethodParams() :
+		sle_solver(SLES_CG),
+		sle_solver_accuracy(1e-5),
+		sle_solver_max_iters(5000),
+		sle_solver_gmres_restart_after(1000),
+		rd_solver(RDS_ADI),
+		p_solver(PS_SLE),
+		p_solver_accuracy(1e-5),
+		p_solver_relax_step(-1),
+		p_solver_relax_max_iters(5000)
+		{} 
+};
+
+typedef MethodParams MP;
+typedef Singleton< MethodParams > Method;
 
 #endif
 

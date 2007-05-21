@@ -25,14 +25,6 @@
 #include "boundary.h"
 #include "params.h"
 
-/// Reaction-diffusion solver
-
-typedef enum {
-	RDS_EXPLICIT,
-	RDS_ADI,
-	RDS_IMPLICIT
-} rd_solver;
-
 /** time integration step for reaction--diffusion equation
  *
  * \DD{var}{t} = \div (Dvar(x,y)\nabla(var)) + Rvar(x,y)
@@ -48,14 +40,14 @@ typedef enum {
 AMesh2D*
 reaction_diffusion_step(BCSet const& bcs, double dt,
 	AMesh2D const& m1, string const var,
-	string const Dvar, string const Rvar, rd_solver solver=RDS_ADI)
+	string const Dvar, string const Rvar, MP::rd_solver_t solver=MP::RDS_ADI)
 throw(MeshException);
 
 /** assume diffusion coefficient and reaction term to be constant everywhere */
 AMesh2D*
 reaction_diffusion_step(BCSet const& bcs, double dt,
 	AMesh2D const& m1, string const var,
-	double const D, double const R, rd_solver solver=RDS_ADI)
+	double const D, double const R, MP::rd_solver_t solver=MP::RDS_ADI)
 throw(MeshException);
 
 #endif
