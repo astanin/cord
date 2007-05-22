@@ -242,10 +242,13 @@ int init_params(Params& p, int argc, const char *argv[]) {
 	char *ofile=(char*)0;
 #endif
 	char *c_eq=(char*)0;
+	char *conffile=(char*)0;
 	int arg_val_hidden_arg=(POPT_ARG_VAL|POPT_ARGFLAG_ONEDASH)
 					&(~POPT_ARGFLAG_SHOW_DEFAULT);
 	int onedash=POPT_ARGFLAG_ONEDASH;
 	struct poptOption optionsTable[] = {
+		{ "config", 'c', POPT_ARG_STRING|onedash, &conffile, 0,
+			"use alternative configuration file", "filename" },
 #ifdef HAVE_LIBHDF5
 		{ "hdf2dx", 0, arg_val_hidden_arg, &p.hdf2dx, 1,
 			"convert HDF5 data to OpenDX format", 0 },
@@ -323,8 +326,12 @@ int init_params(Params& p, int argc, const char *argv[]) {
 		{ NULL, 0, 0, NULL, 0, 0 } };
 	poptContext con=poptGetContext(NULL, argc, argv, optionsTable, 0);
 	int rc=0;
-	while ((rc = poptGetNextOpt(con)) > 0) {
-		// no switch(rc) yet, only changing args
+	rc = poptGetNextOpt(con);
+	if (conffile) {
+		read_conf_file(p,conffile);
+		// command line options have to override the config file
+		poptResetContext(con);
+		rc = poptGetNextOpt(con);
 	}
 	if (rc < -1) {
 		cerr << poptBadOption(con, POPT_BADOPTION_NOALIAS) << ": "
