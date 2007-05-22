@@ -3,6 +3,7 @@
 PLOTTER=gri
 MODE=mono
 TITLE=no
+PLOTWIDTH=18
 
 function usage {
 	echo usage:
@@ -18,6 +19,8 @@ function plot_c {
 	f=$1;
 	fo=$(echo $TIME|perl -e 'while(<>){printf("Oxygen_%07.0f.eps",10*$_);}');
 	gri -b -c0 -output "$fo" << ENDGRI
+set x size $PLOTWIDTH
+set y size $(echo "scale=2;$PLOTWIDTH*($YMAX-$YMIN)/($XMAX-$XMIN)"|bc -s)
 set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
 set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
 draw axes
@@ -25,14 +28,14 @@ draw axes
 set x grid $XMIN $XMAX /$XSIZE
 set y grid $YMIN $YMAX /$YSIZE
 open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NC],\" \"; } else { print \"\n\";} }'|"
-read grid data $YSIZE $XSIZE bycolumns
+read grid data $XSIZE $YSIZE bycolumns
 close
 ${PLOT_C_DATA}
 # psi
 set x grid $XMIN $XMAX /$XSIZE
 set y grid $YMIN $YMAX /$YSIZE
 open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NPSI],\" \"; } else { print \"\n\";} }'|"
-read grid data $YSIZE $XSIZE bycolumns
+read grid data $XSIZE $YSIZE bycolumns
 close
 set line width rapidograph 1
 draw contour 0.0 unlabelled
@@ -44,6 +47,8 @@ function plot_phi {
 	f=$1
 	fo=$(echo $TIME|perl -e 'while(<>){printf("Phi_%07.0f.eps",10*$_);}');
 	gri -b -c0 -output "$fo" << ENDGRI
+set x size $PLOTWIDTH
+set y size $(echo "scale=2;$PLOTWIDTH*($YMAX-$YMIN)/($XMAX-$XMIN)"|bc -s)
 set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
 set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
 draw axes
@@ -51,14 +56,14 @@ draw axes
 set x grid $XMIN $XMAX /$XSIZE
 set y grid $YMIN $YMAX /$YSIZE
 open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NPHI],\" \"; } else { print \"\n\";} }'|"
-read grid data $YSIZE $XSIZE bycolumns
+read grid data $XSIZE $YSIZE bycolumns
 close
 ${PLOT_PHI_DATA}
 # psi
 set x grid $XMIN $XMAX /$XSIZE
 set y grid $YMIN $YMAX /$YSIZE
 open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NPSI],\" \"; } else { print \"\n\";} }'|"
-read grid data $YSIZE $XSIZE bycolumns
+read grid data $XSIZE $YSIZE bycolumns
 close
 set line width rapidograph 1
 draw contour 0.0 unlabelled
