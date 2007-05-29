@@ -383,7 +383,9 @@ const throw(MeshException) {
 				|| (i->first == "vx") || (i->first == "vy")
 				|| (i->first == "c")
 				|| (i->first=="phi_t") || (i->first=="phi_h")
-				|| (i->first == "term_dc_dt")) {
+				|| (i->first=="phi_growth")
+				|| (i->first=="phi_t_growth")
+				|| (i->first=="phi_h_growth")) {
 				dataset = savegroup.createDataSet(i->first,
 						doubletype, ds2d);
 				dataset.write(i->second.data(),
@@ -593,6 +595,10 @@ throw(MeshFileException, MeshException) {
 		 	add_function("phi_h");
 		}
 		load_dataset_2d(savegroup,"phi_h",mf["phi_h"]);
+		if (!defined("phi_growth")) {
+		 	add_function("phi_growth");
+		}
+		load_dataset_2d(savegroup,"phi_growth",mf["phi_growth"]);
 	}
 	catch (H5::FileIException filerr) {
 		ostringstream ss;
