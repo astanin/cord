@@ -28,17 +28,45 @@
 
 using std::auto_ptr;
 
+int H(double const x) {
+	if (x >= 0.0) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
+#include <iostream>
+using std::cerr;
+
 double growth_term(double const phi, double const c,
+	double const phi0, double const c0,
 	double const psi=1.0, double const gamma=1.0) {
-	double Hpsi=(psi>0)?1.0:0.0;
-	return Hpsi*gamma*phi*(1-phi)*c;
+//	double Hpsi=(psi>0)?1.0:0.0;
+//	return Hpsi*gamma*phi*(1-phi)*c;
+//	cerr << "GROWTH: "
+//		<< "phi=" << phi << " c=" << c
+//		<< " (1-phi)*c=" << (1-phi)*c
+//		<< " -phi*c0=" << -phi*c0 << " "
+//		<< H(psi)*phi*(1-phi)*H((1-phi)*c-phi*c0) << "\n";
+	if (((1-phi)*c-phi*c0) >= 0) {
+		return H(psi)*phi*(1-phi);
+	} else {
+		return 0.0;
+	}
 }
 
 double death_term(double const phi, double const c,
 	double const phi0, double const c0,
 	double const psi=1.0, double const gamma=1.0) {
-	double Hpsi=(psi>0)?1.0:0.0;
-	return Hpsi*gamma*phi*(1-phi)*c0;
+//	double Hpsi=(psi>0)?1.0:0.0;
+//	return Hpsi*gamma*phi*(1-phi)*c0;
+//	cerr << "DEATH: " << H(psi)*(phi*(1-phi)*H(phi*c0-(1-phi)*c)) << "\n";
+	if (((1-phi)*c-phi*c0) < 0) {
+		return -H(psi)*phi*(1-phi);
+	} else {
+		return 0.0;
+	}
 }
 
 double
@@ -46,7 +74,19 @@ growth_term(AMesh2D const& m, int const i, int const j, const string& fid) {
 	double phi=m.get(fid,i,j);
 	double c=m.get("c",i,j);
 	double psi=m.get("psi",i,j);
-	return growth_term(phi,c,psi);
+	double c0=m.get_attr("c_critical");
+	double phi0=m.get_attr("phi0");
+	return growth_term(phi,c,phi0,c0,psi);
+}
+
+double
+net_growth_term(AMesh2D const& m, int const i, int const j, const string& fid) {
+	double phi=m.get(fid,i,j);
+	double c=m.get("c",i,j);
+	double psi=m.get("psi",i,j);
+	double c0=m.get_attr("c_critical");
+	double phi0=m.get_attr("phi0");
+	return growth_term(phi,c,phi0,c0,psi)-death_term(phi,c,phi0,c0,psi);
 }
 
 /** right hand side function for GSL ode-solver
@@ -61,7 +101,7 @@ int rhs_f(double t, const double y[], double dydt[], void *params) {
 	double phi0=*(((double*)(params))+1);
 	double c0=*(((double*)(params))+2);
 	double psi=*(((double*)(params))+3);
-	dydt[0]=growth_term(y[0],c,psi)-death_term(y[0],c,phi0,c0,psi);
+	dydt[0]=growth_term(y[0],c,phi0,c0,psi)-death_term(y[0],c,phi0,c0,psi);
 	return 0;
 }
 
@@ -77,6 +117,13 @@ throw(MeshException) {
 		throw MeshException("step_growth_death: c not defined");
 	}
 	auto_ptr<AMesh2D> m2(m1.clone());
+	string gfid=fid+"_growth";
+	m2->add_function_ifndef(gfid);
+	for (int i=0; i<m2->get_xdim(); ++i) {
+		for (int j=0; j<m2->get_ydim(); ++j) {
+			m2->set(gfid,i,j,net_growth_term(*m2,i,j,fid));
+		}
+	}
 	double params[4];
 	gsl_odeiv_system sys;
 	sys.function=rhs_f;
