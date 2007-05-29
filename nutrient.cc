@@ -338,59 +338,6 @@ throw(MeshException) {
 }
 
 void
-eval_nutrient_set_boundaries(const BCSet& bcs, AMesh2D& m)
-throw(MeshException) {
-	int xdim=m.get_xdim();
-	int ydim=m.get_ydim();
-	double dx=m.get_dx();
-	double dy=m.get_dy();
-	BoundaryCondition bc;
-	for (int i=0; i<xdim; ++i) {
-		// north boundary
-		bc=bcs.get_north();
-		m.set("c",i,ydim-1,(bc.c()*dy+bc.b()*m.get("c",i,ydim-2))/
-					(bc.a()*dy+bc.b()));
-		// south boundary
-		bc=bcs.get_south();
-		m.set("c",i,0,(bc.c()*dy+bc.b()*m.get("c",i,1))/
-					(bc.a()*dy+bc.b()));
-	}
-	for (int j=0; j<ydim; ++j) {
-		// west boundary
-		bc=bcs.get_west();
-		m.set("c",0,j,(bc.c()*dx+bc.b()*m.get("c",1,j))/
-					(bc.a()*dx+bc.b()));
-		// east boundary
-		bc=bcs.get_east();
-		m.set("c",xdim-1,j,(bc.c()*dx+bc.b()*m.get("c",xdim-2,j))/
-					(bc.a()*dx+bc.b()));
-	}
-}
-
-AMesh2D*
-eval_nutrient_iteratively_step_explicit(const Params& p, double const dt,
-	const AMesh2D& m)
-throw(MeshException) {
-	double dx=m.get_dx();
-	double dy=m.get_dy();
-	auto_ptr<AMesh2D> m2(m.clone());
-	// inner points
-	for (int i=1; (i<m.get_xdim()-1) ; ++i) {
-		for (int j=1; (j<m.get_ydim()-1) ; ++j) {
-			double loc_res=
-				(m.get("c",i+1,j)-2*m.get("c",i,j)
-					+m.get("c",i-1,j))/(dx*dx)+
-				(m.get("c",i,j+1)-2*m.get("c",i,j)
-				 	+m.get("c",i,j-1))/(dy*dy)-
-				consumption_term(m,i,j);
-			m2->set("c",i,j,m.get("c",i,j)+dt*loc_res);
-		}
-	}
-	// boundary points
-	eval_nutrient_set_boundaries(p.c_bc,*m2);
-	return m2.release();
-}
-void
 eval_nutrient_init_consumption(AMesh2D& m, string const consumption) {
 	m.add_function_ifndef(consumption);
 	// initialize consumption variable
@@ -401,19 +348,6 @@ eval_nutrient_init_consumption(AMesh2D& m, string const consumption) {
 			m.set(consumption,i,j,consumption_term(m,i,j));
 		}
 	}
-}
-
-AMesh2D*
-eval_nutrient_iteratively_step_implicit(const Params& p, double const dt,
-	const AMesh2D& m)
-throw(MeshException) {
-	auto_ptr<AMesh2D> m2(m.clone());
-	eval_nutrient_init_consumption(*m2,"q_tmp");
-	// ADI
-	m2.reset(reaction_diffusion_step(p.c_bc,dt,*m2,"c","","q_tmp",MP::RDS_ADI));
-	// finishing
-	m2->remove_function_ifdef("q_tmp");
-	return m2.release();
 }
 
 AMesh2D*
@@ -443,13 +377,26 @@ throw(MeshException) {
 	res=eval_nutrient_residual(*m2);
 	int iter=0;
 	while ((res>epsilon) && (iter<=Method::it().p_solver_relax_max_iters)) {
-		if (Method::it().rd_solver == MP::RDS_EXPLICIT) {
-			m2.reset(
-			eval_nutrient_iteratively_step_explicit(p,dt,*m2));
-		} else {
-			m2.reset(
-			eval_nutrient_iteratively_step_implicit(p,dt,*m2));
+		eval_nutrient_init_consumption(*m2,"q_tmp");
+		switch (Method::it().rd_solver) {
+		case MP::RDS_EXPLICIT:
+			m2.reset(reaction_diffusion_step(p.c_bc,dt,*m2,
+				"c","","q_tmp",MP::RDS_EXPLICIT));
+			break;
+		case MP::RDS_IMPLICIT:
+			m2.reset(reaction_diffusion_step(p.c_bc,dt,*m2,
+				"c","","q_tmp",MP::RDS_IMPLICIT));
+			break;
+		case MP::RDS_ADI:
+			m2.reset(reaction_diffusion_step(p.c_bc,dt,*m2,
+				"c","","q_tmp",MP::RDS_ADI));
+			break;
+		default:
+			throw MeshException("eval_nutrient_iteratively: "
+				"unknown method");
+			break;
 		}
+		m2->remove_function_ifdef("q_tmp");
 		res=eval_nutrient_residual(*m2);
 		++iter;
 		if ((verbose > 1) && (!(iter%50))) {

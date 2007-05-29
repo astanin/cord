@@ -52,15 +52,8 @@ eval_tissue(const Params& p, double const dt, const AMesh2D& m1,
 	string density_var) {
 	// growth-death (ODE)
 	auto_ptr<AMesh2D> tmp(step_growth_death(dt,m1,density_var));
-	AMesh2D* m2;
-	if (Method::it().rd_solver==MP::RDS_EXPLICIT) {
-		m2=step_euler_explicit(p, dt, *tmp, density_var);
-	} else if (Method::it().rd_solver==MP::RDS_IMPLICIT) {
-		throw MeshException("eval_tissue: RDS_IMPLICIT not implemented");
-	} else {
-		m2=phi_step_adi(p, dt, *tmp, density_var);
-	}
-	return m2;
+	auto_ptr<AMesh2D> m2(phi_step(p, dt, *tmp, density_var));
+	return m2.release();
 }
 
 AMesh2D*
@@ -150,9 +143,11 @@ solve(const Params& p, const AMesh2D& initial) {
 		// dump state
 		if (m1->get_time() >= (last_dump_t+p.dump_every
 				-numeric_limits<double>::epsilon())) {
+			if (verbose) {
 			cerr << dbg_stamp(m1->get_time()) << "dumping state\n";
 			dump_mesh(*m1,(int)(floor(m1->get_time()*1e5)));
 			last_dump_t=m1->get_time();
+			}
 		}
 		// validate solution range
 		if ((max((*m1)["phi"]) > (1.0+1e-9)) ||

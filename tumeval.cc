@@ -163,87 +163,6 @@ struct _K_derivative_params {
 };
 
 double
-K_derivative(double u, void *params) {
-	assert(params!=(void*)0);
-	struct _K_derivative_params *pp;
-	pp=(struct _K_derivative_params*)params;
-	double K_deriv=u*pp->sigma->eval(u)+u*u*pp->sigma_prime->eval(u);
-	return K_deriv;
-}
-
-/// $K = \int_0^\phi u \Sigma(u) + u^2 \Sigma\prime(u) du$
-double
-eval_K(const AMesh2D& m, int const i, int const j, string const var) {
-	double phi=m.get(var,i,j);
-	double result=0.0, error=0.0;
-	ASigmaFactory* sf;
-	// ugly hack... to make it work for GFM and normal way
-	if (var == "phi_t") {
-		sf=new TumourSigma(m);
-	} else if (var == "phi_h") {
-		sf=new HostSigma(m);
-	} else {
-		double psi=m.get("psi",i,j);
-		if (psi > 0) {
-			sf=new TumourSigma(m);
-		} else {
-			sf=new HostSigma(m);
-		}
-	}
-	struct _K_derivative_params params;
-	params.pm=&m;
-	params.sigma=sf->build_sigma();
-	params.sigma_prime=sf->build_sigma_prime();
-	delete sf;
-	sf=0;
-	size_t limit=50;
-	gsl_integration_workspace *w=gsl_integration_workspace_alloc(limit);
-	gsl_function F;
-	F.function=&K_derivative;
-	F.params=&params;
-	gsl_integration_qag(&F, 0.0, phi, 1e-6, 1e-6, limit, GSL_INTEG_GAUSS15,
-		w, &result, &error); 
-	gsl_integration_workspace_free(w);
-	return result;
-}
-
-void
-eval_div(AMesh2D& m, string const div, string const var="phi") {
-	string f="term_K";
-	m.add_function_ifndef(f);
-	for (int i=0; i<m.get_xdim(); ++i) {
-		for (int j=0; j<m.get_ydim(); ++j) {
-			// Using fully divergent K(u) according to S.Evje and
-			// K.H.Karlsen. This way we may have div(grad(K(u))
-			// instead of div(k(u)*grad(u)).
-			double K=eval_K(m,i,j,var);
-			m.set(f,i,j,K);
-		}
-	}
-	m.add_function_ifndef(div);
-	// WARNING: assuming uniform rectangular grid
-	double hx=m.get_dx();
-	double hy=m.get_dy();
-	for (int i=0; i < m.get_xdim(); ++i) {
-		for (int j=0; j < m.get_ydim(); ++j) {
-			if (!m.is_border(i,j) && (m.is_inner(i,j))) {
-				// strictly inside of the cord, not at surface
-				double d=0.0; // divergence
-				d=(m.get(f,i+1,j)-2*m.get(f,i,j)+m.get(f,i-1,j))
-					/(hx*hx)+
-				(m.get(f,i,j+1)-2*m.get(f,i,j)+m.get(f,i,j-1))
-					/(hy*hy);
-				m.set(div,i,j,d);
-			} else {
-				m.set(div,i,j,0); // underfined
-			}
-		}
-	}
-	// remove temporary functions
-	m.remove_function_ifdef(f);
-}
-
-double
 integrate(const AMesh2D& m, string const f) {
 	double integral=0.0;
 	for (int i=0; i<m.get_xdim(); ++i) {
@@ -295,56 +214,6 @@ estimate_optimal_dt(const AMesh2D& m) {
 	return max_dt;
 }
 
-AMesh2D*
-step_euler_explicit(const Params& p, double dt, const AMesh2D& m1,
-	string const var)
-throw(MeshException) {
-	try {
-	auto_ptr<AMesh2D> m2(m1.clone());
-	eval_div(*m2,"term_div",var);
-	// for inner points only
-	for (int i=1; i < (m2->get_xdim()-1); ++i) {
-		for (int j=1; j < (m2->get_ydim()-1); ++j) {
-			double phi2=m1.get(var,i,j)+dt*m2->get("term_div",i,j);
-			m2->set(var,i,j,phi2);
-		}
-	}
-	// boundary points
-	for (int j=1; j < (m2->get_ydim()-1); ++j) {
-		double dx=m2->get_dx();
-		int xdim=m2->get_xdim();
-		BoundaryCondition bc;
-		// east boundary
-		bc=p.phi_bc.get_east();
-		m2->set(var,xdim-1,j,(bc.c()*dx+bc.b()*m2->get(var,xdim-2,j))/
-					(bc.a()*dx+bc.b()));
-		// west boundary
-		bc=p.phi_bc.get_west();
-		m2->set(var,0,j,(bc.c()*dx+bc.b()*m2->get(var,1,j))/
-					(bc.a()*dx+bc.b()));
-	}
-	for (int i=0; i < m2->get_xdim(); ++i) {
-		double dy=m2->get_dy();
-		int ydim=m2->get_ydim();
-		BoundaryCondition bc;
-		// north boundary
-		bc=p.phi_bc.get_north();
-		m2->set(var,i,ydim-1,(bc.c()*dy+bc.b()*m2->get(var,i,ydim-2))/
-					(bc.a()*dy+bc.b()));
-		// south boundary
-		bc=p.phi_bc.get_south();
-		m2->set(var,i,0,(bc.c()*dy+bc.b()*m2->get(var,i,1))/
-					(bc.a()*dy+bc.b()));
-	}
-	m2->remove_function_ifdef("term_div");
-	return m2.release();
-	} catch (MeshException& e) {
-		ostringstream ss;
-		ss << "step_euler_explicit: " << e.what();
-		throw MeshException(ss.str());
-	}
-}
-
 // return maximum value of sqrt(vx^2+vy^2) on the mesh
 double v_max(const AMesh2D& m) throw(MeshException) {
 	if (!m.defined("vx") || !m.defined("vy")) {
@@ -385,35 +254,49 @@ phi_pseudo_diff_coef(const AMesh2D& m, const int i, const int j,
 	return pseudoD;
 }
 
-AMesh2D*
-phi_step_adi(const Params& p, double dt,
-	const AMesh2D& m1, string const var)
-throw(MeshException) {
-	try {
-	auto_ptr<AMesh2D> m2(m1.clone());
+void
+phi_init_pseudo_D(AMesh2D& m, string const var, string const Dvar) {
 	// init diffusion coefficient values
-	m2->remove_function_ifdef("phi_pseudo_D");
-	m2->add_function_ifndef("phi_pseudo_D",0.0);
-	for (int i=0; i < (m2->get_xdim()); ++i) {
-		for (int j=0; j < (m2->get_ydim()); ++j) {
-			m2->set("phi_pseudo_D",i,j,
-				phi_pseudo_diff_coef(m1,i,j,var));
+	m.remove_function_ifdef(Dvar);
+	m.add_function_ifndef(Dvar,0.0);
+	for (int i=0; i < (m.get_xdim()); ++i) {
+		for (int j=0; j < (m.get_ydim()); ++j) {
+			m.set(Dvar,i,j,phi_pseudo_diff_coef(m,i,j,var));
 		}
 	}
 	// debug output
 	if (verbose > 1) {
-		cerr << dbg_stamp(m1.get_time())
+		cerr << dbg_stamp(m.get_time())
 			<<setprecision(3)<<setiosflags(ios::scientific)
-			<< "max(pseudo_D)= "
-				<< max(m2->operator[]("phi_pseudo_D")) << " "
-			<< "min(pseudo_D)= "
-				<< min(m2->operator[]("phi_pseudo_D"))
-			<< "\n";
+			<< "max(" << Dvar << ")= " << max(m[Dvar]) << " "
+			<< "min(" << Dvar << ")= " << min(m[Dvar]) << "\n";
 	}
-	// ADI
-	m2.reset(reaction_diffusion_step(p.phi_bc,dt,*m2,var,
-			"phi_pseudo_D","",MP::RDS_ADI));
-	m2->remove_function_ifdef("phi_pseudo_D");
+}
+
+AMesh2D*
+phi_step(const Params& p, double dt, const AMesh2D& m1, string const var)
+throw(MeshException) {
+	try {
+	auto_ptr<AMesh2D> m2(m1.clone());
+	phi_init_pseudo_D(*m2,var,"pseudo_D");
+	switch (Method::it().rd_solver) {
+	case MethodParams::RDS_EXPLICIT:
+		m2.reset(reaction_diffusion_step(p.phi_bc,dt,*m2,var,
+			"pseudo_D","",MP::RDS_EXPLICIT));
+		break;
+	case MethodParams::RDS_ADI:
+		m2.reset(reaction_diffusion_step(p.phi_bc,dt,*m2,var,
+			"pseudo_D","",MP::RDS_ADI));
+		break;
+	case MethodParams::RDS_IMPLICIT:
+		m2.reset(reaction_diffusion_step(p.phi_bc,dt,*m2,var,
+			"pseudo_D","",MP::RDS_IMPLICIT));
+		break;
+	default:
+		throw MeshException("phi_step: method unknown");
+		break;
+	}
+	m2->remove_function_ifdef("pseudo_D");
 	return m2.release();
 	} catch(MeshException& e) {
 		ostringstream ss;

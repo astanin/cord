@@ -42,8 +42,8 @@ step_euler_explicit(const Params& p,
 	double dt, const AMesh2D& m1, string const var)
 throw(MeshException);
 
-/** @brief take @c m1 and make one full step of Peaceman-Rachford
- * alternative directions implicit method (both substeps)
+/** @brief take @c m1 and make one full time step dt
+ * The method is chosen based on global setting Method::it().rd_solver
  *
  * @param dt	time step
  * @param m1	previous state of the mesh
@@ -54,8 +54,7 @@ throw(MeshException);
  * The method evaluates
  * \DD{\phi}{t} = \div ( \mu \phi \nabla (\phi \Sigma(\phi))) */
 AMesh2D*
-phi_step_adi(const Params& p, double dt,
-	const AMesh2D& m1, string const var)
+phi_step(const Params& p, double dt, const AMesh2D& m1, string const var)
 throw(MeshException);
 
 /** @brief integrate function @f through out the domain */
