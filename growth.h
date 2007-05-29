@@ -28,7 +28,12 @@
 #include "dmesh.h"
 
 double
-growth_term(AMesh2D const& m, int const i, int const j, const string& fid="phi");
+growth_term(AMesh2D const& m, int const i, int const j,
+	const string& fid="phi");
+
+double
+net_growth_term(AMesh2D const& m, int const i, int const j,
+	const string& fid="phi");
 
 /** @brief take @c m1 and evaluate growth-death (ODE)
  * @param dt	time step
