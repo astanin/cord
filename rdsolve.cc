@@ -32,6 +32,67 @@ using std::auto_ptr;
 #include <stdlib.h>
 #endif
 
+double
+div_term(const AMesh2D& m, string var, string Dvar, int i, int j) {
+	double fx=0.5/(m.get_dx()*m.get_dx());
+	double fy=0.5/(m.get_dy()*m.get_dy());
+	return fx*((m[Dvar](i+1,j)+m[Dvar](i,j))*(m[var](i+1,j)-m[var](i,j))
+		  -(m[Dvar](i,j)+m[Dvar](i-1,j))*(m[var](i,j)-m[var](i-1,j)))
+		+
+	       fy*((m[Dvar](i,j+1)+m[Dvar](i,j))*(m[var](i,j+1)-m[var](i,j))
+	          -(m[Dvar](i,j)+m[Dvar](i,j-1))*(m[var](i,j)-m[var](i,j-1)));
+}
+
+AMesh2D*
+rd_step_euler(BCSet const& bcs, double dt, const AMesh2D& m1, string const var,
+	string const Dvar, string const Rvar)
+throw(MeshException) {
+	try {
+	auto_ptr<AMesh2D> m2(m1.clone());
+	int xdim=m2->get_xdim();
+	int ydim=m2->get_ydim();
+	// for inner points
+	for (int i=1; i<(xdim-1); ++i) {
+		for (int j=1; j<(ydim-1); ++j) {
+			double var2=m1.get(var,i,j)
+				+dt*div_term(m1,var,Dvar,i,j)
+				+dt*m1.get(Rvar,i,j);
+			m2->set(var,i,j,var2);
+		}
+	}
+	// boundary points
+	for (int j=1; j < (ydim-1); ++j) {
+		double dx=m2->get_dx();
+		BoundaryCondition bc;
+		// east boundary
+		bc=bcs.get_east();
+		m2->set(var,xdim-1,j,(bc.c()*dx+bc.b()*m2->get(var,xdim-2,j))/
+					(bc.a()*dx+bc.b()));
+		// west boundary
+		bc=bcs.get_west();
+		m2->set(var,0,j,(bc.c()*dx+bc.b()*m2->get(var,1,j))/
+					(bc.a()*dx+bc.b()));
+	}
+	for (int i=0; i < xdim; ++i) {
+		double dy=m2->get_dy();
+		BoundaryCondition bc;
+		// north boundary
+		bc=bcs.get_north();
+		m2->set(var,i,ydim-1,(bc.c()*dy+bc.b()*m2->get(var,i,ydim-2))/
+					(bc.a()*dy+bc.b()));
+		// south boundary
+		bc=bcs.get_south();
+		m2->set(var,i,0,(bc.c()*dy+bc.b()*m2->get(var,i,1))/
+					(bc.a()*dy+bc.b()));
+	}
+	return m2.release();
+	} catch(MeshException& e) {
+		ostringstream ss;
+		ss << "rd_step_euler: " << e.what();
+		throw MeshException(ss.str());
+	}
+}
+
 AMesh2D*
 rd_step_adi(BCSet const& bcs, double dt, const AMesh2D& m1, string const var,
 	string const Dvar, string const Rvar)
@@ -69,14 +130,31 @@ reaction_diffusion_step(BCSet const& bcs, double dt,
 	string const Dvar, string const Rvar,
 	MP::rd_solver_t solver)
 throw(MeshException) {
-	auto_ptr<AMesh2D> m2(0);
+	auto_ptr<AMesh2D> m2(m1.clone());
+	// default coefficients if not given
+	string D;
+	if (Dvar.empty()) { // assume D==1.0
+		D="D_ONE";
+		m2->remove_function_ifdef(D);
+		m2->add_function(D,1.0);
+	} else {
+		D=Dvar;
+	}
+	string R;
+	if (Rvar.empty()) { // assume reaction term R==0.0
+		R="R_ZERO";
+		m2->remove_function_ifdef(R);
+		m2->add_function(R,0.0);
+	} else {
+		R=Rvar;
+	}
+	// solve
 	switch(solver) {
 	case MP::RDS_EXPLICIT:
-		throw MeshException("reaction_diffusion_step: "
-			"RDS_EXPLICIT not implemented");
+		m2.reset(rd_step_euler(bcs,dt,*m2,var,D,R));
 		break;
 	case MP::RDS_ADI:
-		m2.reset(rd_step_adi(bcs,dt,m1,var,Dvar,Rvar));
+		m2.reset(rd_step_adi(bcs,dt,*m2,var,D,R));
 		break;
 	case MP::RDS_IMPLICIT:
 		throw MeshException("reaction_diffusion_step: "
@@ -85,6 +163,13 @@ throw(MeshException) {
 	default:
 		throw MeshException("reaction_diffusion_step: unknown solver");
 		break;
+	}
+	// remove added functions
+	if (Dvar.empty()) {
+		m2->remove_function_ifdef(D);
+	}
+	if (Rvar.empty()) {
+		m2->remove_function_ifdef(R);
 	}
 	return m2.release();
 }
