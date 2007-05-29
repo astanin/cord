@@ -3,7 +3,8 @@
 PLOTTER=gri
 MODE=mono
 TITLE=no
-PLOTWIDTH=18
+PLOTHEIGHT=10
+PLOTWIDTH=10
 
 function usage {
 	echo usage:
@@ -19,8 +20,8 @@ function plot_c {
 	f=$1;
 	fo=$(echo $TIME|perl -e 'while(<>){printf("Oxygen_%07.0f.eps",10*$_);}');
 	gri -b -c0 -output "$fo" << ENDGRI
-set x size $PLOTWIDTH
-set y size $(echo "scale=2;$PLOTWIDTH*($YMAX-$YMIN)/($XMAX-$XMIN)"|bc -s)
+set x size $(echo "scale=2;$PLOTHEIGHT*($XMAX-$XMIN)/($YMAX-$YMIN)"|bc -s)
+set y size $PLOTHEIGHT
 set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
 set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
 draw axes
@@ -47,8 +48,8 @@ function plot_phi {
 	f=$1
 	fo=$(echo $TIME|perl -e 'while(<>){printf("Phi_%07.0f.eps",10*$_);}');
 	gri -b -c0 -output "$fo" << ENDGRI
-set x size $PLOTWIDTH
-set y size $(echo "scale=2;$PLOTWIDTH*($YMAX-$YMIN)/($XMAX-$XMIN)"|bc -s)
+set x size $(echo "scale=2;$PLOTHEIGHT*($XMAX-$XMIN)/($YMAX-$YMIN)"|bc -s)
+set y size $PLOTHEIGHT
 set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
 set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
 draw axes
@@ -71,6 +72,35 @@ ${DRAW_PHI_TITLE}
 ENDGRI
 }
 
+function plot_phi_growth {
+	f=$1
+	fo=$(echo $TIME|perl -e 'while(<>){printf("Growth_%07.0f.eps",10*$_);}');
+	gri -b -c0 -output "$fo" << ENDGRI
+set x size $(echo "scale=2;$PLOTHEIGHT*($XMAX-$XMIN)/($YMAX-$YMIN)"|bc -s)
+set y size $PLOTHEIGHT
+set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
+set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
+draw axes
+# phi
+set x grid $XMIN $XMAX /$XSIZE
+set y grid $YMIN $YMAX /$YSIZE
+open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NGROWTH],\" \"; } else { print \"\n\";} }'|"
+read grid data $XSIZE $YSIZE bycolumns
+close
+${PLOT_GROWTH_DATA}
+# psi
+set x grid $XMIN $XMAX /$XSIZE
+set y grid $YMIN $YMAX /$YSIZE
+open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NPSI],\" \"; } else { print \"\n\";} }'|"
+read grid data $XSIZE $YSIZE bycolumns
+close
+set line width rapidograph 1
+draw contour 0.0 unlabelled
+${DRAW_GROWTH_TITLE}
+ENDGRI
+}
+
+
 function gri_plot {
 	f=$1
 	if [ "x$MODE" == "xmono" ]; then
@@ -84,22 +114,34 @@ set font size 9
 set line width rapidograph 6x0
 draw contour
 END);
+	PLOT_GROWTH_DATA=$(cat << END
+set font size 9
+set line width rapidograph 6x0
+draw contour
+END);
 	else # colormode
 	PLOT_C_DATA=$(cat << END
-convert grid to image
 set image range 0.0 1.0
-set image colorscale rgb 0.2 0.2 0.7 1.00 rgb 1.0 1.0 0.5 0.0 increment 0.1
+convert grid to image
+set image colorscale rgb 0.2 0.2 0.7 1.00 rgb 1.0 1.0 0.5 0.0 increment 0.025
 set image missing value color to rgb 1 0 0
 draw image
 draw image palette axisleft left 0.0 right 1.0 box 3.5 6.0 4.5 16.0
 END);
 	PLOT_PHI_DATA=$(cat << END
-convert grid to image
-set image missing value color to rgb 0 1 0
-set image colorscale rgb 1.0 0.894 0.882 0.6 rgb 0.604 0.161 0.161 0.9 increment 0.025
 set image range 0.6 0.9
+convert grid to image
+set image colorscale rgb 1.0 0.894 0.882 0.6 rgb 0.604 0.161 0.161 0.9 increment 0.025
+set image missing value color to rgb 0 1 0
 draw image
 draw image palette axisleft left 0.6 right 0.9 box 3.5 6 4.5 16
+END);
+	PLOT_GROWTH_DATA=$(cat << END
+set image range -0.2 0.2
+convert grid to image
+set image colorscale rgb 0.5 0.2 0.2 -0.2 rgb 0.0 0.0 1.0 0.2 increment 0.05
+draw image
+draw image palette axisleft left -0.2 right 0.2 box 3.5 6 4.5 16
 END);
 	fi
 	if [ "x$TITLE" != "xno" ]; then
@@ -112,12 +154,18 @@ END);
 set font size 12
 draw title "Packing density, $TS"
 END);
+		DRAW_GROWTH_TITLE=$(cat << END
+set font size 12
+draw title "Rate of growth, $TS"
+END);
 	else
 		DRAW_C_TITLE=""
 		DRAW_PHI_TITLE=""
+		DRAW_GROWTH_TITLE=""
 	fi
 	plot_c $f;
 	plot_phi $f;
+	plot_phi_growth $f;
 }
 
 function gnuplot_plot_c {
@@ -235,9 +283,11 @@ while [ $# -gt 0 ]; do
 		foreach $v(@vars){if("phi" eq $v){print $i,"\n";}++$i;};');
 	NPSI=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
 		foreach $v(@vars){if("psi" eq $v){print $i,"\n";}++$i;};');
+	NGROWTH=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
+		foreach $v(@vars){if("phi_growth" eq $v){print $i,"\n";}++$i;};');
 	echo "time=$TIME";
 	echo "size=${XSIZE}x${YSIZE} [$XMIN:$XMAX]x[$YMIN:$YMAX]";
-	echo "vars: C[$NC] PHI[$NPHI] PSI[$NPSI]";
+	echo "vars: C[$NC] PHI[$NPHI] PSI[$NPSI] GROWTH[$NGROWTH]";
 
 	if [ "x$PLOTTER" == "xgnuplot" ] ; then
 		gnuplot_plot $f
