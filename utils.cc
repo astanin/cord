@@ -139,9 +139,9 @@ read_solvers_config(dictionary *ini) {
 	if (s == "adi") {
 		Method::it().rd_solver=MP::RDS_ADI;
 	} else if (s == "implicit") {
-		Method::it().rd_solver==MP::RDS_IMPLICIT;
+		Method::it().rd_solver=MP::RDS_IMPLICIT;
 	} else if (s == "explicit") {
-		Method::it().rd_solver==MP::RDS_EXPLICIT;
+		Method::it().rd_solver=MP::RDS_EXPLICIT;
 	}
 	s=iniparser_getstring(ini,"method:poisson_solver","n/a");
 	if (s == "relax") {
@@ -236,7 +236,6 @@ read_conf_file(Params& p, const string filename) {
 }
 
 int init_params(Params& p, int argc, const char *argv[]) {
-	read_conf_file(p, "cord.ini");
 #ifdef HAVE_LIBHDF5
 	char *ifile=(char*)0;
 	char *ofile=(char*)0;
@@ -329,10 +328,12 @@ int init_params(Params& p, int argc, const char *argv[]) {
 	rc = poptGetNextOpt(con);
 	if (conffile) {
 		read_conf_file(p,conffile);
-		// command line options have to override the config file
-		poptResetContext(con);
-		rc = poptGetNextOpt(con);
+	} else {
+		read_conf_file(p,"cord.ini");
 	}
+	// command line options have to override the config file
+	poptResetContext(con);
+	rc = poptGetNextOpt(con);
 	if (rc < -1) {
 		cerr << poptBadOption(con, POPT_BADOPTION_NOALIAS) << ": "
 			<< poptStrerror(rc) << "\n";
