@@ -25,6 +25,7 @@
 #include "rdsolve.h"
 #include "growth.h"
 #include "meshenum.h"
+#include "slesolve.h"
 
 #ifndef NUTRIENT_DUMB_EXPLICIT
 #include "spmat.h"
@@ -253,36 +254,8 @@ throw(MeshException) {
 		for (int k=0; k<kenum.size(); ++k) {
 			c.at(k)=m2->get("c",kenum.i(k),kenum.j(k));
 		}
-		auto_ptr<ASparseMatrix> pA;
-#ifdef HAVE_LIBUMFPACK
-		if (Method::it().sle_solver == MP::SLES_UMFPACK) {
-			pA.reset(new UMFPACKMatrix(kenum.size(),kenum.size()));
-		} else
-#endif
-		if (Method::it().sle_solver == MP::SLES_CG) {
-			pA.reset(new LSolverMatrix(kenum.size(), c,
-				Method::it().p_solver_accuracy,
-				Method::it().sle_solver_max_iters,
-				LSolverMatrix::CG));
-		} else if (Method::it().sle_solver == MP::SLES_BICG) {
-			pA.reset(new LSolverMatrix(kenum.size(), c,
-				Method::it().p_solver_accuracy,
-				Method::it().sle_solver_max_iters,
-				LSolverMatrix::BICG));
-		} else if (Method::it().sle_solver == MP::SLES_BICGSTAB) {
-			pA.reset(new LSolverMatrix(kenum.size(), c,
-				Method::it().p_solver_accuracy,
-				Method::it().sle_solver_max_iters,
-				LSolverMatrix::BICGstab));
-		} else if (Method::it().sle_solver == MP::SLES_GMRES) {
-			pA.reset(new LSolverMatrix(kenum.size(), c,
-				Method::it().p_solver_accuracy,
-				Method::it().sle_solver_max_iters,
-				LSolverMatrix::GMRES,
-				Method::it().sle_solver_gmres_restart_after));
-		} else {
-			throw MeshException("unknown Method::it().sle_solver");
-		}
+		auto_ptr<ASparseMatrix> pA(build_sle_solver_matrix(
+			kenum.size(), c, Method::it().p_solver_accuracy));
 		vector<double> rhs(kenum.size());// right hand side vector
 		eval_nutrient_build_sle_matrix(*m2,p.c_bc,*pA,rhs,kenum);
 		// solve SLE
