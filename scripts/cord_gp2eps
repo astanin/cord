@@ -137,11 +137,13 @@ draw image
 draw image palette axisleft left 0.6 right 0.9 box 3.5 6 4.5 16
 END);
 	PLOT_GROWTH_DATA=$(cat << END
-set image range -0.2 0.2
+set image range -0.06 0.06
 convert grid to image
-set image colorscale rgb 0.5 0.2 0.2 -0.2 rgb 0.0 0.0 1.0 0.2 increment 0.05
+#set image colorscale rgb 0.6 0.0 0.0 -0.06 rgb 0.7 0.7 1.0 0.06 increment 0.01
+open "LANG=C awk 'BEGIN { for(i=0;i<256;i++) { print(1-i/(3*256),(i-128)*(i-128)/(128*128),1.0+0.0*i/256) } }' |"
+read image colorscale hsb
 draw image
-draw image palette axisleft left -0.2 right 0.2 box 3.5 6 4.5 16
+draw image palette axisleft left -0.06 right 0.06 box 3.5 6 4.5 16
 END);
 	fi
 	if [ "x$TITLE" != "xno" ]; then
