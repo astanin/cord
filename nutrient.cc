@@ -74,38 +74,8 @@ throw(MeshException) {
 	return m.get("c",i,j)*consumption_rate(m,i,j);
 }
 
-/** @brief fill @c A and @c rhs to construct equation for boundary point
- * @c k_boundary, which satisfies boundary condition @c bc and uses given inner
- * point @c k_inner and point distance @c dx
- */
 void
-build_boundary_point_eq(ASparseMatrix& A, vector<double>& rhs,
-	int const k_boundary, int const k_inner,
-	BoundaryCondition const& bc, double const dx) {
-	int kb=k_boundary;
-	int ki=k_inner;
-	double a_ki_kb;
-	switch (bc.get_type()) {
-	case BoundaryCondition::NEUMANN_BC:
-		a_ki_kb=A.get(ki,kb);
-		A.set(kb,kb ,-a_ki_kb);
-		A.set(kb,ki, a_ki_kb);
-		rhs.at(kb)=bc.c()*dx*a_ki_kb/bc.b();
-		break;
-	case BoundaryCondition::DIRICHLET_BC: // do nothing
-		break;
-	default:
-		ostringstream ss;
-		ss << "build_boundary_point_eq: "
-			<< "unsupported boundary condition ("
-			<< bc.get_type()<<") in "<< ki<<"-th equation";
-		throw MeshException(ss.str());
-		break;
-	}
-}
-
-void
-eval_nutrient_build_sle_matrix(const AMesh2D& m, const BCSet& bcs,
+eval_nutrient_fill_sle_matrix(const AMesh2D& m, const BCSet& bcs,
 	ASparseMatrix& A, vector<double>& rhs, MeshEnumerator const& k)
 throw(MeshException) {
 	int xdim=m.get_xdim();
@@ -164,7 +134,7 @@ throw(MeshException) {
 		}
 	} catch (SparseMatrixException& e) {
 		ostringstream ss;
-		ss << "eval_nutrient_build_sle_matrix: "
+		ss << "eval_nutrient_fill_sle_matrix: "
 			<< "failed to construct inner points equations: "
 			<< " i=" << i << " j=" << j << ", reason: "
 			<< e.what();
@@ -204,42 +174,10 @@ throw(MeshException) {
 		}
 	} catch (SparseMatrixException& e) {
 		ostringstream ss;
-		ss << "eval_nutrient_build_sle_matrix: "
+		ss << "eval_nutrient_fill_sle_matrix: "
 			<< "failed to construct boundary points equations: "
 			<< e.what();
 		throw MeshException(ss.str());
-	}
-}
-
-void
-update_dirichlet_points(AMesh2D& m, const BCSet& bcs, string const var) {
-	int xdim=m.get_xdim();
-	int ydim=m.get_ydim();
-	for (int i=0; i<xdim; ++i) {
-		BoundaryCondition bc;
-		// north
-		bc=bcs.get_north();
-		if (bc.get_type() == BoundaryCondition::DIRICHLET_BC) {
-			m.set(var,i,ydim-1,bc.c()/bc.a());
-		}
-		// south
-		bc=bcs.get_south();
-		if (bc.get_type() == BoundaryCondition::DIRICHLET_BC) {
-			m.set(var,i,0,bc.c()/bc.a());
-		}
-	}
-	for (int j=1; j<(ydim-1); ++j) {
-		BoundaryCondition bc;
-		// west
-		bc=bcs.get_west();
-		if (bc.get_type() == BoundaryCondition::DIRICHLET_BC) {
-			m.set(var,0,j,bc.c()/bc.a());
-		}
-		// east
-		bc=bcs.get_east();
-		if (bc.get_type() == BoundaryCondition::DIRICHLET_BC) {
-			m.set(var,xdim-1,j,bc.c()/bc.a());
-		}
 	}
 }
 
@@ -257,14 +195,13 @@ throw(MeshException) {
 		auto_ptr<ASparseMatrix> pA(build_sle_solver_matrix(
 			kenum.size(), c, Method::it().p_solver_accuracy));
 		vector<double> rhs(kenum.size());// right hand side vector
-		eval_nutrient_build_sle_matrix(*m2,p.c_bc,*pA,rhs,kenum);
+		eval_nutrient_fill_sle_matrix(*m2,p.c_bc,*pA,rhs,kenum);
 		// solve SLE
 		try {
 			c=pA->solve(rhs);
 		} catch (SparseMatrixException& e) {
 			ostringstream ss;
-			ss << "SparseMatrixException exception in solve(): "
-				<< e.what() << "\n";
+			ss << "SparseMatrixException solve(): " << e.what();
 			throw MeshException(ss.str());
 		}
 		// update m2

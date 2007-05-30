@@ -22,8 +22,10 @@
 #include "config.h"
 #endif
 
+#include "slesolve.h"
 #include "rdsolve.h"
 #include "pradi.h"
+#include "meshenum.h"
 
 #include <memory>
 using std::auto_ptr;
@@ -31,6 +33,9 @@ using std::auto_ptr;
 #ifdef ENABLE_ADI_ISO_FIX
 #include <stdlib.h>
 #endif
+
+#include <iostream>
+using std::cerr;
 
 double
 div_term(const AMesh2D& m, string var, string Dvar, int i, int j) {
@@ -89,6 +94,165 @@ throw(MeshException) {
 	} catch(MeshException& e) {
 		ostringstream ss;
 		ss << "rd_step_euler: " << e.what();
+		throw MeshException(ss.str());
+	}
+}
+
+void
+build_boundary_point_eq(ASparseMatrix& A, vector<double>& rhs,
+	int const k_boundary, int const k_inner,
+	BoundaryCondition const& bc, double const dx) {
+	int kb=k_boundary;
+	int ki=k_inner;
+	double a_ki_kb;
+	switch (bc.get_type()) {
+	case BoundaryCondition::NEUMANN_BC:
+		a_ki_kb=A.get(ki,kb);
+		A.set(kb,kb ,-a_ki_kb);
+		A.set(kb,ki, a_ki_kb);
+		rhs.at(kb)=bc.c()*dx*a_ki_kb/bc.b();
+		break;
+	case BoundaryCondition::DIRICHLET_BC: // do nothing
+		break;
+	default:
+		ostringstream ss;
+		ss << "build_boundary_point_eq: "
+			<< "unsupported boundary condition ("
+			<< bc.get_type()<<") in "<< ki<<"-th equation";
+		throw MeshException(ss.str());
+		break;
+	}
+}
+
+void
+rd_step_implicit_fill_matrix(const AMesh2D& m, const BCSet& bcs,
+	ASparseMatrix& A, vector<double>& rhs, MeshEnumerator const& k,
+	double const dt, string const var, string const Dvar, string const Rvar)
+throw(MeshException) {
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	double dx=m.get_dx();
+	double dy=m.get_dy();
+	double fx=0.5*dt/(dx*dx);
+	double fy=0.5*dt/(dy*dy);
+	string D=Dvar;
+	// reset right hand side
+	for (int i=0; i<k.size(); ++i) {
+		rhs.at(i)=0.0;
+	}
+	// for inner points
+	for (int i=1; i<(xdim-1); ++i) {
+		for (int j=1; j<(ydim-1); ++j) {
+			int k0 =k(i  ,j);
+			int k0p=k(i  ,j+1);
+			int kp0=k(i+1,j);
+			int k0m=k(i  ,j-1);
+			int km0=k(i-1,j);
+			// approximate diffusion term
+			A.set(k0,k0,1.0+fx*(m[D](i+1,j))+
+				2*(fx+fy)*(m[D](i,j))+fx*(m[D](i-1,j))
+				+fy*(m[D](i,j+1))+fy*(m[D](i,j-1)));
+			// the following is valid for stationary boundary
+			// conditions only, using var from the previous time
+			// step instead of bc.c()/bc.a()
+			if (k0p >= 0) {
+				A.set(k0,k0p,-fy*(m[D](i,j)+m[D](i,j+1)));
+			} else {
+				rhs.at(k0)+=fy*(m[D](i,j)+m[D](i,j+1))
+						*m[var](i,j+1);
+			}
+			if (k0m >= 0) {
+				A.set(k0,k0m,-fy*(m[D](i,j)+m[D](i,j-1)));
+			} else {
+				rhs.at(k0)+=fy*(m[D](i,j)+m[D](i,j-1))
+						*m[var](i,j-1);
+			}
+			if (kp0 >= 0) {
+				A.set(k0,kp0,-fx*(m[D](i,j)+m[D](i+1,j)));
+			} else {
+				rhs.at(k0)+=fx*(m[D](i,j)+m[D](i+1,j))
+						*m[var](i+1,j);
+			}
+			if (km0 >= 0) {
+				A.set(k0,km0,-fx*(m[D](i,j)+m[D](i-1,j)));
+			} else {
+				rhs.at(k0)+=fx*(m[D](i,j)+m[D](i-1,j))
+						*m[var](i-1,j);
+			}
+			// approximate reaction term
+			rhs.at(k0)+=m[var](i,j)+dt*m[Rvar](i,j);
+		}
+	}
+	// construct equations for boundary points
+	for (int i=1; i<(xdim-1); ++i) {
+		int k0, k0m;
+		BoundaryCondition bc;
+		// north
+		bc=bcs.get_north();
+		k0 =k(i,ydim-1);
+		k0m=k(i,ydim-2);
+		build_boundary_point_eq(A,rhs,k0,k0m,bc,dy);
+		// south
+		bc=bcs.get_south();
+		k0 =k(i,0);
+		k0m=k(i,1);
+		build_boundary_point_eq(A,rhs,k0,k0m,bc,dy);
+	}
+	for (int j=1; j<(ydim-1); ++j) {
+		int k0, k0m;
+		BoundaryCondition bc;
+		// west
+		bc=bcs.get_west();
+		k0 =k(0,j);
+		k0m=k(1,j);
+		build_boundary_point_eq(A,rhs,k0,k0m,bc,dx);
+		// east
+		bc=bcs.get_east();
+		k0 =k(xdim-1,j);
+		k0m=k(xdim-2,j);
+		build_boundary_point_eq(A,rhs,k0,k0m,bc,dx);
+	}
+	return;
+}
+
+AMesh2D*
+rd_step_implicit(BCSet const& bcs, double dt, const AMesh2D& m1,
+	string const var, string const Dvar, string const Rvar)
+throw(MeshException) {
+	try {
+	SkipDirichletEnumerator kenum(m1,bcs);
+	auto_ptr<AMesh2D> m2(m1.clone());
+	int xdim=m2->get_xdim();
+	int ydim=m2->get_ydim();
+	// initial estimate (previous solution)
+	vector<double> u0(kenum.size());
+	for (int k=0; k<kenum.size(); ++k) {
+		u0.at(k)=m2->get(var,kenum.i(k),kenum.j(k));
+	}
+	// SLE matrix
+	auto_ptr<ASparseMatrix> pA(build_sle_solver_matrix(kenum.size(), u0));
+	vector<double> rhs(kenum.size(),0.0);
+	rd_step_implicit_fill_matrix(*m2,bcs,*pA,rhs,kenum,dt,var,Dvar,Rvar);
+	// solve SLE
+	try {
+		u0=pA->solve(rhs);
+	} catch (SparseMatrixException& e) {
+		ostringstream ss;
+		ss << "SparseMatrixException in solve(): " << e.what();
+		throw MeshException(ss.str());
+	}
+	// update m2
+	for (int k=0; k<(int)u0.size(); ++k) {
+		int i=kenum.i(k);
+		int j=kenum.j(k);
+		m2->set(var,i,j,u0.at(k));
+	}
+	// update Dirichlet boundary points (excluded from SLE)
+	update_dirichlet_points(*m2,bcs,var);
+	return m2.release();
+	} catch(MeshException& e) {
+		ostringstream ss;
+		ss << "rd_step_implicit: " << e.what();
 		throw MeshException(ss.str());
 	}
 }
@@ -157,8 +321,7 @@ throw(MeshException) {
 		m2.reset(rd_step_adi(bcs,dt,*m2,var,D,R));
 		break;
 	case MP::RDS_IMPLICIT:
-		throw MeshException("reaction_diffusion_step: "
-			"RDS_IMPLICIT not implemented");
+		m2.reset(rd_step_implicit(bcs,dt,*m2,var,D,R));
 		break;
 	default:
 		throw MeshException("reaction_diffusion_step: unknown solver");

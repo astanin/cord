@@ -22,6 +22,7 @@
 #define RDSOLVE_H
 
 #include "amesh2d.h"
+#include "spmat.h"
 #include "boundary.h"
 #include "params.h"
 
@@ -49,6 +50,15 @@ reaction_diffusion_step(BCSet const& bcs, double dt,
 	AMesh2D const& m1, string const var,
 	double const D, double const R, MP::rd_solver_t solver=MP::RDS_ADI)
 throw(MeshException);
+
+/** @brief fill @c A and @c rhs to construct equation for boundary point
+ * @c k_boundary, which satisfies boundary condition @c bc and uses given inner
+ * point @c k_inner and point distance @c dx
+ */
+void
+build_boundary_point_eq(ASparseMatrix& A, vector<double>& rhs,
+	int const k_boundary, int const k_inner,
+	BoundaryCondition const& bc, double const dx);
 
 #endif
 

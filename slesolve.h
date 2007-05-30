@@ -29,46 +29,12 @@
 #include "amesh2d.h"
 #include "params.h"
 
-#include <memory>
-using std::auto_ptr;
-#include <vector>
-using std::vector;
-
 ASparseMatrix*
-build_sle_solver_matrix(int const dim, vector<double> x0, double const accuracy)
-throw(MeshException) {
-	auto_ptr<ASparseMatrix> pA;
-#ifdef HAVE_LIBUMFPACK
-	if (Method::it().sle_solver == MP::SLES_UMFPACK) {
-		pA.reset(new UMFPACKMatrix(dim,dim));
-	} else
-#endif
-	if (Method::it().sle_solver == MP::SLES_CG) {
-		pA.reset(new LSolverMatrix(dim, x0,
-			accuracy,
-			Method::it().sle_solver_max_iters,
-			LSolverMatrix::CG));
-	} else if (Method::it().sle_solver == MP::SLES_BICG) {
-		pA.reset(new LSolverMatrix(dim, x0,
-			accuracy,
-			Method::it().sle_solver_max_iters,
-			LSolverMatrix::BICG));
-	} else if (Method::it().sle_solver == MP::SLES_BICGSTAB) {
-		pA.reset(new LSolverMatrix(dim, x0,
-			accuracy,
-			Method::it().sle_solver_max_iters,
-			LSolverMatrix::BICGstab));
-	} else if (Method::it().sle_solver == MP::SLES_GMRES) {
-		pA.reset(new LSolverMatrix(dim, x0,
-			accuracy,
-			Method::it().sle_solver_max_iters,
-			LSolverMatrix::GMRES,
-			Method::it().sle_solver_gmres_restart_after));
-	} else {
-		throw MeshException("unknown Method::it().sle_solver");
-	}
-	return pA.release();
-}
+build_sle_solver_matrix(int const dim, vector<double> x0, double accuracy=-1.0)
+throw(MeshException);
+
+void
+update_dirichlet_points(AMesh2D& m, const BCSet& bcs, string const var);
 
 #endif
 
