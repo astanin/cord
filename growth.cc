@@ -42,14 +42,7 @@ using std::cerr;
 double growth_term(double const phi, double const c,
 	double const phi0, double const c0,
 	double const psi=1.0, double const gamma=1.0) {
-//	double Hpsi=(psi>0)?1.0:0.0;
-//	return Hpsi*gamma*phi*(1-phi)*c;
-//	cerr << "GROWTH: "
-//		<< "phi=" << phi << " c=" << c
-//		<< " (1-phi)*c=" << (1-phi)*c
-//		<< " -phi*c0=" << -phi*c0 << " "
-//		<< H(psi)*phi*(1-phi)*H((1-phi)*c-phi*c0) << "\n";
-	if (((1-phi)*c-phi*c0) >= 0) {
+	if ((c-phi*c0) >= 0) {
 		return H(psi)*phi*(1-phi);
 	} else {
 		return 0.0;
@@ -59,11 +52,8 @@ double growth_term(double const phi, double const c,
 double death_term(double const phi, double const c,
 	double const phi0, double const c0,
 	double const psi=1.0, double const gamma=1.0) {
-//	double Hpsi=(psi>0)?1.0:0.0;
-//	return Hpsi*gamma*phi*(1-phi)*c0;
-//	cerr << "DEATH: " << H(psi)*(phi*(1-phi)*H(phi*c0-(1-phi)*c)) << "\n";
-	if (((1-phi)*c-phi*c0) < 0) {
-		return -H(psi)*phi*(1-phi);
+	if ((c-phi*c0) < 0) {
+		return H(psi)*phi*(1-phi);
 	} else {
 		return 0.0;
 	}
