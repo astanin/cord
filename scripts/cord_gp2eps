@@ -140,7 +140,7 @@ END);
 set image range -0.06 0.06
 convert grid to image
 #set image colorscale rgb 0.6 0.0 0.0 -0.06 rgb 0.7 0.7 1.0 0.06 increment 0.01
-open "LANG=C awk 'BEGIN { for(i=0;i<256;i++) { print(1-i/(3*256),(i-128)*(i-128)/(128*128),1.0+0.0*i/256) } }' |"
+open "LC_ALL=C awk 'BEGIN { for(i=0;i<256;i++) { print(1-i/(3*256),(i-128)*(i-128)/(128*128),1.0+0.0*i/256) } }' |"
 read image colorscale hsb
 draw image
 draw image palette axisleft left -0.06 right 0.06 box 3.5 6 4.5 16
@@ -266,17 +266,17 @@ while [ $# -gt 0 ]; do
 			break
 		fi
 	fi
-	TIME=$(head -1 $f|tail -1|awk '{print $2}'|\
+	TIME=$(head -1 $f|tail -1|LC_ALL=C awk '{print $2}'|\
 		perl -e 'while(<>){printf("%g\n",$_);}');
-	XSIZE=$(head -2 $f|tail -1|awk '{print $2}');
-	YSIZE=$(head -2 $f|tail -1|awk '{print $3}');
-	XMIN=$(head -3 $f|tail -1|awk '{print $2}'|\
+	XSIZE=$(head -2 $f|tail -1|LC_ALL=C awk '{print $2}');
+	YSIZE=$(head -2 $f|tail -1|LC_ALL=C awk '{print $3}');
+	XMIN=$(head -3 $f|tail -1|LC_ALL=C awk '{print $2}'|\
 		perl -e 'while(<>){printf("%g\n",$_);}');
-	XMAX=$(head -3 $f|tail -1|awk '{print $NF}'|\
+	XMAX=$(head -3 $f|tail -1|LC_ALL=C awk '{print $NF}'|\
 		perl -e 'while(<>){printf("%g\n",$_);}');
-	YMIN=$(head -4 $f|tail -1|awk '{print $2}'|\
+	YMIN=$(head -4 $f|tail -1|LC_ALL=C awk '{print $2}'|\
 		perl -e 'while(<>){printf("%g\n",$_);}');
-	YMAX=$(head -4 $f|tail -1|awk '{print $NF}'|\
+	YMAX=$(head -4 $f|tail -1|LC_ALL=C awk '{print $NF}'|\
 		perl -e 'while(<>){printf("%g\n",$_);}');
 	VARS=$(head -5 $f|tail -1|sed 's/#//g');
 	NC=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
