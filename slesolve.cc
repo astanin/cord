@@ -20,6 +20,8 @@
 
 #include "slesolve.h"
 
+#include <stdlib.h>
+
 #include <memory>
 using std::auto_ptr;
 #include <vector>
