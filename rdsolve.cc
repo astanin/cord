@@ -22,6 +22,8 @@
 #include "config.h"
 #endif
 
+#include <stdlib.h>
+
 #include "slesolve.h"
 #include "rdsolve.h"
 #include "pradi.h"

@@ -20,6 +20,8 @@
 #include "config.h"
 #endif
 
+#include <stdlib.h>
+
 #include <math.h>
 #include <limits>
 #include "spmat.h"
