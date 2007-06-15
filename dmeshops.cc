@@ -62,9 +62,9 @@ build_mesh(const Params& p) {
 		m.add_function("c",1.0);
 		// model parameters
 		m.set_attr("phi0", p.phi_stress_free);
-		m.set_attr("c_critical", p.c_critical);
-		m.set_attr("consumption_c", p.consumption_c);
-		m.set_attr("gconsumption_c", p.gconsumption_c);
+		m.set_attr("o2_uptake",p.o2_uptake);
+		m.set_attr("upkeep_per_cell",p.upkeep_per_cell);
+		m.set_attr("death_rate",p.death_rate);
 		m.set_attr("cell_motility", p.cell_motility);
 		m.set_attr("tk1",p.tk1);
 		m.set_attr("ts1",p.ts1);

@@ -540,18 +540,18 @@ throw(MeshFileException, MeshException) {
 		savegroup.openAttribute("phi0")
 			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
 		set_attr("phi0",attr_value);
-		savegroup.openAttribute("c_critical")
-			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
-		set_attr("c_critical",attr_value);
 		savegroup.openAttribute("cell_motility")
 			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
 		set_attr("cell_motility",attr_value);
-		savegroup.openAttribute("consumption_c")
+		savegroup.openAttribute("upkeep_per_cell")
 			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
-		set_attr("consumption_c",attr_value);
-		savegroup.openAttribute("gconsumption_c")
+		set_attr("upkeep_per_cell",attr_value);
+		savegroup.openAttribute("death_rate")
 			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
-		set_attr("gconsumption_c",attr_value);
+		set_attr("death_rate",attr_value);
+		savegroup.openAttribute("o2_uptake")
+			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
+		set_attr("o2_uptake",attr_value);
 		savegroup.openAttribute("tk1")
 			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
 		set_attr("tk1",attr_value);

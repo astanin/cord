@@ -62,9 +62,9 @@ public:
 	double initial_cord_x; ///< initial "center" of the tumour seed
 	double initial_cord_y; ///< initial "center" of the tumour seed
 	double cell_motility; ///< motility of the cellular phase
-	double c_critical; ///< critical concentration of nutrient/oxygen
-	double consumption_c; ///< density-related nutrient/oxygen consumption
-	double gconsumption_c; ///< growth-related nutrient/oxygen consumption
+	double o2_uptake; ///< rate of oxygen consumption
+	double upkeep_per_cell; ///< minimal energy requirement per cell
+	double death_rate; ///< rate of cellular death
 	BCSet phi_bc; ///< boundary conditions for phi
 	BCSet c_bc; ///< boundary conditions for c
 	eq_type c_equation; ///< type of equation for c
@@ -78,8 +78,8 @@ public:
 		tk1(1.0), ts1(1.0), hk1(1.0), hs1(1.0),
 		initial_cord_length(0.5), initial_cord_width(0.5),
 		initial_cord_x(0.0), initial_cord_y(0.0),
-		cell_motility(1e-2), c_critical(0.8), consumption_c(6.5),
-		gconsumption_c(0.0),
+		cell_motility(1e-2),
+		o2_uptake(100), upkeep_per_cell(0.2), death_rate(1.0),
 		phi_bc(BC::createDirichletBC(this->phi_stress_free),
 			BC::createDirichletBC(this->phi_stress_free),
 			BC::createNeumannBC(),BC::createNeumannBC()),

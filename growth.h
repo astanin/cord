@@ -27,9 +27,9 @@
 
 #include "dmesh.h"
 
-double
-growth_term(AMesh2D const& m, int const i, int const j,
-	const string& fid="phi");
+double f_atp_per_cell(double const phi);
+
+double g_atp_per_oxygen(double const c);
 
 double
 net_growth_term(AMesh2D const& m, int const i, int const j,

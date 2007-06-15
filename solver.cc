@@ -54,6 +54,12 @@ eval_tissue(const Params& p, double const dt, const AMesh2D& m1,
 	string density_var) {
 	// growth-death (ODE)
 	auto_ptr<AMesh2D> tmp(step_growth_death(dt,m1,density_var));
+	if (verbose > 1) { // extraverbose
+		cerr << dbg_stamp(m1.get_time()) << "average_"
+			<< density_var << "_growth="
+			<< mean((*tmp)[density_var+"_growth"])
+			<< "\n";
+	}
 	auto_ptr<AMesh2D> m2(phi_step(p, dt, *tmp, density_var));
 	return m2.release();
 }

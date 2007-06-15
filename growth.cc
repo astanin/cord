@@ -38,62 +38,68 @@ int H(double const x) {
 	}
 }
 
+double f_atp_per_cell(double const phi) {
+	return (1-phi);
+}
+
+// TODO: update nutrient solver if g != c.
+double g_atp_per_oxygen(double const c) {
+	return c;
+}
+
+double atp_balance(double const phi, double const c, double const theta) {
+	return phi*f_atp_per_cell(phi)*g_atp_per_oxygen(c)-theta*phi;
+}
+
 #include <iostream>
 using std::cerr;
 
 double growth_term(double const phi, double const c,
-	double const phi0, double const c0,
-	double const psi=1.0, double const gamma=1.0) {
-	if ((c-phi*c0) >= 0) {
-		return H(psi)*phi*(1-phi);
-	} else {
-		return 0.0;
-	}
+	double const theta, double const psi=1.0, double const gamma=1.0) {
+	double atp=atp_balance(phi,c,theta);
+	return H(atp)*atp*H(psi);
 }
 
 double death_term(double const phi, double const c,
-	double const phi0, double const c0,
-	double const psi=1.0, double const gamma=1.0) {
-	if ((c-phi*c0) < 0) {
-		return H(psi)*phi*(1-phi);
-	} else {
-		return 0.0;
-	}
+	double const theta, double const psi=1.0, double const epsilon=1.0) {
+	double atp=atp_balance(phi,c,theta);
+	return epsilon*H(-atp)*(-atp)*H(psi);
 }
 
+#if 0
 double
 growth_term(AMesh2D const& m, int const i, int const j, const string& fid) {
 	double phi=m.get(fid,i,j);
 	double c=m.get("c",i,j);
 	double psi=m.get("psi",i,j);
-	double c0=m.get_attr("c_critical");
-	double phi0=m.get_attr("phi0");
-	return growth_term(phi,c,phi0,c0,psi);
+	double theta=m.get_attr("upkeep_per_cell");
+	return growth_term(phi,c,theta,psi);
 }
+#endif
 
 double
 net_growth_term(AMesh2D const& m, int const i, int const j, const string& fid) {
 	double phi=m.get(fid,i,j);
 	double c=m.get("c",i,j);
 	double psi=m.get("psi",i,j);
-	double c0=m.get_attr("c_critical");
-	double phi0=m.get_attr("phi0");
-	return growth_term(phi,c,phi0,c0,psi)-death_term(phi,c,phi0,c0,psi);
+	double theta=m.get_attr("upkeep_per_cell");
+	double epsilon=m.get_attr("death_rate");
+	return growth_term(phi,c,theta,psi)-death_term(phi,c,theta,psi,epsilon);
 }
 
 /** right hand side function for GSL ode-solver
  * y[0] := phi
- * dydt[0] := gamma*phi*(1-phi)*(c-c_critical), 
- * 	where c_critical is a critical value of c
- * params[0] := gamma (growth rate) (==1.0 for non-dimensional model)
- * params[1] := c   (nutrient concentration)
- * params[2] := c_critical  (critical value of c) */
+ * dydt[0] := \Gamma(phi,c), see the paper for details
+ * params[0] := c (oxygen concentration)
+ * params[1] := theta (upkeep per cell)
+ * params[2] := psi (kind of tissue)
+ * params[3] := epsilon (death rate) */
 int rhs_f(double t, const double y[], double dydt[], void *params) {
 	double c=*(((double*)(params))+0);
-	double phi0=*(((double*)(params))+1);
-	double c0=*(((double*)(params))+2);
-	double psi=*(((double*)(params))+3);
-	dydt[0]=growth_term(y[0],c,phi0,c0,psi)-death_term(y[0],c,phi0,c0,psi);
+	double theta=*(((double*)(params))+1);
+	double psi=*(((double*)(params))+2);
+	double eps=*(((double*)(params))+3);
+	dydt[0]=growth_term(y[0],c,theta,psi)-death_term(y[0],c,theta,psi,eps);
 	return 0;
 }
 
@@ -133,9 +139,9 @@ throw(MeshException) {
 			double err=0.0;
 			double phi=m1.get(fid,i,j);
 			params[0]=m1.get("c",i,j);
-			params[1]=m1.get_attr("phi0");
-			params[2]=m1.get_attr("c_critical");
-			params[3]=m1.get("psi",i,j);
+			params[1]=m1.get_attr("upkeep_per_cell");
+			params[2]=m1.get("psi",i,j);
+			params[3]=m1.get_attr("death_rate");
 			gsl_odeiv_step_reset(step);
 			gsl_odeiv_step_apply(step, m1.get_time(), 
 					dt, &phi, &err, 0, 0, &sys);

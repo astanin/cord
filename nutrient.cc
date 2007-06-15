@@ -61,9 +61,8 @@ consumption_rate(AMesh2D const& m, int const i, int const j)
 throw(MeshException) {
 	double consume=0.0;
 	if (m.get("psi",i,j) > 0) { // tumour point
-		consume=m.get("phi",i,j)*m.get_attr("consumption_c");
-		double g=growth_term(m,i,j);
-		consume+=m.get_attr("gconsumption_c")*0.5*(g+fabs(g));
+		double phi=m["phi"](i,j);
+		consume=phi*f_atp_per_cell(phi)*m.get_attr("o2_uptake");
 	}
 	return consume;
 }
@@ -368,13 +367,9 @@ throw(MeshException) {
 	if (!m1.defined("psi")) {
 		throw MeshException("eval_nutrient: psi not defined");
 	}
-	if (!m1.attr_defined("consumption_c")) {
+	if (!m1.attr_defined("o2_uptake")) {
 		throw MeshException("eval_nutrient: "
-			"basic nutrient consumption rate not defined");
-	}
-	if (!m1.attr_defined("gconsumption_c")) {
-		throw MeshException("eval_nutrient: "
-			"growth-related nutrient consumption rate not defined");
+			"oxygen consumption rate not defined");
 	}
 	try {
 		if (p.c_equation == Params::EQ_POISSON) {

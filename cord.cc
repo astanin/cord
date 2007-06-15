@@ -29,6 +29,7 @@
 
 #include "utils.h"
 
+
 using std::string;
 using std::cerr;
 using std::endl;
@@ -65,12 +66,9 @@ print_model_params(const DMesh& m, const Params& p,
 	cerr<<"\thost sigma="<<m.get_attr("hk1")<<"*(phi-phi0),phi>phi0\n";
 	cerr<<"\thost sigma="<<m.get_attr("hs1")<<"*(phi-phi0),phi<phi0\n";
 	cerr<<"\tcell motility: "<<m.get_attr("cell_motility")<<"\n";
-	cerr<<"\tcritical nutrient concentration: "
-		<< m.get_attr("c_critical")<<"\n";
-	cerr<<"\tbasic nutrient consumption: "
-		<<m.get_attr("consumption_c")<<"\n";
-	cerr<<"\tgrowth-related nutrient consumption: "
-		<<m.get_attr("gconsumption_c")<<"\n";
+	cerr<<"\tupkeep per cell: "<<m.get_attr("upkeep_per_cell")<<"\n";
+	cerr<<"\tdeath rate: "<<m.get_attr("death_rate")<<"\n";
+	cerr<<"\toxygen uptake: "<<m.get_attr("o2_uptake")<<"\n";
 	cerr<<"\tnutrient equation: ";
 	switch(p.c_equation) {
 		case Params::EQ_POISSON: cerr << "Poisson\n"; break;

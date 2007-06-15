@@ -187,12 +187,12 @@ read_params(dictionary *ini, Params& p) {
 		"params:phi_stress_free", p.phi_stress_free);
 	p.cell_motility=iniparser_getdouble(ini,
 		"params:phi_motility",p.cell_motility);
-	p.consumption_c=iniparser_getdouble(ini,
-		"params:c_basic_consumption",p.consumption_c);
-	p.gconsumption_c=iniparser_getdouble(ini,
-		"params:c_growth_consumption",p.gconsumption_c);
-	p.c_critical=iniparser_getdouble(ini,
-		"params:c_critical",p.c_critical);
+	p.o2_uptake=iniparser_getdouble(ini,
+		"params:o2_uptake",p.o2_uptake);
+	p.upkeep_per_cell=iniparser_getdouble(ini,
+		"params:upkeep_per_cell",p.upkeep_per_cell);
+	p.death_rate=iniparser_getdouble(ini,
+		"params:death_rate",p.death_rate);
 	p.tk1=iniparser_getdouble(ini,"params:tumour_stress_on_compress",p.tk1);
 	p.ts1=iniparser_getdouble(ini,"params:tumour_stress_on_stretch",p.ts1);
 	p.hk1=iniparser_getdouble(ini,"params:host_stress_on_compress",p.hk1);
@@ -308,15 +308,15 @@ int init_params(Params& p, int argc, const char *argv[]) {
 			"hs1"},
 		{ "nutrient-equation", 0, POPT_ARG_STRING|onedash, &c_eq, 0,
 			"equation type: Poisson | diffusion", "type"},
-		{ "consumption", 0, POPT_ARG_DOUBLE|onedash,
-			&p.consumption_c, 0,
-			"basic nutrient consumption rate", "alpha" },
-		{ "gconsumption", 0, POPT_ARG_DOUBLE|onedash,
-			&p.gconsumption_c, 0,
-			"growth-related nutrient consumption rate", "beta" },
-		{ "critical-nutrient", 0, POPT_ARG_DOUBLE|onedash,
-			&p.c_critical, 0,
-			"threshold value of nutrient concentration", "c0" },
+		{ "upkeep-per-cell", 'u', POPT_ARG_DOUBLE|onedash,
+			&p.upkeep_per_cell, 0,
+			"minimal energy consumption by cells", "theta" },
+		{ "death-rate", 'e', POPT_ARG_DOUBLE|onedash,
+			&p.death_rate, 0,
+			"rate of cellular death", "epsilon" },
+		{ "O2-uptake", 'a', POPT_ARG_DOUBLE|onedash,
+			&p.o2_uptake, 0,
+			"rate of oxygen consumption", "alpha" },
 		{ "verbose", 'v', arg_val_hidden_arg, &verbose, 1,
 			"be verbose", 0},
 		{ "extraverbose", 0, arg_val_hidden_arg, &verbose, 2,
