@@ -79,7 +79,7 @@ public:
 		initial_cord_length(0.5), initial_cord_width(0.5),
 		initial_cord_x(0.0), initial_cord_y(0.0),
 		cell_motility(1e-2),
-		o2_uptake(100), upkeep_per_cell(0.2), death_rate(1.0),
+		o2_uptake(200), upkeep_per_cell(0.15), death_rate(0.8),
 		phi_bc(BC::createDirichletBC(this->phi_stress_free),
 			BC::createDirichletBC(this->phi_stress_free),
 			BC::createNeumannBC(),BC::createNeumannBC()),
