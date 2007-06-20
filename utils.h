@@ -71,5 +71,8 @@ double get_x_size(const AMesh2D& m);
 double norm_1(AMesh2D const& m, string const fid);
 double norm_2(AMesh2D const& m, string const fid);
 
+/** @brief Heaviside funcion */
+int H(double const x);
+
 #endif
 

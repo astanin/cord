@@ -29,4 +29,6 @@ extern int verbose; ///< print verbose output if @c verbose > 0
 
 extern int show_version; ///< print version info
 
+extern int N_ATP_PER_GLUCOSE; ///< how many ATP produced per molecul of glucose
+
 #endif

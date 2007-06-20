@@ -70,6 +70,7 @@ build_mesh(const Params& p) {
 		m.set_attr("ts1",p.ts1);
 		m.set_attr("hk1",p.hk1);
 		m.set_attr("hs1",p.hs1);
+		m.set_attr("host_activity",p.host_active?1.0:0.0);
 #ifdef HAVE_LIBHDF5
 	} else {
 		m.load(p.inputfile);

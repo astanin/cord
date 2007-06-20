@@ -193,6 +193,8 @@ read_params(dictionary *ini, Params& p) {
 		"params:upkeep_per_cell",p.upkeep_per_cell);
 	p.death_rate=iniparser_getdouble(ini,
 		"params:death_rate",p.death_rate);
+	p.host_active=iniparser_getboolean(ini,
+		"params:active_host",p.host_active);
 	p.tk1=iniparser_getdouble(ini,"params:tumour_stress_on_compress",p.tk1);
 	p.ts1=iniparser_getdouble(ini,"params:tumour_stress_on_stretch",p.ts1);
 	p.hk1=iniparser_getdouble(ini,"params:host_stress_on_compress",p.hk1);
@@ -317,6 +319,8 @@ int init_params(Params& p, int argc, const char *argv[]) {
 		{ "O2-uptake", 'a', POPT_ARG_DOUBLE|onedash,
 			&p.o2_uptake, 0,
 			"rate of oxygen consumption", "alpha" },
+		{ "active-host", 0, arg_val_hidden_arg, &p.host_active, true,
+			"host tissue consumes oxygen and may die", 0 },
 		{ "verbose", 'v', arg_val_hidden_arg, &verbose, 1,
 			"be verbose", 0},
 		{ "extraverbose", 0, arg_val_hidden_arg, &verbose, 2,
@@ -686,4 +690,13 @@ double norm_2(AMesh2D const& m, string const fid) {
 	double norm=sum(fabs(m[fid]));
 	return norm;
 }
+
+int H(double const x) {
+	if (x >= 0.0) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
+
 

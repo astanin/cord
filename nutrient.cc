@@ -57,7 +57,7 @@ best_dt(AMesh2D const& m) throw(MeshException) {
 }
 
 double
-consumption_rate(AMesh2D const& m, int const i, int const j)
+uptake_per_cell(AMesh2D const& m, int const i, int const j)
 throw(MeshException) {
 	double consume=0.0;
 	if (m.get("psi",i,j) > 0) { // tumour point
@@ -68,9 +68,15 @@ throw(MeshException) {
 }
 
 double
-consumption_term(AMesh2D const& m, int const i, int const j)
+uptake_term(AMesh2D const& m, int const i, int const j)
 throw(MeshException) {
-	return m.get("c",i,j)*consumption_rate(m,i,j);
+	double psi=m["psi"](i,j);
+	double host_activity=m.get_attr("host_activity");
+	double theta=m.get_attr("upkeep_per_cell");
+	double alpha=m.get_attr("o2_uptake");
+	double host_uptake=H(-psi)*host_activity
+				*theta*alpha*N_ATP_PER_GLUCOSE/6;
+	return m["c"](i,j)*uptake_per_cell(m,i,j) + host_uptake;
 }
 
 void
@@ -128,7 +134,7 @@ throw(MeshException) {
 				}
 				// add consumption term
 				A.set(k0,k0,A.get(k0,k0)
-					-consumption_rate(m,i,j));
+					-uptake_per_cell(m,i,j));
 			}
 		}
 	} catch (SparseMatrixException& e) {
@@ -237,7 +243,7 @@ throw(MeshException) {
 					+m2->get("c",i-1,j))/(dx*dx)+
 				(m2->get("c",i,j+1)-2*m2->get("c",i,j)
 				 	+m2->get("c",i,j-1))/(dy*dy)-
-				consumption_term(*m2,i,j);
+				uptake_term(*m2,i,j);
 			loc_res=fabs(loc_res);
 			m2->set("c_residual",i,j,loc_res);
 		}
@@ -254,7 +260,7 @@ eval_nutrient_init_consumption(AMesh2D& m, string const consumption) {
 	int ydim=m.get_ydim();
 	for (int i=0; i<xdim ; ++i) {
 		for (int j=0; j<ydim ; ++j) {
-			m.set(consumption,i,j,consumption_term(m,i,j));
+			m.set(consumption,i,j,uptake_term(m,i,j));
 		}
 	}
 }
@@ -370,6 +376,10 @@ throw(MeshException) {
 	if (!m1.attr_defined("o2_uptake")) {
 		throw MeshException("eval_nutrient: "
 			"oxygen consumption rate not defined");
+	}
+	if (!m1.attr_defined("host_activity")) {
+		throw MeshException("eval_nutrient: "
+			"host behaviour (host_activity) not defined");
 	}
 	try {
 		if (p.c_equation == Params::EQ_POISSON) {

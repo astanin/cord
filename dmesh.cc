@@ -564,6 +564,9 @@ throw(MeshFileException, MeshException) {
 		savegroup.openAttribute("hs1")
 			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
 		set_attr("hs1",attr_value);
+		savegroup.openAttribute("host_activity")
+			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
+		set_attr("host_activity",attr_value);
 		// load mesh geometry
 		resize(xdim,ydim);
 		load_dataset_2d(savegroup,"x",m_x);

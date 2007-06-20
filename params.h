@@ -68,6 +68,7 @@ public:
 	BCSet phi_bc; ///< boundary conditions for phi
 	BCSet c_bc; ///< boundary conditions for c
 	eq_type c_equation; ///< type of equation for c
+	bool host_active; ///< host tissue dies and consumes
 	/// default parameters
 	Params() :
 #ifdef HAVE_LIBHDF5
@@ -85,7 +86,8 @@ public:
 			BC::createNeumannBC(),BC::createNeumannBC()),
 		c_bc(BC::createNeumannBC(),BC::createNeumannBC(),
 			BC::createDirichletBC(1.0),BC::createNeumannBC()),
-		c_equation(EQ_POISSON)
+		c_equation(EQ_POISSON),
+		host_active(false)
 		{}
 };
 

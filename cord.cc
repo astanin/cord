@@ -43,6 +43,7 @@ using std::ios_base;
 // global flags
 int show_version=0;
 int verbose=0;
+int N_ATP_PER_GLUCOSE=32;
 
 void
 print_model_params(const DMesh& m, const Params& p,
@@ -69,6 +70,8 @@ print_model_params(const DMesh& m, const Params& p,
 	cerr<<"\tupkeep per cell: "<<m.get_attr("upkeep_per_cell")<<"\n";
 	cerr<<"\tdeath rate: "<<m.get_attr("death_rate")<<"\n";
 	cerr<<"\toxygen uptake: "<<m.get_attr("o2_uptake")<<"\n";
+	cerr<<"\thost tissue consumes and dies: "
+			<<m.get_attr("host_activity")<<"\n";
 	cerr<<"\tnutrient equation: ";
 	switch(p.c_equation) {
 		case Params::EQ_POISSON: cerr << "Poisson\n"; break;
