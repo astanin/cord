@@ -315,32 +315,24 @@ throw(MeshException) {
 	m.add_function_ifndef("newpsi",0.0);
 	// resolve for inner points
 	// WARNING: will work for uniform rectangular grid only
+	double dx=m.get_dx();
+	double dy=m.get_dy();
 	for (int i=1; i < (m.get_xdim()-1); ++i) {
 		for (int j=1; j < (m.get_ydim()-1); ++j) {
-			int i1, j1, i2, j2;
-			if (m.get("vx",i,j) < 0) { // TODO: check > or < here
-				i1=i+1;
-				j1=j;
-			} else {
-				i1=i-1;
-				j1=j;
-			}
-			if (m.get("vy",i,j) < 0) { // TODO: check > or < here
-				i2=i;
-				j2=j+1;
-			} else {
-				i2=i;
-				j2=j-1;
-			}
-			blitz::Array<double,1> gpsi=
-					grad(m,"psi",i,j,i1,j1,i2,j2);
 			double psi, vx, vy;
 			psi=m.get("psi",i,j);
 			vx=m.get("vx",i,j);
 			vy=m.get("vy",i,j);
 			double vdotgradpsi;
-			vdotgradpsi=vx*gpsi(0)+vy*gpsi(1);
-			m.set("newpsi",i,j,psi+dt*vdotgradpsi);
+			vdotgradpsi=0.5*(vx+fabs(vx))*
+				(m["psi"](i,j)-m["psi"](i-1,j))/dx
+				+0.5*(vx-fabs(vx))*
+				(m["psi"](i+1,j)-m["psi"](i,j))/dx
+				+0.5*(vy+fabs(vy))*
+				(m["psi"](i,j)-m["psi"](i,j-1))/dy
+				+0.5*(vy-fabs(vy))*
+				(m["psi"](i,j+1)-m["psi"](i,j))/dy;
+			m.set("newpsi",i,j,psi-dt*vdotgradpsi);
 		}
 	}
 	// apply boundary conditions
@@ -458,7 +450,7 @@ int level_set_function_reset(AMesh2D& m) {
 	return count;
 }
 
-/** time step for dpsi/dt - div(psi*v) = 0
+/** time step for dpsi/dt + v*grad(psi) = 0
  *  with uniform boundary condition for psi (zero flux);
  *  WARNING: this implementation works for uniform rectangular grid only */
 AMesh2D*
