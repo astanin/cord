@@ -1,15 +1,15 @@
 #!/usr/bin/env python
 
-xsize = 1.0 # domain length
+xsize = 2.0 # domain length
 ysize = 1.0 # domain width
-nx = 50 # elements along x
+nx = 100 # elements along x
 ny = 50 # elements along y
 dx = xsize/nx
 dy = ysize/ny
 
 r0 = 0.2 # initial radius of the tumour
 
-t=500.0 # simulation time
+t=1000.0 # simulation time
 dt=0.5 # time step
 dump_dt=10.0 # dump period
 
@@ -54,13 +54,13 @@ def simulation():
 	psi0=r0-numerix.sqrt((mesh.getCellCenters()[:,0])**2 + \
 			(mesh.getCellCenters()[:,1])**2)
 	psi.setValue(psi0)
-	psi.calcDistanceFunction()
+	# psi.calcDistanceFunction()
 	Hpsi=CellVariable(mesh=mesh,name='tumour mask H(psi)',value=0.0)
 
 	# boundary conditions, zero flux is assumed if not specified
 	phiBCs=(FixedValue(faces=mesh.getFacesRight(),value=phi0),
 		FixedValue(faces=mesh.getFacesTop(),value=phi0))
-	cBCs = (FixedValue(faces=mesh.getFacesBottom(),value=c_in))
+	cBCs = (FixedValue(faces=mesh.getFacesLeft(),value=c_in))
 
 	# model equations
 	phiEq = TransientTerm() == ImplicitDiffusionTerm(coeff=
@@ -101,7 +101,7 @@ def dump2gp(mesh, t, phi, c, psi, Hpsi):
 	fname="dmp%09d.gp"%(int(t*10))
 	f=open(fname,'w')
 	f.write("#time: %e\n"%t)
-	f.write("#dimensions: %d %d\n"%(nx,ny))
+	f.write("#dimensions: %d %d\n"%(ny,nx))
 	f.write("#x: ")
 	ccs=mesh.getCellCenters()
 	xs = list(set(map(lambda cc: cc[0], ccs)))
