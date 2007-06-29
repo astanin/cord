@@ -8,7 +8,7 @@ PLOTWIDTH=10
 
 function usage {
 	echo usage:
-	echo     $(echo $0|sed 's/.*\///g') \[-gri\|-gnuplot\] \[-mono\|-color\] \[-withtitle\] datafile1.gp \[ datafile2.gp ... \]
+	echo     $(echo $0|sed 's/.*\///g') \[-gri\|-gnuplot\] \[-mono\|-color\] \[-withtitle\] \[-xrange xmin:xmax\] \[-yrange ymin:ymax\] datafile1.gp \[ datafile2.gp ... \]
 	exit -1
 }
 
@@ -267,6 +267,20 @@ while [ $# -gt 0 ]; do
 		elif [ "x$opt" == "x-gri" ]; then
 			PLOTTER=gri
 			continue;
+		elif [ "x$opt" == "x-xrange" ]; then
+			range=$1
+			shift
+			XMIN=${range%:*}
+			XMAX=${range/*:/}
+			CUSTOM_XRANGE=Y
+			continue;
+		elif [ "x$opt" == "x-yrange" ]; then
+			range=$1
+			shift
+			YMIN=${range%:*}
+			YMAX=${range/*:/}
+			CUSTOM_YRANGE=Y
+			continue;
 		else
 			echo "unknown option: $opt"
 			usage
@@ -277,14 +291,18 @@ while [ $# -gt 0 ]; do
 		perl -e 'while(<>){printf("%g\n",$_);}');
 	XSIZE=$(head -2 $f|tail -1|LC_ALL=C awk '{print $2}');
 	YSIZE=$(head -2 $f|tail -1|LC_ALL=C awk '{print $3}');
-	XMIN=$(head -3 $f|tail -1|LC_ALL=C awk '{print $2}'|\
-		perl -e 'while(<>){printf("%g\n",$_);}');
-	XMAX=$(head -3 $f|tail -1|LC_ALL=C awk '{print $NF}'|\
-		perl -e 'while(<>){printf("%g\n",$_);}');
-	YMIN=$(head -4 $f|tail -1|LC_ALL=C awk '{print $2}'|\
-		perl -e 'while(<>){printf("%g\n",$_);}');
-	YMAX=$(head -4 $f|tail -1|LC_ALL=C awk '{print $NF}'|\
-		perl -e 'while(<>){printf("%g\n",$_);}');
+	if [ "$CUSTOM_XRANGE" != "Y" ] ; then
+		XMIN=$(head -3 $f|tail -1|LC_ALL=C awk '{print $2}'|\
+			perl -e 'while(<>){printf("%g\n",$_);}');
+		XMAX=$(head -3 $f|tail -1|LC_ALL=C awk '{print $NF}'|\
+			perl -e 'while(<>){printf("%g\n",$_);}');
+	fi
+	if [ "$CUSTOM_YRANGE" != "Y" ] ; then
+		YMIN=$(head -4 $f|tail -1|LC_ALL=C awk '{print $2}'|\
+			perl -e 'while(<>){printf("%g\n",$_);}');
+		YMAX=$(head -4 $f|tail -1|LC_ALL=C awk '{print $NF}'|\
+			perl -e 'while(<>){printf("%g\n",$_);}');
+	fi
 	VARS=$(head -5 $f|tail -1|sed 's/#//g');
 	NC=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
 		foreach $v(@vars){if("c" eq $v){print $i,"\n";}++$i;};');
