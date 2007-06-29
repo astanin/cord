@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-xsize = 2.0 # domain length
+xsize = 1.0 # domain length
 ysize = 1.0 # domain width
-nx = 100 # elements along x
-ny = 50 # elements along y
+nx = 200 # elements along x
+ny = 200 # elements along y
 dx = xsize/nx
 dy = ysize/ny
 
@@ -11,7 +11,7 @@ r0 = 0.2 # initial radius of the tumour
 
 t=1000.0 # simulation time
 dt=0.5 # time step
-dump_dt=10.0 # dump period
+dump_dt=20.0 # dump period
 
 phi0=0.75 # stress-free density
 mu=0.01 # tissue relaxation rate
@@ -69,9 +69,11 @@ def simulation():
 				- epsilon*phi*pos(theta-(1-phi)*c)*Hpsi )
 	cEq = TransientTerm() == ImplicitDiffusionTerm( coeff=1.0 ) \
 			+ ImplicitSourceTerm( -alpha*phi*(1-phi)*c*Hpsi )
+	gradpsi=psi.getGrad()
 	psiEq = buildAdvectionEquation(advectionCoeff=
 			-mu*(phi*sigma(phi)+phi*phi*sigma_prime(phi))
-			*phi.getGrad().dot(psi.getGrad()) )
+			*phi.getGrad().dot(gradpsi)/
+			numerix.sqrtDot(gradpsi,gradpsi))
 
 	# solve the equations
 	steps=int(t/dt)
@@ -92,7 +94,7 @@ def simulation():
 
 		psiEq.solve(psi,dt=dt)
 
-		if (ct-lastdump) >= dump_dt:
+		if (ct-lastdump) >= (dump_dt-1e-3*dt):
 			dump2gp(mesh,ct,phi,c,psi,Hpsi)
 			lastdump=ct
 
