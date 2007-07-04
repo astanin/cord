@@ -2,16 +2,16 @@
 
 xsize = 1.0 # domain length
 ysize = 1.0 # domain width
-nx = 200 # elements along x
-ny = 200 # elements along y
+nx = 80 # elements along x
+ny = 80 # elements along y
 dx = xsize/nx
 dy = ysize/ny
 
 r0 = 0.2 # initial radius of the tumour
 
-t=1000.0 # simulation time
+t=700.0 # simulation time
 dt=0.5 # time step
-dump_dt=20.0 # dump period
+dump_dt=100.0 # dump period
 
 phi0=0.75 # stress-free density
 mu=0.01 # tissue relaxation rate
