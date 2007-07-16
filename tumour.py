@@ -2,8 +2,8 @@
 
 xsize = 1.0 # domain length
 ysize = 1.0 # domain width
-nx = 80 # elements along x
-ny = 80 # elements along y
+nx = 200 # elements along x
+ny = 200 # elements along y
 dx = xsize/nx
 dy = ysize/ny
 
@@ -51,9 +51,11 @@ def simulation():
 	phi=CellVariable(mesh=mesh,name='cell packing density',value=phi0)
 	c=CellVariable(mesh=mesh,name='oxygen',value=c_in)
 	psi=DistanceVariable(mesh=mesh,name='level set variable',value=1.0)
+	# either initialize level set variable manually to r0-sqrt(x^2+y^2)
 	psi0=r0-numerix.sqrt((mesh.getCellCenters()[:,0])**2 + \
 			(mesh.getCellCenters()[:,1])**2)
 	psi.setValue(psi0)
+	# or call automatic
 	# psi.calcDistanceFunction()
 	Hpsi=CellVariable(mesh=mesh,name='tumour mask H(psi)',value=0.0)
 
@@ -98,7 +100,7 @@ def simulation():
 			dump2gp(mesh,ct,phi,c,psi,Hpsi)
 			lastdump=ct
 
-# saves the variables in a format suitable for cord plotting scripts
+# saves the variables in a format suitable for cord plotting scripts I have
 def dump2gp(mesh, t, phi, c, psi, Hpsi):
 	fname="dmp%09d.gp"%(int(t*10))
 	f=open(fname,'w')
