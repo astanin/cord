@@ -1,3 +1,12 @@
+2007-07-16: version 0.3.5: (tag: cord-0.3.5)
+	new growth/death model (energy balance based)
+	--active-host option: host consumes oxygen and may die
+	--nutrient-equation option: either diffusion or Poisson equation
+	--config option: to specify alternative configuration file
+	generic (reusable) reaction-diffusion solver
+	level set function re-initialization
+	faster and more flexible plotting script (cord_gp2eps)
+
 2007-05-10: version 0.3.4: (tag: cord-biphase-0.3.4)
 	generation of symmetric positive definite matrices (CG method enabled)
 	support for growth-related nutrient consumption term (-gconsumption)
