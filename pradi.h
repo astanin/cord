@@ -46,10 +46,11 @@ for quasilinear parabolic equations */
  * 
  * \DD{var}{t} = \div (D_coev_var(x,y) \nable(var)) + reaction_term_var(x,y)
  */
-AMesh2D*
+template<class fid_t>
+AMesh2D<fid_t>*
 step_peaceman_rachford_adi_x(const BCSet& bcs,
-	double dt, const AMesh2D& m1, string const var,
-	string const D_coef_var, string const reaction_term_var)
+	double dt, const AMesh2D<fid_t>& m1, fid_t const var,
+	fid_t const D_coef_var, fid_t const reaction_term_var)
 throw(MeshException);
 
 /** @brief the second half-step of Peaceman-Rachford alternative directions
@@ -65,10 +66,11 @@ throw(MeshException);
  * 
  * \DD{var}{t} = \div (D_coev_var(x,y) \nable(var)) + reaction_term_var(x,y)
  */
-AMesh2D*
+template<class fid_t>
+AMesh2D<fid_t>*
 step_peaceman_rachford_adi_y(const BCSet& bcs,
-	double dt, const AMesh2D& m1, string const var,
-	string const D_coef_var, string const reaction_term_var)
+	double dt, const AMesh2D<fid_t>& m1, fid_t const var,
+	fid_t const D_coef_var, fid_t const reaction_term_var)
 throw(MeshException);
 
 #endif

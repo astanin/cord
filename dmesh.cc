@@ -26,15 +26,59 @@
 
 using std::make_pair;
 
-DMesh::DMesh(int _xdim, int _ydim, double _xmin, double _xmax, double _ymin,
-	double _ymax) :
+template<class fid_t>
+string id2str(fid_t& id) {
+        std::ostringstream ss;
+        ss << id;
+        return ss.str();
+}
+
+template<>
+string id2str<int>(int& id) {
+	switch (id) {
+	case PHI:
+		return "phi";
+		break;
+	case CO2:
+		return "c";
+		break;
+	case PSI:
+		return "psi";
+		break;
+	case VX:
+		return "vx";
+		break;
+	case VY:
+		return "vy";
+		break;
+	case PHI_T:
+		return "phi_t";
+		break;
+	case PHI_H:
+		return "phi_h";
+		break;
+	case PHI_GROWTH:
+		return "phi_growth";
+		break;
+	default:
+		std::ostringstream ss;
+		ss << "fid_" << id;
+		return ss.str();
+		break;
+	}
+}
+
+template<class fid_t>
+DMesh<fid_t>::DMesh
+(int _xdim, int _ydim, double _xmin, double _xmax, double _ymin, double _ymax) :
 	time(0), xdim(_xdim), ydim(_ydim), xmin(_xmin),
 	xmax(_xmax), ymin(_ymin), ymax(_ymax), m_x(_xdim,_ydim),
 	m_y(_xdim, _ydim), mf(), attr() {
 		init_mesh();
 }
 
-DMesh::DMesh(const DMesh& om) :
+template<class fid_t>
+DMesh<fid_t>::DMesh(const DMesh<fid_t>& om) :
 	time(om.time), xdim(om.xdim), ydim(om.ydim), xmin(om.xmin),
 	xmax(om.xmax), ymin(om.ymin), ymax(om.ymax),
 	m_x(om.xdim,om.ydim), m_y(om.xdim,om.ydim), mf(), attr() {
@@ -45,9 +89,9 @@ DMesh::DMesh(const DMesh& om) :
 	m_y=om.m_y.copy();
 	/* copy arrays */
 	mf.clear();
-	map<string,array2d>::const_iterator i = om.mf.begin();
+	typename pile_of_arrays::const_iterator i = om.mf.begin();
 	for (; i != om.mf.end(); ++i) {
-		string mfkey=i->first;
+		fid_t mfkey=i->first;
 		array2d mfc;
 		mfc.resize(i->second.shape());
 		mfc=i->second.copy();
@@ -56,8 +100,9 @@ DMesh::DMesh(const DMesh& om) :
 	attr=om.attr;
 }
 
-DMesh&
-DMesh::operator=(const DMesh& rhs) {
+template<class fid_t>
+DMesh<fid_t>&
+DMesh<fid_t>::operator=(const DMesh<fid_t>& rhs) {
 	if (this == &rhs) { // do not do anything
 		return *this;
 	} else {
@@ -75,9 +120,9 @@ DMesh::operator=(const DMesh& rhs) {
 		m_y=rhs.m_y.copy();
 		/* copy arrays */
 		mf.clear();
-		map<string,array2d>::const_iterator i=rhs.mf.begin();
+		typename pile_of_arrays::const_iterator i=rhs.mf.begin();
 		for (; i != rhs.mf.end(); ++i) {
-			string mfkey=i->first;
+			fid_t mfkey=i->first;
 			array2d mfc;
 			mfc.resize(i->second.shape());
 			mfc=i->second.copy();
@@ -88,10 +133,11 @@ DMesh::operator=(const DMesh& rhs) {
 	}
 }
 
+template<class fid_t>
 double
-DMesh::x(const int i, const int j)
+DMesh<fid_t>::x(const int i, const int j)
 const throw(MeshException) {
-	if (!is_out_of_domain(i,j)) {
+	if (!this->is_out_of_domain(i,j)) {
 		return m_x(i,j);
 	} else {
 		ostringstream ss;
@@ -100,10 +146,11 @@ const throw(MeshException) {
 	}
 }
 
+template<class fid_t>
 double
-DMesh::y(const int i, const int j)
+DMesh<fid_t>::y(const int i, const int j)
 const throw(MeshException) {
-	if (!is_out_of_domain(i,j)) {
+	if (!this->is_out_of_domain(i,j)) {
 		return m_y(i,j);
 	} else {
 		ostringstream ss;
@@ -112,10 +159,11 @@ const throw(MeshException) {
 	}
 }
 
+template<class fid_t>
 void
-DMesh::set_x(const int i, const int j, double const value)
+DMesh<fid_t>::set_x(const int i, const int j, double const value)
 throw(MeshException) {
-	if (!is_out_of_domain(i,j)) {
+	if (!this->is_out_of_domain(i,j)) {
 		m_x(i,j)=value;
 	} else {
 		ostringstream ss;
@@ -124,10 +172,11 @@ throw(MeshException) {
 	}
 }
 
+template<class fid_t>
 void
-DMesh::set_y(const int i, const int j, double const value)
+DMesh<fid_t>::set_y(const int i, const int j, double const value)
 throw(MeshException) {
-	if (!is_out_of_domain(i,j)) {
+	if (!this->is_out_of_domain(i,j)) {
 		m_y(i,j)=value;
 	} else {
 		ostringstream ss;
@@ -136,8 +185,9 @@ throw(MeshException) {
 	}
 }
 
+template<class fid_t>
 void
-DMesh::init_mesh(void) {
+DMesh<fid_t>::init_mesh(void) {
 	if ((xdim < 2) || (ydim < 2)) {
 		ostringstream sstr;
 		sstr << "init_mesh(): cannot map "
@@ -154,8 +204,9 @@ DMesh::init_mesh(void) {
 	}
 }
 
+template<class fid_t>
 void
-DMesh::resize(int const _xdim, int const _ydim) {
+DMesh<fid_t>::resize(int const _xdim, int const _ydim) {
 	if ((xdim == _xdim) && (ydim == _ydim)) { // do nothing
 		return;
 	} else {
@@ -167,8 +218,9 @@ DMesh::resize(int const _xdim, int const _ydim) {
 	}
 }
 
+template<class fid_t>
 void
-DMesh::add_function(string const fid, double const value)
+DMesh<fid_t>::add_function(fid_t const fid, double const value)
 throw() {
 	array2d a;
 	mf[fid]=a;
@@ -176,23 +228,26 @@ throw() {
 	mf[fid]=value;
 }
 
+template<class fid_t>
 void
-DMesh::add_function_ifndef(string const fid, double const value)
+DMesh<fid_t>::add_function_ifndef(fid_t const fid, double const value)
 throw() {
 	if (!defined(fid)) {
 		add_function(fid,value);
 	}
 }
 
+template<class fid_t>
 void
-DMesh::remove_function(string const fid)
+DMesh<fid_t>::remove_function(fid_t const fid)
 throw() {
 	// TODO: do we have to clean up here?
 	mf.erase(fid);
 }
 
+template<class fid_t>
 void
-DMesh::remove_function_ifdef(string const fid)
+DMesh<fid_t>::remove_function_ifdef(fid_t const fid)
 throw() {
 	if (defined(fid)) {
 		remove_function(fid);
@@ -200,8 +255,9 @@ throw() {
 }
 
 
+template<class fid_t>
 bool
-DMesh::defined(string fid)
+DMesh<fid_t>::defined(fid_t fid)
 const throw() {
 	if (mf.find(fid) == mf.end()) {
 		return false;
@@ -210,64 +266,69 @@ const throw() {
 	}
 }
 
-vector<string>
-DMesh::get_fids(void)
+template<class fid_t>
+vector<fid_t>
+DMesh<fid_t>::get_fids(void)
 const throw() {
-	vector<string> fids;
-	map<string,array2d>::const_iterator i = mf.begin();
+	vector<fid_t> fids;
+	typename pile_of_arrays::const_iterator i = mf.begin();
 	for (; i != mf.end(); ++i) {
 		fids.push_back(i->first);
 	}
 	return fids;
 }
 
+template<class fid_t>
 double
-DMesh::get(string const fid, const int i, const int j)
+DMesh<fid_t>::get(fid_t const fid, const int i, const int j)
 const throw(MeshException) {
 	if (!defined(fid)) { // there is no such function
 		string msg="DMesh::get: no such mesh function: ";
-		msg+=fid;
+		msg+=id2str(fid);
 		throw MeshException(msg);
 	}
-	if (is_out_of_domain(i,j)) {
+	if (this->is_out_of_domain(i,j)) {
 		ostringstream ss;
 		ss << "DMesh::get: indices out of range: " << i << ", " << j;
-		ss << " (fid=" << fid << ")";
+		ss << " (fid=" << id2str(fid) << ")";
 		throw MeshException(ss.str());
 	}
-	return ((map<string,array2d>)mf)[fid](i,j);
+	return ((pile_of_arrays)mf)[fid](i,j);
 }
 
+template<class fid_t>
 void
-DMesh::set(string const fid, const int i, const int j, const double value)
+DMesh<fid_t>::set(fid_t const fid, const int i, const int j, const double value)
 throw(MeshException) {
 	if (!defined(fid)) { // there is no such function
 		string msg="DMesh::set: no such mesh function: ";
-		msg+=fid;
+		msg+=id2str(fid);
 		throw MeshException(msg);
 	}
-	if (is_out_of_domain(i,j)) {
+	if (this->is_out_of_domain(i,j)) {
 		ostringstream ss;
 		ss << "DMesh::set: indices out of range: " << i << ", " << j;
-		ss << " (fid=" << fid << ")";
+		ss << " (fid=" << id2str(fid) << ")";
 		throw MeshException(ss.str());
 	}
 	mf[fid](i,j)=value;
 }
 
+template<class fid_t>
 const blitz::Array<double,2>
-DMesh::operator[](string const fid)
+DMesh<fid_t>::operator[](fid_t const fid)
 const throw(MeshException) {
 	if (!defined(fid)) { // there is no such function
 		string msg="DMesh::operator[]: no such mesh function: ";
-		msg+=fid;
+		msg+=id2str(fid);
 		throw MeshException(msg);
 	}
-	return ((map<string,array2d>)mf)[fid];
+	return ((pile_of_arrays)mf)[fid];
 }
 
+template<class fid_t>
 double
-DMesh::triangle_area(double const x1, double const y1, double const x2,
+DMesh<fid_t>::triangle_area(double const x1, double const y1, double const x2,
 	double const y2, double const x3, double const y3)
 const {
 	pair<double,double> ab(x2-x1,y2-y1);
@@ -276,8 +337,9 @@ const {
 	return s;
 }
 
+template<class fid_t>
 bool
-DMesh::is_corner(const int i, const int j)
+DMesh<fid_t>::is_corner(const int i, const int j)
 const throw() {
 	// if corner point
 	if ( ((i==0) || (i==(get_xdim()-1)))
@@ -288,8 +350,9 @@ const throw() {
 	}
 }
 
+template<class fid_t>
 double
-DMesh::area(const int i, const int j)
+DMesh<fid_t>::area(const int i, const int j)
 const throw() {
 	if (is_corner(i,j)) {
 		return 0;
@@ -319,26 +382,29 @@ const throw() {
 	}
 }
 
+template<class fid_t>
 vector<string>
-DMesh::get_attrs(void) const throw() {
+DMesh<fid_t>::get_attrs(void) const throw() {
 	vector<string> names;
-	map<string,double>::const_iterator i = attr.begin();
+	typename map<string,double>::const_iterator i = attr.begin();
 	for (; i != attr.end(); ++i) {
 		names.push_back(i->first);
 	}
 	return names;
 }
 
+template<class fid_t>
 void
-DMesh::set_attr(string const attribute, double const value)
+DMesh<fid_t>::set_attr(string const attribute, double const value)
 throw(MeshException) {
 	attr[attribute]=value;
 }
 
+template<class fid_t>
 double
-DMesh::get_attr(string const attribute)
+DMesh<fid_t>::get_attr(string const attribute)
 const throw(MeshException) {
-	map<string,double>::const_iterator i;
+	typename map<string,double>::const_iterator i;
 	i=attr.find(attribute);
 	if (i == attr.end()) {
 		ostringstream ss;
@@ -350,8 +416,9 @@ const throw(MeshException) {
 	}
 }
 
+template<class fid_t>
 bool
-DMesh::attr_defined(string const attribute)
+DMesh<fid_t>::attr_defined(string const attribute)
 const {
 	if (attr.find(attribute) == attr.end()) {
 		return false;
@@ -361,8 +428,9 @@ const {
 }
 
 #ifdef HAVE_LIBHDF5
+template<class fid_t>
 void
-DMesh::save(string const filename)
+DMesh<fid_t>::save(string const filename)
 const throw(MeshException) {
 	try {
 		H5::H5File file(filename, H5F_ACC_TRUNC);
@@ -379,20 +447,12 @@ const throw(MeshException) {
 		dataset.write(m_x.data(), H5::PredType::NATIVE_DOUBLE);
 		dataset = savegroup.createDataSet("y", doubletype, ds2d);
 		dataset.write(m_y.data(), H5::PredType::NATIVE_DOUBLE);
-		map<string,array2d>::const_iterator i = mf.begin();
+		typename pile_of_arrays::const_iterator i = mf.begin();
 		for (; i != mf.end(); ++i) {
-			if ((i->first == "phi") || (i->first == "psi")
-				|| (i->first == "vx") || (i->first == "vy")
-				|| (i->first == "c")
-				|| (i->first=="phi_t") || (i->first=="phi_h")
-				|| (i->first=="phi_growth")
-				|| (i->first=="phi_t_growth")
-				|| (i->first=="phi_h_growth")) {
-				dataset = savegroup.createDataSet(i->first,
-						doubletype, ds2d);
-				dataset.write(i->second.data(),
-						H5::PredType::NATIVE_DOUBLE);
-			}
+			dataset = savegroup.createDataSet(id2str(i->first),
+					doubletype, ds2d);
+			dataset.write(i->second.data(),
+					H5::PredType::NATIVE_DOUBLE);
 		}
 		// save scalar data
 		H5::DataSpace ds0;
@@ -411,7 +471,7 @@ const throw(MeshException) {
 		savegroup.createAttribute("ymax", doubletype, ds0)
 			.write(H5::PredType::NATIVE_DOUBLE, &ymax);
 		// save all the dynamic attributes
-		map<string,double>::const_iterator ai = attr.begin();
+		typename map<string,double>::const_iterator ai = attr.begin();
 		for (; ai != attr.end(); ++ai) {
 			string name=ai->first;
 			double value=ai->second;
@@ -424,16 +484,16 @@ const throw(MeshException) {
 	}
 }
 
+template<class fid_t>
 void
-DMesh::load_dataset_2d(H5::Group const g, string const& setname,
+DMesh<fid_t>::load_dataset_2d(H5::Group const g, string const& setname,
 	blitz::Array<double,2>& array) {
 	try {
 	hsize_t dims[2];
 	H5::DataSet set=g.openDataSet(setname);
 	H5::DataSpace space=set.getSpace();
 	if (space.getSimpleExtentNdims() != 2) {
-		string errmsg=
-			"DMesh::load_dataset_2d: dataset `FOO' is not 2D";
+		string errmsg="DMesh::load_dataset_2d: dataset `FOO' is not 2D";
 		errmsg.replace(errmsg.find("FOO",0,3),3,setname);
 		throw MeshException(errmsg);
 	}
@@ -472,8 +532,9 @@ DMesh::load_dataset_2d(H5::Group const g, string const& setname,
 	}
 }
 
+template<class fid_t>
 void
-DMesh::load_dataset_1d(H5::Group const g, string const& setname,
+DMesh<fid_t>::load_dataset_1d(H5::Group const g, string const& setname,
 	blitz::Array<int,1>& array) {
 	try {
 	hsize_t size;
@@ -512,8 +573,9 @@ DMesh::load_dataset_1d(H5::Group const g, string const& setname,
 	}
 }
 
+template<class fid_t>
 void
-DMesh::load(string const filename)
+DMesh<fid_t>::load(string const filename)
 throw(MeshFileException, MeshException) {
 	try {
 		H5::Exception::dontPrint();
@@ -572,38 +634,38 @@ throw(MeshFileException, MeshException) {
 		load_dataset_2d(savegroup,"x",m_x);
 		load_dataset_2d(savegroup,"y",m_y);
 		// load essential mesh functions
-		if (!defined("phi")) {
-		 	add_function("phi");
+		if (!defined(PHI)) {
+		 	add_function(PHI);
 		}
-		load_dataset_2d(savegroup,"phi",mf["phi"]);
-		if (!defined("psi")) {
-		 	add_function("psi");
+		load_dataset_2d(savegroup,"phi",mf[PHI]);
+		if (!defined(PSI)) {
+		 	add_function(PSI);
 		}
-		load_dataset_2d(savegroup,"psi",mf["psi"]);
-		if (!defined("c")) {
-		 	add_function("c");
+		load_dataset_2d(savegroup,"psi",mf[PSI]);
+		if (!defined(CO2)) {
+		 	add_function(CO2);
 		}
-		load_dataset_2d(savegroup,"c",mf["c"]);
-		if (!defined("vx")) {
-		 	add_function("vx");
+		load_dataset_2d(savegroup,"c",mf[CO2]);
+		if (!defined(VX)) {
+		 	add_function(VX);
 		}
-		load_dataset_2d(savegroup,"vx",mf["vx"]);
-		if (!defined("vy")) {
-		 	add_function("vy");
+		load_dataset_2d(savegroup,"vx",mf[VX]);
+		if (!defined(VY)) {
+		 	add_function(VY);
 		}
-		load_dataset_2d(savegroup,"vy",mf["vy"]);
-		if (!defined("phi_t")) {
-		 	add_function("phi_t");
+		load_dataset_2d(savegroup,"vy",mf[VY]);
+		if (!defined(PHI_T)) {
+		 	add_function(PHI_T);
 		}
-		load_dataset_2d(savegroup,"phi_t",mf["phi_t"]);
-		if (!defined("phi_h")) {
-		 	add_function("phi_h");
+		load_dataset_2d(savegroup,"phi_t",mf[PHI_T]);
+		if (!defined(PHI_H)) {
+		 	add_function(PHI_H);
 		}
-		load_dataset_2d(savegroup,"phi_h",mf["phi_h"]);
-		if (!defined("phi_growth")) {
-		 	add_function("phi_growth");
+		load_dataset_2d(savegroup,"phi_h",mf[PHI_H]);
+		if (!defined(PHI_GROWTH)) {
+		 	add_function(PHI_GROWTH);
 		}
-		load_dataset_2d(savegroup,"phi_growth",mf["phi_growth"]);
+		load_dataset_2d(savegroup,"phi_growth",mf[PHI_GROWTH]);
 	}
 	catch (H5::FileIException filerr) {
 		ostringstream ss;
@@ -620,15 +682,17 @@ throw(MeshFileException, MeshException) {
 }
 #endif // ifdef HAVE_LIBHDF5
 
+template<class fid_t>
 double
-DMesh::vecxvec(const pair<double,double>& v1,
+DMesh<fid_t>::vecxvec(const pair<double,double>& v1,
 	const pair<double,double>& v2)
 const {
 	return v1.second*v2.first-v1.first*v2.second;
 }
 
-bool
-DMesh::is_in_triangle (const DMesh::Point& p, const DMesh::Triangle& t)
+template<class fid_t>
+bool DMesh<fid_t>::is_in_triangle
+(const DMesh<fid_t>::Point& p, const DMesh<fid_t>::Triangle& t)
 const {
 	// precision
 	double err=1e-20;
@@ -658,9 +722,10 @@ const {
 	}
 }
 
+template<class fid_t>
 double
-DMesh::interpolate_in_triangle(string const fid, const DMesh::Point& p,
-	const DMesh::Triangle& t)
+DMesh<fid_t>::interpolate_in_triangle
+(fid_t const fid, const DMesh<fid_t>::Point& p, const DMesh<fid_t>::Triangle& t)
 const throw(MeshException) {
 	/*
 	 * looking for a f(x,y)=a*x+b*y+c, solving this system first
@@ -704,8 +769,9 @@ const throw(MeshException) {
 	return value;
 }
 
+template<class fid_t>
 double
-DMesh::interpolate(string const fid, const double x, const double y)
+DMesh<fid_t>::interpolate(fid_t const fid, const double x, const double y)
 const throw(MeshException) {
 	// for each quandrangle of the grid do
 	for (int i=0; i<(xdim-1); i++) {
@@ -758,4 +824,7 @@ const throw(MeshException) {
 	return 0.0; // not defined, really, for outer points; but no error
 }
 
-
+// templates
+template string id2str<int>(int& id);
+template string id2str<string>(string& id);
+template class DMesh<int>;

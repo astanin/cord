@@ -47,6 +47,9 @@ using std::setfill;
 using std::setiosflags;
 using std::ios_base;
 
+template<class fid_t>
+string id2str(fid_t& id);
+
 /// generates the string with timestamp which debug lines should begin with
 string
 dbg_stamp(double t) {
@@ -372,8 +375,9 @@ int init_params(Params& p, int argc, const char *argv[]) {
 	}
 }
 
+template<class fid_t>
 void
-dump2gp(AMesh2D& m, string const& filename) {
+dump2gp(AMesh2D<fid_t>& m, string const& filename) {
 	ofstream fs;
 	fs.open(filename.c_str());
 	if (fs.is_open()) {
@@ -391,15 +395,15 @@ dump2gp(AMesh2D& m, string const& filename) {
 			fs << " " << m.y(0,j);
 		}
 		fs << "\n";
-		vector<string> fids;
+		vector<fid_t> fids;
 		fids=m.get_fids();
-		vector<string>::iterator fun;
+		typename vector<fid_t>::iterator fun;
 		fs << "#x #y ";
 		for (fun=fids.begin(); fun!=fids.end(); ++fun) {
 			if (fun != fids.begin()) {
 				fs << " ";
 			}
-			fs << "#" << *fun;
+			fs << "#" << id2str(*fun);
 		}
 		fs << "\n";
 		for (int i=0; i<m.get_xdim(); ++i) {
@@ -418,15 +422,17 @@ dump2gp(AMesh2D& m, string const& filename) {
 	}
 }
 
+template<class fid_t>
 void
-dump2gp(AMesh2D& m, int const timestamp) {
+dump2gp(AMesh2D<fid_t>& m, int const timestamp) {
 	ostringstream ss;
 	ss << "dmp" << timestamp2str(timestamp) << ".gp";
 	dump2gp(m, ss.str());
 }
 
+template<class fid_t>
 int
-count_inner_points(AMesh2D const& m) {
+count_inner_points(AMesh2D<fid_t> const& m) {
 	int count=0;
 	for (int i=0; i<m.get_xdim(); ++i) {
 		for (int j=0; j<m.get_ydim(); ++j) {
@@ -441,8 +447,9 @@ count_inner_points(AMesh2D const& m) {
 
 /** count quad-connections with bottom-left angle in (i,j)
  * as well as semi-quad-connections (triangular) on the border */
+template<class fid_t>
 int
-count_connections(AMesh2D const& m) {
+count_connections(AMesh2D<fid_t> const& m) {
 	int count=0;
 	for (int i=0; i<(m.get_xdim()-1); ++i) {
 		for (int j=0; j<(m.get_ydim()-1); ++j) {
@@ -458,7 +465,9 @@ count_connections(AMesh2D const& m) {
 	return count;
 }
 
-void dump2dx_scalar_field(AMesh2D const& m, string const& fid, ofstream& fs) {
+template<class fid_t>
+void dump2dx_scalar_field
+(AMesh2D<fid_t> const& m, fid_t const& fid, ofstream& fs) {
 	int xdim=m.get_xdim();
 	int ydim=m.get_ydim();
 	int npos=xdim*ydim; // WARNING: assuming rectangular grid
@@ -492,8 +501,9 @@ void dump2dx_scalar_field(AMesh2D const& m, string const& fid, ofstream& fs) {
 	}
 }
 
-void
-dump2dx_vector_field(AMesh2D const& m, string const& vxfid, string const& vyfid,
+template<class fid_t>
+void dump2dx_vector_field
+(AMesh2D<fid_t> const& m, fid_t const& vxfid, fid_t const& vyfid,
 	string const& fieldname, ofstream& fs) {
 	int xdim=m.get_xdim();
 	int ydim=m.get_ydim();
@@ -532,8 +542,9 @@ dump2dx_vector_field(AMesh2D const& m, string const& vxfid, string const& vyfid,
 	}
 }
 
+template<class fid_t>
 void
-dump2dx(AMesh2D const& m, string const& filename) {
+dump2dx(AMesh2D<fid_t> const& m, string const& filename) {
 	ofstream fs;
 	fs.open(filename.c_str());
 	if (fs.is_open()) {
@@ -586,12 +597,12 @@ dump2dx(AMesh2D const& m, string const& filename) {
 		fs << "attribute \"element type\" string \"quads\"\n";
 		fs << "attribute \"ref\" string \"positions\"\n";
 		
-		dump2dx_scalar_field(m,"phi",fs);
-		dump2dx_scalar_field(m,"c",fs);
-		dump2dx_vector_field(m,"vx","vy","v",fs);
-		dump2dx_scalar_field(m,"psi",fs);
-		dump2dx_scalar_field(m,"phi_t",fs);
-		dump2dx_scalar_field(m,"phi_h",fs);
+		dump2dx_scalar_field<fid_t>(m,PHI,fs);
+		dump2dx_scalar_field<fid_t>(m,CO2,fs);
+		dump2dx_vector_field<fid_t>(m,VX,VY,"v",fs);
+		dump2dx_scalar_field<fid_t>(m,PSI,fs);
+		dump2dx_scalar_field<fid_t>(m,PHI_T,fs);
+		dump2dx_scalar_field<fid_t>(m,PHI_H,fs);
 
 		fs << "end\n";
 	} else {
@@ -601,15 +612,17 @@ dump2dx(AMesh2D const& m, string const& filename) {
 	}
 }
 
+template<class fid_t>
 void
-dump2dx(AMesh2D const& m, int const timestamp) {
+dump2dx(AMesh2D<fid_t> const& m, int const timestamp) {
 	ostringstream ss;
 	ss << "dmp" << timestamp2str(timestamp) << ".dx";
-	dump2dx(m, ss.str());
+	dump2dx<fid_t>(m, ss.str());
 }
 
+template<class fid_t>
 void
-dump_mesh(AMesh2D& m, int timestamp) {
+dump_mesh(AMesh2D<fid_t>& m, int timestamp) {
 #ifdef HAVE_LIBHDF5
 	// Save complete HDF file
 	ostringstream ss;
@@ -617,20 +630,21 @@ dump_mesh(AMesh2D& m, int timestamp) {
 	m.save(ss.str());
 #else
 	// Dump to OpenDX
-	dump2dx(m,timestamp);
+	dump2dx<fid_t>(m,timestamp);
 	// Dump to Gnuplot
-	dump2gp(m,timestamp);
+	dump2gp<fid_t>(m,timestamp);
 #endif
 }
 
 
 /** Evaluate current size of the cord along x-axis (based on psi).
  * Assuming that psi>0 inside the cord. */
-double get_x_size(const AMesh2D& m) {
+template<class fid_t>
+double get_x_size(const AMesh2D<fid_t>& m) {
 	double psi1=0, psi2=0;
-	psi1=m.get("psi",0,0);
+	psi1=m.get(PSI,0,0);
 	for (int i=1; i<m.get_xdim(); ++i) {
-		psi2=m.get("psi",i,0);
+		psi2=m.get(PSI,i,0);
 		if ((psi1>=0) && (psi2<0)) {
 			double x1, x2;
 			double stepratio;
@@ -653,11 +667,12 @@ double get_x_size(const AMesh2D& m) {
 
 /** Evaluate current size of the cord along y-axis (based on psi).
  * Assuming that psi>0 inside the cord. */
-double get_y_size(const AMesh2D& m) {
+template<class fid_t>
+double get_y_size(const AMesh2D<fid_t>& m) {
 	double psi1=0, psi2=0;
-	psi1=m.get("psi",0,0);
+	psi1=m.get(PSI,0,0);
 	for (int j=1; j<(m.get_ydim()); ++j) {
-		psi2=m.get("psi",0,j);
+		psi2=m.get(PSI,0,j);
 		if ((psi1>=0) && (psi2<0)) {
 			double y1, y2;
 			double stepratio;
@@ -679,13 +694,15 @@ double get_y_size(const AMesh2D& m) {
 }
 
 /// norm-I: max(abs(f))
-double norm_1(AMesh2D const& m, string const fid) {
+template<class fid_t>
+double norm_1(AMesh2D<fid_t> const& m, fid_t const fid) {
 	using namespace blitz;
 	return max(fabs(m[fid]));
 }
 
 /// norm-II: sum(abs(f))
-double norm_2(AMesh2D const& m, string const fid) {
+template<class fid_t>
+double norm_2(AMesh2D<fid_t> const& m, fid_t const fid) {
 	using namespace blitz;
 	double norm=sum(fabs(m[fid]));
 	return norm;
@@ -699,4 +716,12 @@ int H(double const x) {
 	}
 }
 
+// templates
+
+template double get_x_size<int>(const AMesh2D<int>& m);
+template double get_y_size<int>(const AMesh2D<int>& m);
+template void dump_mesh<int>(AMesh2D<int>& m, int timestamp);
+template double norm_1<int>(AMesh2D<int> const& m, int const fid);
+template void dump2dx<int>(AMesh2D<int> const& m, string const& filename);
+template void dump2gp<int>(AMesh2D<int>& m, string const& filename);
 

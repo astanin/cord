@@ -49,11 +49,12 @@ public:
 
 #include "amesh2d.h"
 
+template<class fid_t>
 class FullEnumerator : public MeshEnumerator {
 	int xdim;
 	int ydim;
 public:
-	FullEnumerator(AMesh2D const& m) :
+	FullEnumerator(AMesh2D<fid_t> const& m) :
 		xdim(m.get_xdim()), ydim(m.get_ydim()) {}
 	virtual ~FullEnumerator() {}
 	virtual int size(void) const {
@@ -77,6 +78,7 @@ public:
  * SkipDirichletEnumerator enumerates only those mesh points where
  * Dirichlet boundary condition is not defined.
  */
+template<class fid_t>
 class SkipDirichletEnumerator : public MeshEnumerator {
 private:
 	int xdim;
@@ -86,7 +88,7 @@ private:
 	int ymin;
 	int ymax;
 public:
-	SkipDirichletEnumerator(AMesh2D const& m, BCSet const& bcs)
+	SkipDirichletEnumerator(AMesh2D<fid_t> const& m, BCSet const& bcs)
 		: xdim(m.get_xdim()), ydim(m.get_ydim()) {
 		xmin=0;
 		xmax=xdim-1;

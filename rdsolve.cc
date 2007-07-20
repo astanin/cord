@@ -39,8 +39,9 @@ using std::auto_ptr;
 #include <iostream>
 using std::cerr;
 
+template<class fid_t>
 double
-div_term(const AMesh2D& m, string var, string Dvar, int i, int j) {
+div_term(const AMesh2D<fid_t>& m, fid_t var, fid_t Dvar, int i, int j) {
 	double fx=0.5/(m.get_dx()*m.get_dx());
 	double fy=0.5/(m.get_dy()*m.get_dy());
 	return fx*((m[Dvar](i+1,j)+m[Dvar](i,j))*(m[var](i+1,j)-m[var](i,j))
@@ -50,12 +51,13 @@ div_term(const AMesh2D& m, string var, string Dvar, int i, int j) {
 	          -(m[Dvar](i,j)+m[Dvar](i,j-1))*(m[var](i,j)-m[var](i,j-1)));
 }
 
-AMesh2D*
-rd_step_euler(BCSet const& bcs, double dt, const AMesh2D& m1, string const var,
-	string const Dvar, string const Rvar)
+template<class fid_t>
+AMesh2D<fid_t>*
+rd_step_euler(BCSet const& bcs, double dt, const AMesh2D<fid_t>& m1,
+	fid_t const var, fid_t const Dvar, fid_t const Rvar)
 throw(MeshException) {
 	try {
-	auto_ptr<AMesh2D> m2(m1.clone());
+	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
 	int xdim=m2->get_xdim();
 	int ydim=m2->get_ydim();
 	// for inner points
@@ -126,10 +128,11 @@ build_boundary_point_eq(ASparseMatrix& A, vector<double>& rhs,
 	}
 }
 
+template<class fid_t>
 void
-rd_step_implicit_fill_matrix(const AMesh2D& m, const BCSet& bcs,
+rd_step_implicit_fill_matrix(const AMesh2D<fid_t>& m, const BCSet& bcs,
 	ASparseMatrix& A, vector<double>& rhs, MeshEnumerator const& k,
-	double const dt, string const var, string const Dvar, string const Rvar)
+	double const dt, fid_t const var, fid_t const Dvar, fid_t const Rvar)
 throw(MeshException) {
 	int xdim=m.get_xdim();
 	int ydim=m.get_ydim();
@@ -137,7 +140,7 @@ throw(MeshException) {
 	double dy=m.get_dy();
 	double fx=0.5*dt/(dx*dx);
 	double fy=0.5*dt/(dy*dy);
-	string D=Dvar;
+	fid_t D=Dvar;
 	// reset right hand side
 	for (int i=0; i<k.size(); ++i) {
 		rhs.at(i)=0.0;
@@ -217,13 +220,14 @@ throw(MeshException) {
 	return;
 }
 
-AMesh2D*
-rd_step_implicit(BCSet const& bcs, double dt, const AMesh2D& m1,
-	string const var, string const Dvar, string const Rvar)
+template<class fid_t>
+AMesh2D<fid_t>*
+rd_step_implicit(BCSet const& bcs, double dt, const AMesh2D<fid_t>& m1,
+	fid_t const var, fid_t const Dvar, fid_t const Rvar)
 throw(MeshException) {
 	try {
-	SkipDirichletEnumerator kenum(m1,bcs);
-	auto_ptr<AMesh2D> m2(m1.clone());
+	SkipDirichletEnumerator<fid_t> kenum(m1,bcs);
+	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
 	int xdim=m2->get_xdim();
 	int ydim=m2->get_ydim();
 	// initial estimate (previous solution)
@@ -259,25 +263,27 @@ throw(MeshException) {
 	}
 }
 
-AMesh2D*
-rd_step_adi(BCSet const& bcs, double dt, const AMesh2D& m1, string const var,
-	string const Dvar, string const Rvar)
+template<class fid_t>
+AMesh2D<fid_t>*
+rd_step_adi
+(BCSet const& bcs, double dt, const AMesh2D<fid_t>& m1, fid_t const var,
+	fid_t const Dvar, fid_t const Rvar)
 throw(MeshException) {
 	try {
-	auto_ptr<AMesh2D> m2(m1.clone());
+	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
 	// ADI
 #ifdef ENABLE_ADI_ISO_FIX
 	if (rand()%2) { // choose sequence of directions: 50% x,y - 50% y,x
 #endif
-		m2.reset(step_peaceman_rachford_adi_x
+		m2.reset(step_peaceman_rachford_adi_x<fid_t>
 			(bcs, 0.5*dt, *m2, var, Dvar, Rvar));
-		m2.reset(step_peaceman_rachford_adi_y
+		m2.reset(step_peaceman_rachford_adi_y<fid_t>
 			(bcs, 0.5*dt, *m2, var, Dvar, Rvar));
 #ifdef ENABLE_ADI_ISO_FIX
 	} else {
-		m2.reset(step_peaceman_rachford_adi_y
+		m2.reset(step_peaceman_rachford_adi_y<fid_t>
 			(bcs, 0.5*dt, *m2, var, Dvar, Rvar));
-		m2.reset(step_peaceman_rachford_adi_x
+		m2.reset(step_peaceman_rachford_adi_x<fid_t>
 			(bcs, 0.5*dt, *m2, var, Dvar, Rvar));
 	}
 #endif
@@ -290,25 +296,26 @@ throw(MeshException) {
 }
 
 
-AMesh2D*
+template<class fid_t>
+AMesh2D<fid_t>*
 reaction_diffusion_step(BCSet const& bcs, double dt,
-	AMesh2D const& m1, string const var,
-	string const Dvar, string const Rvar,
+	AMesh2D<fid_t> const& m1, fid_t const var,
+	fid_t const Dvar, fid_t const Rvar,
 	MP::rd_solver_t solver)
 throw(MeshException) {
-	auto_ptr<AMesh2D> m2(m1.clone());
+	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
 	// default coefficients if not given
-	string D;
-	if (Dvar.empty()) { // assume D==1.0
-		D="D_ONE";
+	fid_t D;
+	if (Dvar == NONE) { // assume D==1.0
+		D=D_ONE;
 		m2->remove_function_ifdef(D);
 		m2->add_function(D,1.0);
 	} else {
 		D=Dvar;
 	}
-	string R;
-	if (Rvar.empty()) { // assume reaction term R==0.0
-		R="R_ZERO";
+	fid_t R;
+	if (Rvar == NONE) { // assume reaction term R==0.0
+		R=R_ZERO;
 		m2->remove_function_ifdef(R);
 		m2->add_function(R,0.0);
 	} else {
@@ -330,30 +337,40 @@ throw(MeshException) {
 		break;
 	}
 	// remove added functions
-	if (Dvar.empty()) {
+	if (Dvar == NONE) {
 		m2->remove_function_ifdef(D);
 	}
-	if (Rvar.empty()) {
+	if (Rvar == NONE) {
 		m2->remove_function_ifdef(R);
 	}
 	return m2.release();
 }
 
-AMesh2D*
+template<class fid_t>
+AMesh2D<fid_t>*
 reaction_diffusion_step(BCSet const& bcs, double dt,
-	AMesh2D const& m1, string const var,
+	AMesh2D<fid_t> const& m1, fid_t const var,
 	double const D, double const R,
 	MP::rd_solver_t solver)
 throw(MeshException) {
-	auto_ptr<AMesh2D> m2(m1.clone());
-	m2->remove_function_ifdef("Dvar_tmp");
-	m2->remove_function_ifdef("Rvar_tmp");
-	m2->add_function("Dvar_tmp",D);
-	m2->add_function("Rvar_tmp",R);
+	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
+	m2->remove_function_ifdef(DVAR_TMP);
+	m2->remove_function_ifdef(RVAR_TMP);
+	m2->add_function(DVAR_TMP,D);
+	m2->add_function(RVAR_TMP,R);
 	m2.reset(reaction_diffusion_step(bcs,dt,m1,var,
-				"Dvar_tmp","Rvar_tmp",solver));
-	m2->remove_function_ifdef("Dvar_tmp");
-	m2->remove_function_ifdef("Rvar_tmp");
+				DVAR_TMP,RVAR_TMP,solver));
+	m2->remove_function_ifdef(DVAR_TMP);
+	m2->remove_function_ifdef(RVAR_TMP);
 	return m2.release();
 }
+
+// templates
+
+template
+AMesh2D<int>*
+reaction_diffusion_step<int>(BCSet const& bcs, double dt,
+	AMesh2D<int> const& m1, int const var,
+	int const Dvar, int const Rvar,
+	MP::rd_solver_t solver);
 

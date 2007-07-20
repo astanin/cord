@@ -38,16 +38,18 @@
  * @param Rvar	variable with reaction term coefficient
  * @return	state of the mesh after time step @c dt
  **/
-AMesh2D*
+template<class fid_t>
+AMesh2D<fid_t>*
 reaction_diffusion_step(BCSet const& bcs, double dt,
-	AMesh2D const& m1, string const var,
-	string const Dvar, string const Rvar, MP::rd_solver_t solver=MP::RDS_ADI)
+	AMesh2D<fid_t> const& m1, fid_t const var,
+	fid_t const Dvar, fid_t const Rvar, MP::rd_solver_t solver=MP::RDS_ADI)
 throw(MeshException);
 
 /** assume diffusion coefficient and reaction term to be constant everywhere */
-AMesh2D*
+template<class fid_t>
+AMesh2D<fid_t>*
 reaction_diffusion_step(BCSet const& bcs, double dt,
-	AMesh2D const& m1, string const var,
+	AMesh2D<fid_t> const& m1, fid_t const var,
 	double const D, double const R, MP::rd_solver_t solver=MP::RDS_ADI)
 throw(MeshException);
 

@@ -74,6 +74,8 @@ public:
 	throw(MeshFileException,MeshException) = 0;
 };
 
+typedef blitz::Array<double,2> array2d; ///< 2D array of floats type
+
 /** @brief abstract 2D rectangular mesh class
  * Mesh is a mapping of (i,j) points in index space [0:xdim-1],[0:ydim-1] to
  * their (x,y) physical coordinates.
@@ -83,16 +85,15 @@ public:
  * Mesh function are double-valued and are referenced with std::string names.
  * Mesh functions are distinguished by function ids (e.g. their literal names).
  * */
+template<class fid_t>
 class AMesh2D : public AEvolvableInterface
 #ifdef HAVE_LIBHDF5
 	, public APermanentInterface
 #endif
 {
 public:
-	typedef blitz::Array<double,2> array2d; ///< 2D array of floats type
-
 	virtual ~AMesh2D() {}
-	virtual AMesh2D* clone() const = 0;
+	virtual AMesh2D<fid_t>* clone() const = 0;
 
 	/// return physical x for mesh point (i,j)
 	virtual double x(const int i, const int j) const = 0;
@@ -133,26 +134,26 @@ public:
 	 * @param fid[in]	name (ID) of the function
 	 * @param value[in]	initial value */
 	virtual void
-	add_function(string const fid, double const value=0.0) = 0;
+	add_function(fid_t const fid, double const value=0.0) = 0;
 
 	/** @brief add double-valued mesh function if does not exist yet */
 	virtual void
-	add_function_ifndef(string const fid, double const value=0.0) = 0;
+	add_function_ifndef(fid_t const fid, double const value=0.0) = 0;
 
 	/** @brief remove mesh function from the mesh
 	 * @param fid[in]	name (ID) of the function */
-	virtual void remove_function(string const fid) = 0;
+	virtual void remove_function(fid_t const fid) = 0;
 
 	/** @brief remove mesh function from the mesh if one exists */
 	virtual void
-	remove_function_ifdef(string const fid) = 0;
+	remove_function_ifdef(fid_t const fid) = 0;
 
 	/** @brief return vector of names of attached mesh functions */
-	virtual vector<string> get_fids(void) const = 0;
+	virtual vector<fid_t> get_fids(void) const = 0;
 
 	/** @brief returns true if mesh function @c fid is defined, false
 	 * otherwise */
-	virtual bool defined(string const fid) const = 0;
+	virtual bool defined(fid_t const fid) const = 0;
 
 	/** @brief get mesh function value
 	 * @param fid[in]	name (id) of the function
@@ -160,7 +161,7 @@ public:
 	 * @param j[in]		y-axis index
 	 * @return		value of @c fid(i,j) */
 	virtual double
-	get(string const fid, const int i, const int j) const = 0;
+	get(fid_t const fid, const int i, const int j) const = 0;
 
 	/** @brief set mesh function value
 	 * @param fid[in]	name (id) of the function
@@ -168,7 +169,7 @@ public:
 	 * @param j[in]		y-axis index
 	 * @param value[in]	new value of the @c fid(i,j) */
 	virtual void
-	set(string const fid, const int i, const int j, const double value)
+	set(fid_t const fid, const int i, const int j, const double value)
 	= 0;
 
 	/** @brief return reference to array corresponding to mesh function
@@ -183,11 +184,11 @@ public:
 	 *
 	 * @param fid[in]	name (id) of the function
 	 * @return		array2d with function values */
-	virtual array2d const operator[](string const fid) const = 0;
+	virtual array2d const operator[](fid_t const fid) const = 0;
 
 	/// interpolate mesh function in a given point
 	virtual double
-	interpolate (string const fid, double const x, double const y)
+	interpolate (fid_t const fid, double const x, double const y)
 	const throw(MeshException) = 0;
 
 	/** @brief return vector of names of attached attributes */

@@ -1,7 +1,7 @@
 /* Tumour cord growth model */
 
 /*
- * Copyright (C) 2006 Sergey Astanin, Luigi Preziosi, Andrea Tosin
+ * Copyright (C) 2006-2007 Sergey Astanin, Luigi Preziosi, Andrea Tosin
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,32 @@
 using std::string;
 
 #include "singleton.h" 
+
+typedef enum {
+	PHI=0,
+	CO2,
+	PSI,
+	VX,
+	VY,
+	PHI_T,
+	PHI_H,
+	PHI_GROWTH,
+	DEATH_RATE,
+	C_RESIDUAL,
+	TERM_PHI_SIGMA,
+	Q_TMP,
+	D_C_TMP,
+	R_ZERO,
+	D_ONE,
+	DVAR_TMP,
+	RVAR_TMP,
+	PSEUDO_D,
+	NEWPSI,
+	SPSI,
+	PSI2,
+	DPSI2_DT,
+	NONE=-1
+} fid_enum;
 
 /// set of command line parameters
 class Params {

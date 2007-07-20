@@ -47,9 +47,30 @@ using std::ofstream;
 
 #include "function.h"
 
+template<class fid_t> class DMesh;
+
+template<class fid_t>
+void
+dump2dx_scalar_field (DMesh<fid_t> const& m, fid_t const& fid, ofstream& fs);
+
+template<class fid_t>
+void
+dump2dx_vector_field(DMesh<fid_t> const& m, fid_t const& vxfid,
+	fid_t const& vyfid, string const& fieldname, ofstream& fs);
+
+template<class fid_t>
+void
+dump2dx(DMesh<fid_t> const& m, string const& filename);
+
+template<class fid_t>
+string id2str(fid_t& id);
+
 /** @brief 2D mesh with rectangular-like connections and named functions */
-class DMesh : public AMesh2D
+template<class fid_t>
+class DMesh : public AMesh2D<fid_t>
 {
+	typedef map<fid_t, array2d > pile_of_arrays;
+
 private:
 
 	double time; ///< value of time variable corresponding to mesh state
@@ -63,7 +84,7 @@ private:
 	array2d m_y; ///< physical y-coordinates of vertex positions (i,j)
 
 	/** set of named functions defined on the mesh (mesh functions) */
-	map<string, array2d> mf;
+	pile_of_arrays mf;
 
 // interpolation infrastructure
 
@@ -94,7 +115,7 @@ private:
 
 	/// interpolation procedure within a triangle
 	double
-	interpolate_in_triangle(string const fid,
+	interpolate_in_triangle(fid_t const fid,
 		const Point& p, const Triangle& t) const throw(MeshException);
 
 	/// triangle area
@@ -133,8 +154,8 @@ public:
 
 	virtual ~DMesh() {}
 
-	virtual DMesh* clone(void) const {
-		return new DMesh(*this);
+	virtual DMesh<fid_t>* clone(void) const {
+		return new DMesh<fid_t>(*this);
 	}
 
 	/** constructs nx*ny mesh and maps it to [_xmin;_xmax]*[_ymin;_ymax]
@@ -143,10 +164,10 @@ public:
 		double _ymin=0.0, double _ymax=1.0);
 
 	/** copy constructor */
-	DMesh(const DMesh& om);
+	DMesh(const DMesh<fid_t>& om);
 
 	/** assignment operator */
-	DMesh& operator=(const DMesh& rhs);
+	DMesh& operator=(const DMesh<fid_t>& rhs);
 
 	/// delete all mesh functions and mesh attributes
 	virtual void
@@ -204,35 +225,35 @@ public:
 	// mesh functions
 
 	virtual void
-	add_function(string const fid, double const value=0.0)
+	add_function(fid_t const fid, double const value=0.0)
 	throw();
 
 	virtual void
-	add_function_ifndef(string const fid, double const value=0.0)
+	add_function_ifndef(fid_t const fid, double const value=0.0)
 	throw();
 
 	virtual void
-	remove_function(string fid) throw();
+	remove_function(fid_t fid) throw();
 
 	virtual void
-	remove_function_ifdef(string const fid) throw();
+	remove_function_ifdef(fid_t const fid) throw();
 
-	virtual vector<string>
+	virtual vector<fid_t>
 	get_fids(void) const throw();
 
 	virtual bool
-	defined(string fid) const throw();
+	defined(fid_t fid) const throw();
 
 	virtual double
-	get(string const fid, const int i, const int j)
+	get(fid_t const fid, const int i, const int j)
 	const throw(MeshException);
 
 	virtual void
-	set(string const fid, const int i, const int j,
+	set(fid_t const fid, const int i, const int j,
 		const double value) throw(MeshException);
 
 	virtual const blitz::Array<double,2>
-	operator[](string const fid) const throw(MeshException);
+	operator[](fid_t const fid) const throw(MeshException);
 
 
 // mesh attributes
@@ -253,7 +274,7 @@ public:
 
 	/// interpolate mesh function in a given point
 	virtual double
-	interpolate (string const fid, const double x, const double y)
+	interpolate (fid_t const fid, const double x, const double y)
 	const throw(MeshException);
 
 // file operations
@@ -271,14 +292,16 @@ public:
 // friends
 
 	friend void
-	dump2dx_scalar_field(DMesh const& m, string const& fid, ofstream& fs);
+	dump2dx_scalar_field<>
+	(DMesh<fid_t> const& m, fid_t const& fid, ofstream& fs);
 
 	friend void
-	dump2dx_vector_field(DMesh const& m, string const& vxfid,
-		string const& vyfid, string const& fieldname, ofstream& fs);
+	dump2dx_vector_field<>
+	(DMesh<fid_t> const& m, fid_t const& vxfid, fid_t const& vyfid,
+		string const& fieldname, ofstream& fs);
 
 	friend void
-	dump2dx(DMesh const& m, string const& filename);
+	dump2dx<>(DMesh<fid_t> const& m, string const& filename);
 
 };
 

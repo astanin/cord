@@ -38,6 +38,7 @@ public:
 };
 
 /// piece linear tumour sigma
+template<class fid_t>
 class TumourSigma : public ASigmaFactory {
 	double phi0;
 	double kright;
@@ -45,7 +46,7 @@ class TumourSigma : public ASigmaFactory {
 public:
 	virtual ~TumourSigma() {}
 	// may throw MeshException
-	TumourSigma(AMesh2D const& m) : phi0(m.get_attr("phi0")),
+	TumourSigma(AMesh2D<fid_t> const& m) : phi0(m.get_attr("phi0")),
 		kright(m.get_attr("tk1")), kleft(m.get_attr("ts1")) {
 	}
 	virtual ADoubleFunction* build_sigma() {
@@ -57,6 +58,7 @@ public:
 };
 
 /// piece linear host sigma
+template<class fid_t>
 class HostSigma : public ASigmaFactory {
 	double phi0;
 	double kright;
@@ -64,7 +66,7 @@ class HostSigma : public ASigmaFactory {
 public:
 	virtual ~HostSigma() {}
 	// may throw MeshException
-	HostSigma(AMesh2D const& m) : phi0(m.get_attr("phi0")),
+	HostSigma(AMesh2D<fid_t> const& m) : phi0(m.get_attr("phi0")),
 		kright(m.get_attr("hk1")), kleft(m.get_attr("hs1")) {
 	}
 	virtual ADoubleFunction* build_sigma() {
@@ -128,28 +130,30 @@ public:
 };
 
 /// Ghost Fluid Method: construct ghost fluids and reconstruct real fluids
+template<class fid_t>
 class AGFMSplitter {
 public:
 	virtual ~AGFMSplitter() {}
 	/// split mesh variable fid_real into fid_pos and fid_neg
 	virtual void
-	split(AMesh2D& m, string const fid_real, string const fid_phase,
-		string const fid_pos, string const fid_neg) const = 0;
+	split(AMesh2D<fid_t>& m, fid_t const fid_real, fid_t const fid_phase,
+		fid_t const fid_pos, fid_t const fid_neg) const = 0;
 	/// reconstruct mesh variable fid_real from fid_pos and fid_neg
 	virtual void
-	merge(AMesh2D& m, string const fid_real, string const fid_phase,
-		string const fid_pos, string const fid_neg) const = 0;
+	merge(AMesh2D<fid_t>& m, fid_t const fid_real, fid_t const fid_phase,
+		fid_t const fid_pos, fid_t const fid_neg) const = 0;
 };
 
-class TumourHostSplitter : public AGFMSplitter {
+template<class fid_t>
+class TumourHostSplitter : public AGFMSplitter<fid_t> {
 private:
-	TumourSigma tumour;
-	HostSigma host;
+	TumourSigma<fid_t> tumour;
+	HostSigma<fid_t> host;
 	GFM_A2B_Converter t2h;
 	GFM_A2B_Converter h2t;
 public:
 	virtual ~TumourHostSplitter() {}
-	TumourHostSplitter(AMesh2D const& m) :
+	TumourHostSplitter(AMesh2D<fid_t> const& m) :
 		tumour(m), host(m),
 		t2h(tumour.build_sigma(),
 			host.build_sigma(),host.build_sigma_prime()),
@@ -157,8 +161,8 @@ public:
 			tumour.build_sigma(),tumour.build_sigma_prime()) {}
 	/// split mesh variable fid_real into fid_pos and fid_neg
 	virtual void
-	split(AMesh2D& m, string const fid_real, string const fid_phase,
-		string const fid_pos, string const fid_neg) const {
+	split(AMesh2D<fid_t>& m, fid_t const fid_real, fid_t const fid_phase,
+		fid_t const fid_pos, fid_t const fid_neg) const {
 		try {
 		m.remove_function_ifdef(fid_pos);
 		m.remove_function_ifdef(fid_neg);
@@ -188,8 +192,8 @@ public:
 	}
 	/// reconstruct mesh variable fid_real from fid_pos and fid_neg
 	virtual void
-	merge(AMesh2D& m, string const fid_real, string const fid_phase,
-		string const fid_pos, string const fid_neg) const {
+	merge(AMesh2D<fid_t>& m, fid_t const fid_real, fid_t const fid_phase,
+		fid_t const fid_pos, fid_t const fid_neg) const {
 		try {
 		m.remove_function_ifdef(fid_real);
 		m.add_function(fid_real);

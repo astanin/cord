@@ -45,8 +45,9 @@ int show_version=0;
 int verbose=0;
 int N_ATP_PER_GLUCOSE=32;
 
+template<class fid_t>
 void
-print_model_params(const DMesh& m, const Params& p,
+print_model_params(const DMesh<fid_t>& m, const Params& p,
 	int argc, const char *argv[]) {
 	if (!verbose) {
 		return;
@@ -176,7 +177,7 @@ main(int argc, const char *argv[]) {
 	}
 #ifdef HAVE_LIBHDF5
 	if (p.hdf2dx) { // HDF5 to OpenDX conversion, no calculation
-		ret=hdf2dx(p);
+		ret=hdf2dx<int>(p);
 		if (ret) {
 			exit(EXIT_FAILURE);
 		} else {
@@ -184,7 +185,7 @@ main(int argc, const char *argv[]) {
 		}
 	}
 	if (p.hdf2gp) { // HDF5 to gnuplot conversion, no calculation
-		ret=hdf2gp(p);
+		ret=hdf2gp<int>(p);
 		if (ret) {
 			exit(EXIT_FAILURE);
 		} else {
@@ -193,9 +194,9 @@ main(int argc, const char *argv[]) {
 	}
 #endif
 	try {
-		DMesh m=build_mesh(p);
+		DMesh<int> m=build_mesh<int>(p);
 		print_model_params(m,p,argc,argv);
-		DMesh* pm2=static_cast<DMesh*>(solve(p,m));
+		DMesh<int>* pm2=static_cast<DMesh<int>*>(solve<int>(p,m));
 		m=*pm2;
 #ifdef HAVE_LIBHDF5
 		if (!p.outputfile.empty()) {

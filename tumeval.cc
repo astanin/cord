@@ -39,8 +39,9 @@ using std::auto_ptr;
 
 string dbg_stamp(double t);
 
+template<class fid_t>
 blitz::Array<double,1>
-grad(const AMesh2D& m, string const fid, const int i, const int j,
+grad(const AMesh2D<fid_t>& m, fid_t const fid, const int i, const int j,
 	const int i1, const int j1, const int i2, const int j2)
 throw(MeshException) {
 	double df1=m.get(fid,i,j)-m.get(fid,i1,j1);
@@ -68,8 +69,9 @@ throw(MeshException) {
 	return g;
 }
 
+template<class fid_t>
 blitz::Array<double,1>
-smart_grad(const AMesh2D& m, string const fid, const int i, const int j)
+smart_grad(const AMesh2D<fid_t>& m, fid_t const fid, const int i, const int j)
 throw(MeshException) {
 	try {
 	if (!m.is_inner(i,j)) {
@@ -113,31 +115,32 @@ throw(MeshException) {
 }
 
 // {vx,vy} -- velocity field of the material (tissue)
+template<class fid_t>
 void
-eval_v(AMesh2D& m, string const vx="vx", string const vy="vy")
+eval_v(AMesh2D<fid_t>& m, fid_t const vx=VX, fid_t const vy=VY)
 throw(MeshException) {
-	m.add_function_ifndef("term_phi_sigma");
+	m.add_function_ifndef(TERM_PHI_SIGMA);
 	m.add_function_ifndef(vx);
 	m.add_function_ifndef(vy);
-	TumourSigma tumour(m);
-	HostSigma host(m);
+	TumourSigma<fid_t> tumour(m);
+	HostSigma<fid_t> host(m);
 	for (int i=0; i<m.get_xdim(); ++i) {
 		for (int j=0; j<m.get_ydim(); ++j) {
-			double phi=m.get("phi",i,j);
-			double psi=m.get("psi",i,j);
+			double phi=m[PHI](i,j);
+			double psi=m[PSI](i,j);
 			auto_ptr<ADoubleFunction> sigma;
 			if (psi>0) {
 				sigma.reset(tumour.build_sigma());
 			} else {
 				sigma.reset(host.build_sigma());
 			}
-			m.set("term_phi_sigma",i,j,phi*sigma->eval(phi));
+			m.set(TERM_PHI_SIGMA,i,j,phi*sigma->eval(phi));
 		}
 	}
 	for (int i=0; i<m.get_xdim(); ++i) {
 		for (int j=0; j<m.get_ydim(); ++j) {
 			blitz::Array<double,1> g=
-				smart_grad(m,"term_phi_sigma",i,j);
+				smart_grad<int>(m,TERM_PHI_SIGMA,i,j);
 			double mu=m.get_attr("cell_motility");
 			double vxval=(i>0)?(-g(0)*mu):0;
 			double vyval=(j>0)?(-g(1)*mu):0;
@@ -145,15 +148,16 @@ throw(MeshException) {
 			m.set(vy,i,j,vyval);
 		}
 	}
-	m.remove_function_ifdef("term_phi_sigma");
+	m.remove_function_ifdef(TERM_PHI_SIGMA);
 }
 
+template<class fid_t>
 struct _K_derivative_params {
-	const AMesh2D *pm;
+	const AMesh2D<fid_t> *pm;
 	ADoubleFunction* sigma;
 	ADoubleFunction* sigma_prime;
 	_K_derivative_params() :
-		pm((AMesh2D*)0), sigma(0), sigma_prime(0) {}
+		pm((AMesh2D<fid_t>*)0), sigma(0), sigma_prime(0) {}
 	~_K_derivative_params() {
 		if (sigma) {
 			delete sigma;
@@ -164,19 +168,21 @@ struct _K_derivative_params {
 	}
 };
 
+template<class fid_t>
 double
-integrate(const AMesh2D& m, string const f) {
+integrate(const AMesh2D<fid_t>& m, fid_t const f) {
 	double integral=0.0;
 	for (int i=0; i<m.get_xdim(); ++i) {
 		for (int j=0; j<m.get_ydim(); ++j) {
-			integral+=m.get(f,i,j)*m.area(i,j);
+			integral+=m[f](i,j)*m.area(i,j);
 		}
 	}
 	return integral;
 }
 
+template<class fid_t>
 double
-estimate_optimal_dt(const AMesh2D& m) {
+estimate_optimal_dt(const AMesh2D<fid_t>& m) {
 	double max_dt=0.0;
 	double max_D=0.0;
 	double min_h2=1.0e99;
@@ -185,16 +191,16 @@ estimate_optimal_dt(const AMesh2D& m) {
 	// as $\mu ( \Phi^2\Sigma\prime(\Phi)+\Phi\Sigma(\Phi) )$
 	for (int i=0; i<m.get_xdim(); ++i) {
 		for (int j=0; j<m.get_ydim(); ++j) {
-			double phi=m.get("phi",i,j);
-			double psi=m.get("psi",i,j);
+			double phi=m[PHI](i,j);
+			double psi=m[PSI](i,j);
 			auto_ptr<ADoubleFunction> ps;
 			auto_ptr<ADoubleFunction> psp;
 			if (psi > 0) {
-				ps.reset(TumourSigma(m).build_sigma());
-				psp.reset(TumourSigma(m).build_sigma_prime());
+				ps.reset(TumourSigma<fid_t>(m).build_sigma());
+				psp.reset(TumourSigma<fid_t>(m).build_sigma_prime());
 			} else {
-				ps.reset(HostSigma(m).build_sigma());
-				psp.reset(HostSigma(m).build_sigma_prime());
+				ps.reset(HostSigma<fid_t>(m).build_sigma());
+				psp.reset(HostSigma<fid_t>(m).build_sigma_prime());
 			}
 			double s=ps->eval(phi);
 			double sp=psp->eval(phi);
@@ -217,16 +223,18 @@ estimate_optimal_dt(const AMesh2D& m) {
 }
 
 // return maximum value of sqrt(vx^2+vy^2) on the mesh
-double v_max(const AMesh2D& m) throw(MeshException) {
-	if (!m.defined("vx") || !m.defined("vy")) {
+template<class fid_t>
+double v_max(const AMesh2D<fid_t>& m)
+throw(MeshException) {
+	if (!m.defined(VX) || !m.defined(VY)) {
 		throw MeshException("v_max: vx or vy not defined");
 	}
 	double vmax=0.0;
 	for (int i=0; i < (m.get_xdim()); ++i) {
 		for (int j=0; j < (m.get_ydim()); ++j) {
 			double vx, vy, v;
-			vx=m.get("vx",i,j);
-			vy=m.get("vy",i,j);
+			vx=m[VX](i,j);
+			vy=m[VY](i,j);
 			v=sqrt(vx*vx+vy*vy);
 			if (v > vmax) {
 				vmax=v;
@@ -237,18 +245,19 @@ double v_max(const AMesh2D& m) throw(MeshException) {
 }
 
 /** Pseudo diffusion coefficient for phi */
+template<class fid_t>
 double
-phi_pseudo_diff_coef(const AMesh2D& m, const int i, const int j,
-		string const var) {
+phi_pseudo_diff_coef
+(const AMesh2D<fid_t>& m, const int i, const int j, fid_t const var) {
 	auto_ptr<ADoubleFunction> sigma;
 	auto_ptr<ADoubleFunction> sigma_prime;
-	double psi=m.get("psi",i,j);
+	double psi=m[PSI](i,j);
 	if (psi > 0) {
-		sigma.reset(TumourSigma(m).build_sigma());
-		sigma_prime.reset(TumourSigma(m).build_sigma_prime());
+		sigma.reset(TumourSigma<fid_t>(m).build_sigma());
+		sigma_prime.reset(TumourSigma<fid_t>(m).build_sigma_prime());
 	} else {
-		sigma.reset(HostSigma(m).build_sigma());
-		sigma_prime.reset(HostSigma(m).build_sigma_prime());
+		sigma.reset(HostSigma<fid_t>(m).build_sigma());
+		sigma_prime.reset(HostSigma<fid_t>(m).build_sigma_prime());
 	}
 	double mu=m.get_attr("cell_motility");
 	double phi=m.get(var,i,j);
@@ -256,8 +265,9 @@ phi_pseudo_diff_coef(const AMesh2D& m, const int i, const int j,
 	return pseudoD;
 }
 
+template<class fid_t>
 void
-phi_init_pseudo_D(AMesh2D& m, string const var, string const Dvar) {
+phi_init_pseudo_D(AMesh2D<fid_t>& m, fid_t const var, fid_t const Dvar) {
 	// init diffusion coefficient values
 	m.remove_function_ifdef(Dvar);
 	m.add_function_ifndef(Dvar,0.0);
@@ -270,35 +280,36 @@ phi_init_pseudo_D(AMesh2D& m, string const var, string const Dvar) {
 	if (verbose > 1) {
 		cerr << dbg_stamp(m.get_time())
 			<<setprecision(3)<<setiosflags(ios::scientific)
-			<< "max(" << Dvar << ")= " << max(m[Dvar]) << " "
-			<< "min(" << Dvar << ")= " << min(m[Dvar]) << "\n";
+			<< "max("<< id2str(Dvar) <<")= "<< max(m[Dvar]) << " "
+			<< "min("<< id2str(Dvar) <<")= "<< min(m[Dvar]) << "\n";
 	}
 }
 
-AMesh2D*
-phi_step(const Params& p, double dt, const AMesh2D& m1, string const var)
+template<class fid_t>
+AMesh2D<fid_t>*
+phi_step(const Params& p, double dt, const AMesh2D<fid_t>& m1, fid_t const var)
 throw(MeshException) {
 	try {
-	auto_ptr<AMesh2D> m2(m1.clone());
-	phi_init_pseudo_D(*m2,var,"pseudo_D");
+	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
+	phi_init_pseudo_D<fid_t>(*m2,var,PSEUDO_D);
 	switch (Method::it().rd_solver) {
 	case MethodParams::RDS_EXPLICIT:
-		m2.reset(reaction_diffusion_step(p.phi_bc,dt,*m2,var,
-			"pseudo_D","",MP::RDS_EXPLICIT));
+		m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,var,
+			PSEUDO_D,NONE,MP::RDS_EXPLICIT));
 		break;
 	case MethodParams::RDS_ADI:
-		m2.reset(reaction_diffusion_step(p.phi_bc,dt,*m2,var,
-			"pseudo_D","",MP::RDS_ADI));
+		m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,var,
+			PSEUDO_D,NONE,MP::RDS_ADI));
 		break;
 	case MethodParams::RDS_IMPLICIT:
-		m2.reset(reaction_diffusion_step(p.phi_bc,dt,*m2,var,
-			"pseudo_D","",MP::RDS_IMPLICIT));
+		m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,var,
+			PSEUDO_D,NONE,MP::RDS_IMPLICIT));
 		break;
 	default:
 		throw MeshException("phi_step: method unknown");
 		break;
 	}
-	m2->remove_function_ifdef("pseudo_D");
+	m2->remove_function_ifdef(PSEUDO_D);
 	return m2.release();
 	} catch(MeshException& e) {
 		ostringstream ss;
@@ -307,12 +318,13 @@ throw(MeshException) {
 	}
 }
 
+template<class fid_t>
 void
-substep_level_set(double dt, AMesh2D& m)
+substep_level_set(double dt, AMesh2D<fid_t>& m)
 throw(MeshException) {
 	try {
-	m.remove_function_ifdef("newpsi");
-	m.add_function_ifndef("newpsi",0.0);
+	m.remove_function_ifdef(NEWPSI);
+	m.add_function_ifndef(NEWPSI,0.0);
 	// resolve for inner points
 	// WARNING: will work for uniform rectangular grid only
 	double dx=m.get_dx();
@@ -320,46 +332,46 @@ throw(MeshException) {
 	for (int i=1; i < (m.get_xdim()-1); ++i) {
 		for (int j=1; j < (m.get_ydim()-1); ++j) {
 			double psi, vx, vy;
-			psi=m.get("psi",i,j);
-			vx=m.get("vx",i,j);
-			vy=m.get("vy",i,j);
+			psi=m[PSI](i,j);
+			vx=m[VX](i,j);
+			vy=m[VY](i,j);
 			double vdotgradpsi;
 			vdotgradpsi=0.5*(vx+fabs(vx))*
-				(m["psi"](i,j)-m["psi"](i-1,j))/dx
+				(m[PSI](i,j)-m[PSI](i-1,j))/dx
 				+0.5*(vx-fabs(vx))*
-				(m["psi"](i+1,j)-m["psi"](i,j))/dx
+				(m[PSI](i+1,j)-m[PSI](i,j))/dx
 				+0.5*(vy+fabs(vy))*
-				(m["psi"](i,j)-m["psi"](i,j-1))/dy
+				(m[PSI](i,j)-m[PSI](i,j-1))/dy
 				+0.5*(vy-fabs(vy))*
-				(m["psi"](i,j+1)-m["psi"](i,j))/dy;
-			m.set("newpsi",i,j,psi-dt*vdotgradpsi);
+				(m[PSI](i,j+1)-m[PSI](i,j))/dy;
+			m.set(NEWPSI,i,j,psi-dt*vdotgradpsi);
 		}
 	}
 	// apply boundary conditions
 	// WARNING: valid for rectangular grid only
 	for (int j=1; j<(m.get_ydim()-1); ++j) {
 		double psi_in;
-		psi_in=m.get("newpsi",1,j);
-		m.set("newpsi",0,j,psi_in);
-		psi_in=m.get("newpsi",m.get_xdim()-2,j);
-		m.set("newpsi",m.get_xdim()-1,j,psi_in);
+		psi_in=m.get(NEWPSI,1,j);
+		m.set(NEWPSI,0,j,psi_in);
+		psi_in=m.get(NEWPSI,m.get_xdim()-2,j);
+		m.set(NEWPSI,m.get_xdim()-1,j,psi_in);
 	}
 	for (int i=0; i<m.get_xdim(); ++i) {
 		double psi_in;
-		psi_in=m.get("newpsi",i,1);
-		m.set("newpsi",i,0,psi_in);
-		psi_in=m.get("newpsi",i,m.get_ydim()-2);
-		m.set("newpsi",i,m.get_ydim()-1,psi_in);
+		psi_in=m.get(NEWPSI,i,1);
+		m.set(NEWPSI,i,0,psi_in);
+		psi_in=m.get(NEWPSI,i,m.get_ydim()-2);
+		m.set(NEWPSI,i,m.get_ydim()-1,psi_in);
 	}
 	// overwrite old psi
 	for (int i=0; i < (m.get_xdim()); ++i) {
 		for (int j=0; j < (m.get_ydim()); ++j) {
 			double newpsi;
-			newpsi=m.get("newpsi",i,j);
-			m.set("psi",i,j,newpsi);
+			newpsi=m[NEWPSI](i,j);
+			m.set(PSI,i,j,newpsi);
 		}
 	}
-	m.remove_function_ifdef("newpsi");
+	m.remove_function_ifdef(NEWPSI);
 	return;
 	} catch (MeshException& e) {
 		ostringstream ss;
@@ -368,8 +380,9 @@ throw(MeshException) {
 	}
 }
 
-double level_set_function_reset_step(AMesh2D& m,
-	string const& var, string const& dvar) {
+template<class fid_t>
+double level_set_function_reset_step(AMesh2D<fid_t>& m,
+	fid_t const& var, fid_t const& dvar) {
 	using namespace blitz;
 	m.remove_function_ifdef(dvar);
 	m.add_function_ifndef(dvar,0.0);
@@ -387,7 +400,7 @@ double level_set_function_reset_step(AMesh2D& m,
 			double gx=0.5*(dpx+fabs(dpx)+dmx-fabs(dmx))/dx;
 			double gy=0.5*(dpy+fabs(dpy)+dmy-fabs(dmy))/dy;
 			// d(psi2)/dt
-			double dpsi2=m.get("Spsi",i,j)*(1-sqrt(gx*gx+gy*gy));
+			double dpsi2=m.get(SPSI,i,j)*(1-sqrt(gx*gx+gy*gy));
 			m.set(dvar,i,j,dpsi2);
 		}
 	}
@@ -419,11 +432,12 @@ double level_set_function_reset_step(AMesh2D& m,
 /** find steady state solution of
  * d psi2 / dt = S(psi) (1- |grad(psi2)|), S(psi) = psi/\sqrt{psi^2+h_x^2+h_y^2}
  */
-int level_set_function_reset(AMesh2D& m) {
-	m.remove_function_ifdef("psi2");
-	m.add_function_ifndef("psi2");
-	m.remove_function_ifdef("Spsi");
-	m.add_function_ifndef("Spsi");
+template<class fid_t>
+int level_set_function_reset(AMesh2D<fid_t>& m) {
+	m.remove_function_ifdef(PSI2);
+	m.add_function_ifndef(PSI2);
+	m.remove_function_ifdef(SPSI);
+	m.add_function_ifndef(SPSI);
 	double psi;
 	// eps is heuristic parameter
 	double eps=16*(m.get_dx()*m.get_dx()+m.get_dy()*m.get_dy());
@@ -431,35 +445,36 @@ int level_set_function_reset(AMesh2D& m) {
 	int ydim=m.get_ydim();
 	for (int i=0; i<xdim; ++i) {
 		for (int j=0; j<ydim; ++j) {
-			psi=m.get("psi",i,j);
-			m.set("Spsi",i,j,psi/sqrt(psi*psi+eps));
+			psi=m.get(PSI,i,j);
+			m.set(SPSI,i,j,psi/sqrt(psi*psi+eps));
 		}
 	}
 	int count=0;
 	do {
-		eps=level_set_function_reset_step(m,"psi2","dpsi2_dt");
+		eps=level_set_function_reset_step<fid_t>(m,PSI2,DPSI2_DT);
 		++count;
 	} while (eps < Method::it().sle_solver_accuracy);
 	for (int i=0; i<xdim; ++i) {
 		for (int j=0; j<ydim; ++j) {
-			m.set("psi",i,j,m.get("psi2",i,j));
+			m.set(PSI,i,j,m.get(PSI2,i,j));
 		}
 	}
-	m.remove_function_ifdef("psi2");
-	m.remove_function_ifdef("Spsi");
+	m.remove_function_ifdef(PSI2);
+	m.remove_function_ifdef(SPSI);
 	return count;
 }
 
 /** time step for dpsi/dt + v*grad(psi) = 0
  *  with uniform boundary condition for psi (zero flux);
  *  WARNING: this implementation works for uniform rectangular grid only */
-AMesh2D*
-step_level_set(double dt, const AMesh2D& m1)
+template<class fid_t>
+AMesh2D<fid_t>*
+step_level_set(double dt, const AMesh2D<fid_t>& m1)
 throw(MeshException) {
 	try {
-	auto_ptr<AMesh2D> m2(m1.clone());
-	eval_v(*m2);
-	if (!m2->defined("vx") || !m2->defined("vy")) {
+	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
+	eval_v<fid_t>(*m2);
+	if (!m2->defined(VX) || !m2->defined(VY)) {
 		throw MeshException("step_level_set: vx or vy not defined");
 	}
 	double vmax=v_max(*m2);
@@ -481,7 +496,7 @@ throw(MeshException) {
 	}
 	if (Method::it().level_set_reset) {
 		int count;
-		count=level_set_function_reset(*m2);
+		count=level_set_function_reset<fid_t>(*m2);
 		if (verbose > 1) {
 			cerr << dbg_stamp(m1.get_time())
 				<< "step_level_set: "
@@ -497,3 +512,16 @@ throw(MeshException) {
 	}
 }
 
+// tepmlates
+template
+AMesh2D<int>*
+phi_step<int>
+(const Params& p, double dt, const AMesh2D<int>& m1, int const var);
+
+template
+AMesh2D<int>*
+step_level_set<int>(double dt, const AMesh2D<int>& m1);
+
+template
+double
+estimate_optimal_dt<int>(const AMesh2D<int>& m);

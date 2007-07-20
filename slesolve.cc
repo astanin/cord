@@ -66,8 +66,9 @@ throw(MeshException) {
 	return pA.release();
 }
 
+template<class fid_t>
 void
-update_dirichlet_points(AMesh2D& m, const BCSet& bcs, string const var) {
+update_dirichlet_points(AMesh2D<fid_t>& m, const BCSet& bcs, fid_t const var) {
 	int xdim=m.get_xdim();
 	int ydim=m.get_ydim();
 	for (int i=1; i<(xdim-1); ++i) {
@@ -104,4 +105,8 @@ update_dirichlet_points(AMesh2D& m, const BCSet& bcs, string const var) {
 						+m[var](xdim-1,ydim-2)));
 }
 
+// templates
+template
+void
+update_dirichlet_points<int>(AMesh2D<int>& m, const BCSet& bcs, int const var);
 

@@ -27,13 +27,14 @@ using std::auto_ptr;
 
 string dbg_stamp(double t);
 
-AMesh2D*
+template<class fid_t>
+AMesh2D<fid_t>*
 step_peaceman_rachford_adi_x(const BCSet& bcs,
-	double dt, const AMesh2D& m1, string const var,
-	string const D_coef_var, string const reaction_term_var)
+	double dt, const AMesh2D<fid_t>& m1, fid_t const var,
+	fid_t const D_coef_var, fid_t const reaction_term_var)
 throw(MeshException) {
 	try {
-	auto_ptr<AMesh2D> m2(m1.clone());
+	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
 	int xdim=m1.get_xdim();
 	int ydim=m1.get_ydim();
 	// WARNING: valid for uniform grid only
@@ -57,7 +58,7 @@ throw(MeshException) {
 		// inner points
 		for (int i=1; i<(xdim-1); ++i) {
 			double D_0, D_ip, D_im, D_jp, D_jm;
-			if (!D_coef_var.empty()) {
+			if (D_coef_var != NONE) {
 				D_0=m1.get(D_coef_var,i,j);
 				D_ip=m1.get(D_coef_var,i+1,j);
 				D_im=m1.get(D_coef_var,i-1,j);
@@ -77,7 +78,7 @@ throw(MeshException) {
 			double u_jp=m1.get(var,i,j+1);
 			double u_jm=m1.get(var,i,j-1);
 			double f;
-			if (!reaction_term_var.empty()) {
+			if (reaction_term_var != NONE) {
 				f=-m1.get(reaction_term_var,i,j);
 			} else {
 				f=0.0;
@@ -127,13 +128,14 @@ throw(MeshException) {
 	}
 }
 
-AMesh2D*
+template<class fid_t>
+AMesh2D<fid_t>*
 step_peaceman_rachford_adi_y(const BCSet& bcs,
-	double dt, const AMesh2D& m1, string const var,
-	string const D_coef_var, string const reaction_term_var)
+	double dt, const AMesh2D<fid_t>& m1, fid_t const var,
+	fid_t const D_coef_var, fid_t const reaction_term_var)
 throw(MeshException) {
 	try {
-	auto_ptr<AMesh2D> m2(m1.clone());
+	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
 	int xdim=m1.get_xdim();
 	int ydim=m1.get_ydim();
 	// WARNING: valid for uniform grid only
@@ -157,7 +159,7 @@ throw(MeshException) {
 		// inner points
 		for (int j=1; j<(ydim-1); ++j) {
 			double D_0, D_ip, D_im, D_jp, D_jm;
-			if (!D_coef_var.empty()) {
+			if (D_coef_var != NONE) {
 				D_0=m1.get(D_coef_var,i,j);
 				D_ip=m1.get(D_coef_var,i+1,j);
 				D_im=m1.get(D_coef_var,i-1,j);
@@ -177,7 +179,7 @@ throw(MeshException) {
 			double u_ip=m1.get(var,i+1,j);
 			double u_im=m1.get(var,i-1,j);
 			double f;
-			if (!reaction_term_var.empty()) {
+			if (reaction_term_var != NONE) {
 				f=-m1.get(reaction_term_var,i,j);
 			} else {
 				f=0.0;
@@ -227,4 +229,15 @@ throw(MeshException) {
 	}
 }
 
+// templates
+template
+AMesh2D<int>*
+step_peaceman_rachford_adi_x<int>(const BCSet& bcs,
+	double dt, const AMesh2D<int>& m1, int const var,
+	int const D_coef_var, int const reaction_term_var);
+template
+AMesh2D<int>*
+step_peaceman_rachford_adi_y<int>(const BCSet& bcs,
+	double dt, const AMesh2D<int>& m1, int const var,
+	int const D_coef_var, int const reaction_term_var);
 

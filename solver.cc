@@ -46,27 +46,24 @@ using std::auto_ptr;
 #include "dmeshops.h"
 #include "utils.h"
 
+template<class fid_t>
 double
-estimate_optimal_dt(const AMesh2D& m);
+estimate_optimal_dt(const AMesh2D<fid_t>& m);
 
-AMesh2D*
-eval_tissue(const Params& p, double const dt, const AMesh2D& m1,
-	string density_var) {
+template<class fid_t>
+AMesh2D<fid_t>*
+eval_tissue(const Params& p, double const dt, const AMesh2D<fid_t>& m1,
+	fid_t density_var) {
 	// growth-death (ODE)
-	auto_ptr<AMesh2D> tmp(step_growth_death(dt,m1,density_var));
-	if (verbose > 1) { // extraverbose
-		cerr << dbg_stamp(m1.get_time()) << "average_"
-			<< density_var << "_growth="
-			<< mean((*tmp)[density_var+"_growth"])
-			<< "\n";
-	}
-	auto_ptr<AMesh2D> m2(phi_step(p, dt, *tmp, density_var));
+	auto_ptr<AMesh2D<fid_t> > tmp(step_growth_death<fid_t>(dt,m1,density_var));
+	auto_ptr<AMesh2D<fid_t> > m2(phi_step<fid_t>(p, dt, *tmp, density_var));
 	return m2.release();
 }
 
-AMesh2D*
-solve(const Params& p, const AMesh2D& initial) {
-	auto_ptr<AMesh2D> m1(initial.clone());
+template<class fid_t>
+AMesh2D<fid_t>*
+solve(const Params& p, const AMesh2D<fid_t>& initial) {
+	auto_ptr<AMesh2D<fid_t> > m1(initial.clone());
 	double last_dump_t=m1->get_time();
 	double final_t=m1->get_time()+p.eval_t;
 	double prevxsize=0.0;
@@ -80,15 +77,15 @@ solve(const Params& p, const AMesh2D& initial) {
 	} else {
 		use_ghostfluidmethod=false;
 		// we need these functions anyway to maintain save compatibility
-		m1->add_function_ifndef("phi_t");
-		m1->add_function_ifndef("phi_h");
+		m1->add_function_ifndef(PHI_T);
+		m1->add_function_ifndef(PHI_H);
 	}
-	TumourHostSplitter gfm(*m1);
+	TumourHostSplitter<fid_t> gfm(*m1);
 	while (m1->get_time() < final_t) {
 		double eff_dt=0.0;
 		// if ((dt == 0) || (dt < 0)) use automatic time step
 		if (p.dt < 1e-99) {
-			eff_dt=estimate_optimal_dt(*m1);
+			eff_dt=estimate_optimal_dt<fid_t>(*m1);
 			if (verbose) {
 				cerr << dbg_stamp(m1->get_time())
 					<< "autostep=" << eff_dt << "\n";
@@ -99,31 +96,32 @@ solve(const Params& p, const AMesh2D& initial) {
 		if (eff_dt_initial < 0) {
 			eff_dt_initial=eff_dt;
 		}
-		auto_ptr<AMesh2D> m2;
+		auto_ptr<AMesh2D<fid_t> > m2;
 		if (use_ghostfluidmethod) {
 			// update "real" (tumour) and "ghost" (host) fluids
-			gfm.split(*m1,"phi","psi","phi_t","phi_h");
+			gfm.split(*m1,PHI,PSI,PHI_T,PHI_H);
 			// evaluate tissue behaviour
-			m2.reset(eval_tissue(p,eff_dt,*m1,"phi_t"));
-			m2.reset(eval_tissue(p,eff_dt,*m2,"phi_h"));
+			m2.reset(eval_tissue<fid_t>(p,eff_dt,*m1,PHI_T));
+			m2.reset(eval_tissue<fid_t>(p,eff_dt,*m2,PHI_H));
 			// re-construct solution
-			gfm.merge(*m2,"phi","psi","phi_t","phi_h");
+			gfm.merge(*m2,PHI,PSI,PHI_T,PHI_H);
 		} else {
 			// evaluate tissue behaviour
-			m2.reset(eval_tissue(p,eff_dt,*m1,"phi"));
+			m2.reset(eval_tissue<fid_t>(p,eff_dt,*m1,PHI));
 		}
 		// level set (interface tracking)
-		m2.reset(step_level_set(eff_dt,*m2));
+		m2.reset(step_level_set<fid_t>(eff_dt,*m2));
 		// nutrient (eliptic)
-		m2.reset(eval_nutrient(p,*m2,Method::it().p_solver_accuracy,eff_dt));
+		m2.reset(eval_nutrient<fid_t>(p,*m2,Method::it().
+					p_solver_accuracy,eff_dt));
 		// done all sub steps
 		m2->inc_time(eff_dt);
 		m1.reset(m2->clone());
 		if (verbose) {
 			cerr << dbg_stamp(m1->get_time())
 				<<setprecision(5)<<setiosflags(ios::scientific)
-				<< "max(phi)= " << max((*m1)["phi"]) << " "
-				<< "min(phi)= " << min((*m1)["phi"])
+				<< "max(phi)= " << max((*m1)[PHI]) << " "
+				<< "min(phi)= " << min((*m1)[PHI])
 				<< "\n";
 		}
 		if (verbose > 1) { // extra verbose
@@ -139,13 +137,13 @@ solve(const Params& p, const AMesh2D& initial) {
 			prevysize=ysize;
 			cerr << dbg_stamp(m1->get_time())
 				<<setprecision(5)<<setiosflags(ios::scientific)
-				<< "max(c)= " << max((*m1)["c"]) << " "
-				<< "min(c)= " << min((*m1)["c"])
+				<< "max(c)= " << max((*m1)[CO2]) << " "
+				<< "min(c)= " << min((*m1)[CO2])
 				<< "\n";
 			cerr << dbg_stamp(m1->get_time())
 				<<setprecision(5)<<setiosflags(ios::scientific)
-				<< "max(psi)= " << max((*m1)["psi"]) << " "
-				<< "min(psi)= " << min((*m1)["psi"])
+				<< "max(psi)= " << max((*m1)[PSI]) << " "
+				<< "min(psi)= " << min((*m1)[PSI])
 				<< "\n";
 		}
 		// dump state
@@ -153,23 +151,31 @@ solve(const Params& p, const AMesh2D& initial) {
 				-numeric_limits<double>::epsilon())) {
 			if (verbose) {
 			cerr << dbg_stamp(m1->get_time()) << "dumping state\n";
-			dump_mesh(*m1,(int)(floor(m1->get_time()*1e5)));
+			dump_mesh<fid_t>(*m1,(int)(floor(m1->get_time()*1e5)));
 			last_dump_t=m1->get_time();
 			}
 		}
 		// validate solution range
-		if ((max((*m1)["phi"]) > (1.0+1e-9)) ||
-			(min((*m1)["phi"]) < (-1e-9)) ||
-			(min((*m1)["c"]) < (-1e-9))) {
+		if ((max((*m1)[PHI]) > (1.0+1e-9)) ||
+			(min((*m1)[PHI]) < (-1e-9)) ||
+			(min((*m1)[CO2]) < (-1e-9))) {
 			ostringstream ss;
 			ss << "solve: solution out of valid range: "
-				<< "max(phi)= " << max((*m1)["phi"]) << " "
-				<< "min(phi)= " << min((*m1)["phi"]) << " "
-				<< "max(c)= " << max((*m1)["c"]) << " "
-				<< "min(c)= " << min((*m1)["c"]);
+				<< "max(phi)= " << max((*m1)[PHI]) << " "
+				<< "min(phi)= " << min((*m1)[PHI]) << " "
+				<< "max(c)= " << max((*m1)[CO2]) << " "
+				<< "min(c)= " << min((*m1)[CO2]);
 			throw MeshException(ss.str());
 		}
 	}
 	return m1.release();
 }
 
+template
+AMesh2D<int>*
+eval_tissue<int>
+(const Params& p, double const dt, const AMesh2D<int>& m1, int density_var);
+
+template
+AMesh2D<int>*
+solve<int>(const Params& p, const AMesh2D<int>& initial);

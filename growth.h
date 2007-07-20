@@ -31,9 +31,9 @@ double f_atp_per_cell(double const phi);
 
 double g_atp_per_oxygen(double const c);
 
-double
-net_growth_term(AMesh2D const& m, int const i, int const j,
-	const string& fid="phi");
+template<class fid_t>
+double net_growth_term
+(AMesh2D<fid_t> const& m, int const i, int const j, const fid_t& fid);
 
 /** @brief take @c m1 and evaluate growth-death (ODE)
  * @param dt	time step
@@ -44,8 +44,9 @@ net_growth_term(AMesh2D const& m, int const i, int const j,
  *
  * The method is C-style rather than class. It evaluates
  * \DD{\Phi}{t} = \Phi*(1-\Phi)*(c - c_{crit}) */
-AMesh2D*
-step_growth_death(const double dt, const AMesh2D& m1, const string& fid)
+template<class fid_t>
+AMesh2D<fid_t>*
+step_growth_death(const double dt, const AMesh2D<fid_t>& m1, const fid_t& fid)
 throw(MeshException);
 
 #endif

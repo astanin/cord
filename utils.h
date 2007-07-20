@@ -47,29 +47,38 @@ int
 init_params(Params& p, int argc, const char *argv[]);
 
 /** @brief dump mesh stat to gnuplot file */
+template<class fid_t>
 void
-dump2gp(AMesh2D& m, string const& filename);
+dump2gp(AMesh2D<fid_t>& m, string const& filename);
 
 /** @brief dump mesh stat to gnuplot file */
+template<class fid_t>
 void
-dump2gp(AMesh2D& m, int const timestamp);
+dump2gp(AMesh2D<fid_t>& m, int const timestamp);
 
 /** @brief dump mesh stat to OpenDX file */
+template<class fid_t>
 void
-dump2dx(AMesh2D const& m, string const& filename);
+dump2dx(AMesh2D<fid_t> const& m, string const& filename);
 
 /** @brief dump mesh stat to OpenDX file */
+template<class fid_t>
 void
-dump2dx(AMesh2D const& m, int const timestamp);
+dump2dx(AMesh2D<fid_t> const& m, int const timestamp);
 
+template<class fid_t>
 void
-dump_mesh(AMesh2D& m, int timestamp);
+dump_mesh(AMesh2D<fid_t>& m, int timestamp);
 
-double get_y_size(const AMesh2D& m);
-double get_x_size(const AMesh2D& m);
+template<class fid_t>
+double get_y_size(const AMesh2D<fid_t>& m);
+template<class fid_t>
+double get_x_size(const AMesh2D<fid_t>& m);
 
-double norm_1(AMesh2D const& m, string const fid);
-double norm_2(AMesh2D const& m, string const fid);
+template<class fid_t>
+double norm_1(AMesh2D<fid_t> const& m, fid_t const fid);
+template<class fid_t>
+double norm_2(AMesh2D<fid_t> const& m, fid_t const fid);
 
 /** @brief Heaviside funcion */
 int H(double const x);

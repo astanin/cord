@@ -33,8 +33,9 @@ ASparseMatrix*
 build_sle_solver_matrix(int const dim, vector<double> x0, double accuracy=-1.0)
 throw(MeshException);
 
+template<class fid_t>
 void
-update_dirichlet_points(AMesh2D& m, const BCSet& bcs, string const var);
+update_dirichlet_points(AMesh2D<fid_t>& m, const BCSet& bcs, fid_t const var);
 
 #endif
 

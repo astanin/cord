@@ -37,9 +37,10 @@
  *
  * The method evaluates
  * \DD{\phi}{t} = \div ( \mu \phi \nabla (\phi \Sigma(\phi))) */
-AMesh2D*
+template<class fid_t>
+AMesh2D<fid_t>*
 step_euler_explicit(const Params& p,
-	double dt, const AMesh2D& m1, string const var)
+	double dt, const AMesh2D<fid_t>& m1, fid_t const var)
 throw(MeshException);
 
 /** @brief take @c m1 and make one full time step dt
@@ -53,16 +54,19 @@ throw(MeshException);
  *
  * The method evaluates
  * \DD{\phi}{t} = \div ( \mu \phi \nabla (\phi \Sigma(\phi))) */
-AMesh2D*
-phi_step(const Params& p, double dt, const AMesh2D& m1, string const var)
+template<class fid_t>
+AMesh2D<fid_t>*
+phi_step(const Params& p, double dt, const AMesh2D<fid_t>& m1, fid_t const var)
 throw(MeshException);
 
 /** @brief integrate function @f through out the domain */
+template<class fid_t>
 double
-integrate(const AMesh2D& m, string const f="phi");
+integrate(const AMesh2D<fid_t>& m, fid_t const f=PHI);
 
-AMesh2D*
-step_level_set(double dt, const AMesh2D& m1)
+template<class fid_t>
+AMesh2D<fid_t>*
+step_level_set(double dt, const AMesh2D<fid_t>& m1)
 throw(MeshException);
 
 #endif

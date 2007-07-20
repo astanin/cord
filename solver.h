@@ -36,8 +36,9 @@
  * super class, this way alternative models and/or methods may be run for
  * the same initial conditions.
  * @return	final state of the system */
-AMesh2D*
-solve(const Params& p, const AMesh2D& initial);
+template<class fid_t>
+AMesh2D<fid_t>*
+solve(const Params& p, const AMesh2D<fid_t>& initial);
 
 #endif
 

@@ -46,8 +46,9 @@ extern int verbose;
 
 string dbg_stamp(double t);
 
+template<class fid_t>
 double
-best_dt(AMesh2D const& m) throw(MeshException) {
+best_dt(AMesh2D<fid_t> const& m) throw(MeshException) {
 	// WARNING: assuming uniform rectangular grid
 	double dx=m.get_dx();
 	double dy=m.get_dy();
@@ -56,31 +57,34 @@ best_dt(AMesh2D const& m) throw(MeshException) {
 	return dt;
 }
 
+template<class fid_t>
 double
-uptake_per_cell(AMesh2D const& m, int const i, int const j)
+uptake_per_cell(AMesh2D<fid_t> const& m, int const i, int const j)
 throw(MeshException) {
 	double consume=0.0;
-	if (m.get("psi",i,j) > 0) { // tumour point
-		double phi=m["phi"](i,j);
+	if (m.get(PSI,i,j) > 0) { // tumour point
+		double phi=m[PHI](i,j);
 		consume=phi*f_atp_per_cell(phi)*m.get_attr("o2_uptake");
 	}
 	return consume;
 }
 
+template<class fid_t>
 double
-uptake_term(AMesh2D const& m, int const i, int const j)
+uptake_term(AMesh2D<fid_t> const& m, int const i, int const j)
 throw(MeshException) {
-	double psi=m["psi"](i,j);
+	double psi=m[PSI](i,j);
 	double host_activity=m.get_attr("host_activity");
 	double theta=m.get_attr("upkeep_per_cell");
 	double alpha=m.get_attr("o2_uptake");
 	double host_uptake=H(-psi)*host_activity
 				*theta*alpha*N_ATP_PER_GLUCOSE/6;
-	return m["c"](i,j)*uptake_per_cell(m,i,j) + host_uptake;
+	return m[CO2](i,j)*uptake_per_cell(m,i,j) + host_uptake;
 }
 
+template<class fid_t>
 void
-eval_nutrient_fill_sle_matrix(const AMesh2D& m, const BCSet& bcs,
+eval_nutrient_fill_sle_matrix(const AMesh2D<fid_t>& m, const BCSet& bcs,
 	ASparseMatrix& A, vector<double>& rhs, MeshEnumerator const& k)
 throw(MeshException) {
 	int xdim=m.get_xdim();
@@ -110,27 +114,27 @@ throw(MeshException) {
 				// fill in laplacian matrix
 				A.set(k0,k0, -2.0*(dx2f+dy2f));
 	// WARNING/TODO: this is valid only for stationary boundary conditions,
-	// should use bc.c()/bc.a() for appropriate bc instead of m.get("c")
+	// should use bc.c()/bc.a() for appropriate bc instead of m.get(CO2)
 	// from the previous time step
 				if (k0p >= 0) {
 					A.set(k0,k0p, dy2f);
 				} else {
-					rhs.at(k0)=-dy2f*m.get("c",i,j+1);
+					rhs.at(k0)=-dy2f*m.get(CO2,i,j+1);
 				}
 				if (k0m >= 0) {
 					A.set(k0,k0m, dy2f);
 				} else {
-					rhs.at(k0)=-dy2f*m.get("c",i,j-1);
+					rhs.at(k0)=-dy2f*m.get(CO2,i,j-1);
 				}
 				if (kp0 >= 0) {
 					A.set(k0,kp0, dx2f);
 				} else {
-					rhs.at(k0)=-dx2f*m.get("c",i+1,j);
+					rhs.at(k0)=-dx2f*m.get(CO2,i+1,j);
 				}
 				if (km0 >= 0) {
 					A.set(k0,km0, dx2f);
 				} else {
-					rhs.at(k0)=-dx2f*m.get("c",i-1,j);
+					rhs.at(k0)=-dx2f*m.get(CO2,i-1,j);
 				}
 				// add consumption term
 				A.set(k0,k0,A.get(k0,k0)
@@ -186,16 +190,17 @@ throw(MeshException) {
 	}
 }
 
-AMesh2D*
-eval_nutrient_directly(const Params& p, const AMesh2D& m1)
+template<class fid_t>
+AMesh2D<fid_t>*
+eval_nutrient_directly(const Params& p, const AMesh2D<fid_t>& m1)
 throw(MeshException) {
 	try {
-		SkipDirichletEnumerator kenum(m1,p.c_bc);
-		auto_ptr<AMesh2D> m2(m1.clone());
+		SkipDirichletEnumerator<fid_t> kenum(m1,p.c_bc);
+		auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
 		// initial estimate (previous solution)
 		vector<double> c(kenum.size());
 		for (int k=0; k<kenum.size(); ++k) {
-			c.at(k)=m2->get("c",kenum.i(k),kenum.j(k));
+			c.at(k)=m2->get(CO2,kenum.i(k),kenum.j(k));
 		}
 		auto_ptr<ASparseMatrix> pA(build_sle_solver_matrix(
 			kenum.size(), c, Method::it().p_solver_accuracy));
@@ -213,10 +218,10 @@ throw(MeshException) {
 		for (int k=0; k<(int)c.size(); ++k) {
 			int i=kenum.i(k);
 			int j=kenum.j(k);
-			m2->set("c",i,j,c.at(k));
+			m2->set(CO2,i,j,c.at(k));
 		}
 		// update Dirichlet boundary points (excluded from SLE)
-		update_dirichlet_points(*m2,p.c_bc,"c");
+		update_dirichlet_points<fid_t>(*m2,p.c_bc,CO2);
 		return m2.release();
 	} catch (MeshException& e) {
 		ostringstream ss;
@@ -225,35 +230,37 @@ throw(MeshException) {
 	}
 }
 
+template<class fid_t>
 double
-eval_nutrient_residual(const AMesh2D& m)
+eval_nutrient_residual(const AMesh2D<fid_t>& m)
 throw(MeshException) {
 	double global_res=0.0;
 	double dx=m.get_dx();
 	double dy=m.get_dy();
-	const auto_ptr<AMesh2D> m2(m.clone());
-	m2->remove_function_ifdef("c_residual");
-	m2->add_function("c_residual");
+	const auto_ptr<AMesh2D<fid_t> > m2(m.clone());
+	m2->remove_function_ifdef(C_RESIDUAL);
+	m2->add_function(C_RESIDUAL);
 	// WARNING: ignoring boundary points
 	// inner points
 	for (int i=1; (i<m2->get_xdim()-1) ; ++i) {
 		for (int j=1; (j<m2->get_ydim()-1) ; ++j) {
 			double loc_res=0.0;
-			loc_res=(m2->get("c",i+1,j)-2*m2->get("c",i,j)
-					+m2->get("c",i-1,j))/(dx*dx)+
-				(m2->get("c",i,j+1)-2*m2->get("c",i,j)
-				 	+m2->get("c",i,j-1))/(dy*dy)-
+			loc_res=(m2->get(CO2,i+1,j)-2*m2->get(CO2,i,j)
+					+m2->get(CO2,i-1,j))/(dx*dx)+
+				(m2->get(CO2,i,j+1)-2*m2->get(CO2,i,j)
+				 	+m2->get(CO2,i,j-1))/(dy*dy)-
 				uptake_term(*m2,i,j);
 			loc_res=fabs(loc_res);
-			m2->set("c_residual",i,j,loc_res);
+			m2->set(C_RESIDUAL,i,j,loc_res);
 		}
 	}
-	global_res=norm_1(*m2,"c_residual");
+	global_res=norm_1<fid_t>(*m2,C_RESIDUAL);
 	return global_res;
 }
 
+template<class fid_t>
 void
-eval_nutrient_init_consumption(AMesh2D& m, string const consumption) {
+eval_nutrient_init_consumption(AMesh2D<fid_t>& m, fid_t const consumption) {
 	m.add_function_ifndef(consumption);
 	// initialize consumption variable
 	int xdim=m.get_xdim();
@@ -265,12 +272,13 @@ eval_nutrient_init_consumption(AMesh2D& m, string const consumption) {
 	}
 }
 
-AMesh2D*
-eval_nutrient_iteratively(const Params& p, const AMesh2D& m,
+template<class fid_t>
+AMesh2D<fid_t>*
+eval_nutrient_iteratively(const Params& p, const AMesh2D<fid_t>& m,
 		double const epsilon)
 throw(MeshException) {
 	try {
-	auto_ptr<AMesh2D> m2(m.clone());
+	auto_ptr< AMesh2D<fid_t> > m2(m.clone());
 	double dt;
 	if (Method::it().p_solver_relax_step < 0) { // automatic time step
 		if (Method::it().rd_solver == MP::RDS_EXPLICIT) {
@@ -289,29 +297,29 @@ throw(MeshException) {
 	}
 	// iterative method here
 	double res=0.0;
-	res=eval_nutrient_residual(*m2);
+	res=eval_nutrient_residual<fid_t>(*m2);
 	int iter=0;
 	while ((res>epsilon) && (iter<=Method::it().p_solver_relax_max_iters)) {
-		eval_nutrient_init_consumption(*m2,"q_tmp");
+		eval_nutrient_init_consumption<fid_t>(*m2,Q_TMP);
 		switch (Method::it().rd_solver) {
 		case MP::RDS_EXPLICIT:
-			m2.reset(reaction_diffusion_step(p.c_bc,dt,*m2,
-				"c","","q_tmp",MP::RDS_EXPLICIT));
+			m2.reset(reaction_diffusion_step<fid_t>(p.c_bc,dt,*m2,
+				CO2,NONE,Q_TMP,MP::RDS_EXPLICIT));
 			break;
 		case MP::RDS_IMPLICIT:
-			m2.reset(reaction_diffusion_step(p.c_bc,dt,*m2,
-				"c","","q_tmp",MP::RDS_IMPLICIT));
+			m2.reset(reaction_diffusion_step<fid_t>(p.c_bc,dt,*m2,
+				CO2,NONE,Q_TMP,MP::RDS_IMPLICIT));
 			break;
 		case MP::RDS_ADI:
-			m2.reset(reaction_diffusion_step(p.c_bc,dt,*m2,
-				"c","","q_tmp",MP::RDS_ADI));
+			m2.reset(reaction_diffusion_step<fid_t>(p.c_bc,dt,*m2,
+				CO2,NONE,Q_TMP,MP::RDS_ADI));
 			break;
 		default:
 			throw MeshException("eval_nutrient_iteratively: "
 				"unknown method");
 			break;
 		}
-		m2->remove_function_ifdef("q_tmp");
+		m2->remove_function_ifdef(Q_TMP);
 		res=eval_nutrient_residual(*m2);
 		++iter;
 		if ((verbose > 1) && (!(iter%50))) {
@@ -333,45 +341,50 @@ throw(MeshException) {
 	}
 }
 
-AMesh2D*
-eval_nutrient_diffusion(Params const& p, double const dt, AMesh2D const& m1)
+template<class fid_t>
+AMesh2D<fid_t>*
+eval_nutrient_diffusion
+(Params const& p, double const dt, AMesh2D<fid_t> const& m1)
 throw(MeshException) {
-	auto_ptr<AMesh2D> m2(m1.clone());
-	eval_nutrient_init_consumption(*m2,"q_tmp");
-	m2->remove_function_ifdef("D_c_tmp");
-	m2->add_function("D_c_tmp",1.0);
-	m2.reset(reaction_diffusion_step(p.c_bc,dt,*m2,"c","D_c_tmp","q_tmp"));
-	m2->remove_function_ifdef("q_tmp");
-	m2->remove_function_ifdef("D_c_tmp");
+	auto_ptr< AMesh2D<fid_t> > m2(m1.clone());
+	eval_nutrient_init_consumption<fid_t>(*m2,Q_TMP);
+	m2->remove_function_ifdef(D_C_TMP);
+	m2->add_function(D_C_TMP,1.0);
+	m2.reset(reaction_diffusion_step<fid_t>(p.c_bc,dt,*m2,CO2,D_C_TMP,Q_TMP));
+	m2->remove_function_ifdef(Q_TMP);
+	m2->remove_function_ifdef(D_C_TMP);
 	return m2.release();
 }
 
-AMesh2D*
-eval_nutrient_poisson(Params const& p, AMesh2D const& m1, double const epsilon)
+template<class fid_t>
+AMesh2D<fid_t>*
+eval_nutrient_poisson
+(Params const& p, AMesh2D<fid_t> const& m1, double const epsilon)
 throw(MeshException) {
-	AMesh2D *m2;
+	AMesh2D<fid_t> *m2;
 	if (Method::it().p_solver == MP::PS_SLE) {
-		m2=eval_nutrient_directly(p, m1);
+		m2=eval_nutrient_directly<fid_t>(p, m1);
 	} else if (Method::it().p_solver == MP::PS_RELAX) {
-		m2=eval_nutrient_iteratively(p, m1, epsilon);
+		m2=eval_nutrient_iteratively<fid_t>(p, m1, epsilon);
 	} else {
 		throw MeshException("eval_nutrient: unknown method");
 	}
 	return m2;
 }
 
-AMesh2D*
-eval_nutrient(const Params& p, const AMesh2D& m1,
+template<class fid_t>
+AMesh2D<fid_t>*
+eval_nutrient(const Params& p, const AMesh2D<fid_t>& m1,
 	double const epsilon, double const dt)
 throw(MeshException) {
-	if (!m1.defined("c")) {
-		throw MeshException("eval_nutrient: c not defined");
+	if (!m1.defined(CO2)) {
+		throw MeshException("eval_nutrient: CO2 not defined");
 	}
-	if (!m1.defined("phi")) {
-		throw MeshException("eval_nutrient: phi not defined");
+	if (!m1.defined(PHI)) {
+		throw MeshException("eval_nutrient: PHI not defined");
 	}
-	if (!m1.defined("psi")) {
-		throw MeshException("eval_nutrient: psi not defined");
+	if (!m1.defined(PSI)) {
+		throw MeshException("eval_nutrient: PSI not defined");
 	}
 	if (!m1.attr_defined("o2_uptake")) {
 		throw MeshException("eval_nutrient: "
@@ -383,9 +396,9 @@ throw(MeshException) {
 	}
 	try {
 		if (p.c_equation == Params::EQ_POISSON) {
-			return eval_nutrient_poisson(p,m1,epsilon);
+			return eval_nutrient_poisson<fid_t>(p,m1,epsilon);
 		} else if (p.c_equation == Params::EQ_DIFFUSION) {
-			return eval_nutrient_diffusion(p,dt,m1);
+			return eval_nutrient_diffusion<fid_t>(p,dt,m1);
 		} else {
 			throw MeshException("eval_nutrient: "
 				"unsupported nutrient equation");
@@ -396,4 +409,11 @@ throw(MeshException) {
 		throw MeshException(ss.str());
 	}
 }
+
+// templates
+template
+AMesh2D<int>*
+eval_nutrient<int>(const Params& p, const AMesh2D<int>& m1,
+	double const epsilon, double const dt);
+
 
