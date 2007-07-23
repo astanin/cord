@@ -125,13 +125,16 @@ throw(MeshException) {
 		throw MeshException
 			("step_growth_death: cannot alloc gsl_odeiv_step");
 	}
+	array2d phi_arr=m1[fid];
+	array2d c_arr=m1[CO2];
+	array2d psi_arr=m1[PSI];
 	for (int i=0; i<m1.get_xdim(); ++i) {
 		for (int j=0; j<m1.get_ydim(); ++j) {
 			double err=0.0;
-			double phi=m1.get(fid,i,j);
-			params[0]=m1.get(CO2,i,j);
+			double phi=phi_arr(i,j);
+			params[0]=c_arr(i,j);
 			params[1]=m1.get_attr("upkeep_per_cell");
-			params[2]=m1.get(PSI,i,j);
+			params[2]=psi_arr(i,j);
 			params[3]=m1.get_attr("death_rate");
 			params[4]=m1.get_attr("host_activity");
 			gsl_odeiv_step_reset(step);

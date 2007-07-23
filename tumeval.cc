@@ -390,41 +390,43 @@ double level_set_function_reset_step(AMesh2D<fid_t>& m,
 	int ydim=m.get_ydim();
 	double dx=m.get_dx();
 	double dy=m.get_dy();
+	array2d var_a=m[var];
+	array2d spsi_a=m[SPSI];
+	array2d dpsi_a=m[dvar];
 	for (int i=1; i<(xdim-1); ++i) {
 		for (int j=1; j<(ydim-1); ++j) {
-			double dpx=m.get(var,i+1,j)-m.get(var,i,j);
-			double dmx=m.get(var,i,j)-m.get(var,i-1,j);
-			double dpy=m.get(var,i,j+1)-m.get(var,i,j);
-			double dmy=m.get(var,i,j)-m.get(var,i,j-1);
+			double dpx=var_a(i+1,j)-var_a(i,j);
+			double dmx=var_a(i,j)-var_a(i-1,j);
+			double dpy=var_a(i,j+1)-var_a(i,j);
+			double dmy=var_a(i,j)-var_a(i,j-1);
 			// grad(psi2)
 			double gx=0.5*(dpx+fabs(dpx)+dmx-fabs(dmx))/dx;
 			double gy=0.5*(dpy+fabs(dpy)+dmy-fabs(dmy))/dy;
 			// d(psi2)/dt
-			double dpsi2=m.get(SPSI,i,j)*(1-sqrt(gx*gx+gy*gy));
-			m.set(dvar,i,j,dpsi2);
+			dpsi_a(i,j)=spsi_a(i,j)*(1-sqrt(gx*gx+gy*gy));
 		}
 	}
 	double maxdvar=max(fabs(m[dvar]));
 	double dt=0.2*(dx+dy)/maxdvar;
 	for (int i=1; i<(xdim-1); ++i) {
 		for (int j=1; j<(ydim-1); ++j) {
-			m.set(var,i,j,m.get(var,i,j)+dt*m.get(dvar,i,j));
+			var_a(i,j)=var_a(i,j)+dt*dpsi_a(i,j);
 		}
 	}
 	// zero flux on all boundaries
 	for (int i=1; i<(xdim-1); ++i) {
-		m.set(var,i,0,m.get(var,i,1));
-		m.set(var,i,ydim-1,m.get(var,i,ydim-2));
+		var_a(i,0)=var_a(i,1);
+		var_a(i,ydim-1)=var_a(i,ydim-2);
 	}
 	for (int j=1; j<(ydim-1); ++j) {
-		m.set(var,0,j,m.get(var,1,j));
-		m.set(var,xdim-1,j,m.get(var,xdim-2,j));
+		var_a(0,j)=var_a(1,j);
+		var_a(xdim-1,j)=var_a(xdim-2,j);
 	}
 	// avoid extremums in corner points
-	m.set(var,0,0,0.5*(m.get(var,1,0)+m.get(var,0,1)));
-	m.set(var,xdim-1,0,0.5*(m.get(var,xdim-2,0)+m.get(var,xdim-1,1)));
-	m.set(var,0,ydim-1,0.5*(m.get(var,1,ydim-1)+m.get(var,0,ydim-2)));
-	m.set(var,xdim-1,ydim-1,0.5*(m.get(var,xdim-2,ydim-1)+m.get(var,xdim-1,ydim-2)));
+	var_a(0,0)=0.5*(var_a(1,0)+var_a(0,1));
+	var_a(xdim-1,0)=0.5*(var_a(xdim-2,0)+var_a(xdim-1,1));
+	var_a(0,ydim-1)=0.5*(var_a(1,ydim-1)+var_a(0,ydim-2));
+	var_a(xdim-1,ydim-1)=0.5*(var_a(xdim-2,ydim-1)+var_a(xdim-1,ydim-2));
 	m.remove_function_ifdef(dvar);
 	return maxdvar;
 }
@@ -443,10 +445,14 @@ int level_set_function_reset(AMesh2D<fid_t>& m) {
 	double eps=16*(m.get_dx()*m.get_dx()+m.get_dy()*m.get_dy());
 	int xdim=m.get_xdim();
 	int ydim=m.get_ydim();
+	array2d psi_a=m[PSI];
+	array2d spsi_a=m[SPSI];
 	for (int i=0; i<xdim; ++i) {
 		for (int j=0; j<ydim; ++j) {
-			psi=m.get(PSI,i,j);
-			m.set(SPSI,i,j,psi/sqrt(psi*psi+eps));
+			psi=psi_a(i,j);
+			spsi_a(i,j)=psi/sqrt(psi*psi+eps);
+//			psi=m.get(PSI,i,j);
+//			m.set(SPSI,i,j,psi/sqrt(psi*psi+eps));
 		}
 	}
 	int count=0;
@@ -454,9 +460,11 @@ int level_set_function_reset(AMesh2D<fid_t>& m) {
 		eps=level_set_function_reset_step<fid_t>(m,PSI2,DPSI2_DT);
 		++count;
 	} while (eps < Method::it().sle_solver_accuracy);
+	array2d psi2_a=m[PSI2];
 	for (int i=0; i<xdim; ++i) {
 		for (int j=0; j<ydim; ++j) {
-			m.set(PSI,i,j,m.get(PSI2,i,j));
+//			m.set(PSI,i,j,m.get(PSI2,i,j));
+			psi_a(i,j)=psi2_a(i,j);
 		}
 	}
 	m.remove_function_ifdef(PSI2);

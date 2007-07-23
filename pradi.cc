@@ -40,6 +40,9 @@ throw(MeshException) {
 	// WARNING: valid for uniform grid only
 	double dx=m1.get_dx();
 	double dy=m1.get_dy();
+	array2d u=m1[var];
+	array2d D=m1[D_coef_var];
+	array2d R=m1[reaction_term_var];
 	for (int j=1; j<(ydim-1); ++j) {
 		// solution vector
 		vector<double> u2(xdim);
@@ -58,31 +61,18 @@ throw(MeshException) {
 		// inner points
 		for (int i=1; i<(xdim-1); ++i) {
 			double D_0, D_ip, D_im, D_jp, D_jm;
-			if (D_coef_var != NONE) {
-				D_0=m1.get(D_coef_var,i,j);
-				D_ip=m1.get(D_coef_var,i+1,j);
-				D_im=m1.get(D_coef_var,i-1,j);
-				D_jp=m1.get(D_coef_var,i,j+1);
-				D_jm=m1.get(D_coef_var,i,j-1);
-			} else {
-				D_0=1.0;
-				D_ip=1.0;
-				D_im=1.0;
-				D_jp=1.0;
-				D_jm=1.0;
-			}
+			D_0=D(i,j);
+			D_ip=D(i+1,j);
+			D_im=D(i-1,j);
+			D_jp=D(i,j+1);
+			D_jm=D(i,j-1);
 			A.set(i,i,  2*dx*dx+dt*(D_ip+D_im+2*D_0));
 			A.set(i,i+1,-dt*(D_ip+D_0));
 			A.set(i,i-1,-dt*(D_im+D_0));
-			double u_0=m1.get(var,i,j);
-			double u_jp=m1.get(var,i,j+1);
-			double u_jm=m1.get(var,i,j-1);
-			double f;
-			if (reaction_term_var != NONE) {
-				f=-m1.get(reaction_term_var,i,j);
-			} else {
-				f=0.0;
-			}
+			double u_0=u(i,j);
+			double u_jp=u(i,j+1);
+			double u_jm=u(i,j-1);
+			double f=-R(i,j);
 			rhs.at(i)= 2*dx*dx*u_0 +
 				(dt*dx*dx/(dy*dy))*(
 					+ (D_jp+D_0)*u_jp
@@ -141,6 +131,9 @@ throw(MeshException) {
 	// WARNING: valid for uniform grid only
 	double dx=m1.get_dx();
 	double dy=m1.get_dy();
+	array2d u=m1[var];
+	array2d D=m1[D_coef_var];
+	array2d R=m1[reaction_term_var];
 	for (int i=1; i<(xdim-1); ++i) {
 		// solution vector
 		vector<double> u2(ydim);
@@ -159,31 +152,18 @@ throw(MeshException) {
 		// inner points
 		for (int j=1; j<(ydim-1); ++j) {
 			double D_0, D_ip, D_im, D_jp, D_jm;
-			if (D_coef_var != NONE) {
-				D_0=m1.get(D_coef_var,i,j);
-				D_ip=m1.get(D_coef_var,i+1,j);
-				D_im=m1.get(D_coef_var,i-1,j);
-				D_jp=m1.get(D_coef_var,i,j+1);
-				D_jm=m1.get(D_coef_var,i,j-1);
-			} else {
-				D_0=1.0;
-				D_ip=1.0;
-				D_im=1.0;
-				D_jp=1.0;
-				D_jm=1.0;
-			}
+			D_0=D(i,j);
+			D_ip=D(i+1,j);
+			D_im=D(i-1,j);
+			D_jp=D(i,j+1);
+			D_jm=D(i,j-1);
 			A.set(j,j, 2*dy*dy+dt*(D_jp+D_jm+2*D_0));
 			A.set(j,j+1,-dt*(D_jp+D_0));
 			A.set(j,j-1,-dt*(D_jm+D_0));
-			double u_0=m1.get(var,i,j);
-			double u_ip=m1.get(var,i+1,j);
-			double u_im=m1.get(var,i-1,j);
-			double f;
-			if (reaction_term_var != NONE) {
-				f=-m1.get(reaction_term_var,i,j);
-			} else {
-				f=0.0;
-			}
+			double u_0=u(i,j);
+			double u_ip=u(i+1,j);
+			double u_im=u(i-1,j);
+			double f=-R(i,j);
 			rhs.at(j)=2*dy*dy*u_0 +
 				(dt*dy*dy/(dx*dx))*(
 					+ (D_ip+D_0)*u_ip

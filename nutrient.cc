@@ -59,14 +59,21 @@ best_dt(AMesh2D<fid_t> const& m) throw(MeshException) {
 
 template<class fid_t>
 double
-uptake_per_cell(AMesh2D<fid_t> const& m, int const i, int const j)
-throw(MeshException) {
+uptake_per_cell(AMesh2D<fid_t> const& m, array2d const& phi, array2d const& psi,
+			int const i, int const j) {
 	double consume=0.0;
-	if (m.get(PSI,i,j) > 0) { // tumour point
-		double phi=m[PHI](i,j);
-		consume=phi*f_atp_per_cell(phi)*m.get_attr("o2_uptake");
+	if (psi(i,j) > 0) { // tumour point
+		double p=phi(i,j);
+		consume=p*f_atp_per_cell(p)*m.get_attr("o2_uptake");
 	}
 	return consume;
+}
+
+template<class fid_t>
+double
+uptake_per_cell(AMesh2D<fid_t> const& m, int const i, int const j)
+throw(MeshException) {
+	return uptake_per_cell(m,m[PHI],m[PSI],i,j);
 }
 
 template<class fid_t>
@@ -91,6 +98,9 @@ throw(MeshException) {
 	int ydim=m.get_ydim();
 	int i, j;
 	try {
+		array2d c_arr=m[CO2];
+		array2d phi_arr=m[PHI];
+		array2d psi_arr=m[PSI];
 		for (i=1; i<(xdim-1); ++i) {
 			for (j=1; j<(ydim-1); ++j) {
 				/* div(grad(c)) stencil:
@@ -119,26 +129,26 @@ throw(MeshException) {
 				if (k0p >= 0) {
 					A.set(k0,k0p, dy2f);
 				} else {
-					rhs.at(k0)=-dy2f*m.get(CO2,i,j+1);
+					rhs.at(k0)=-dy2f*c_arr(i,j+1);
 				}
 				if (k0m >= 0) {
 					A.set(k0,k0m, dy2f);
 				} else {
-					rhs.at(k0)=-dy2f*m.get(CO2,i,j-1);
+					rhs.at(k0)=-dy2f*c_arr(i,j-1);
 				}
 				if (kp0 >= 0) {
 					A.set(k0,kp0, dx2f);
 				} else {
-					rhs.at(k0)=-dx2f*m.get(CO2,i+1,j);
+					rhs.at(k0)=-dx2f*c_arr(i+1,j);
 				}
 				if (km0 >= 0) {
 					A.set(k0,km0, dx2f);
 				} else {
-					rhs.at(k0)=-dx2f*m.get(CO2,i-1,j);
+					rhs.at(k0)=-dx2f*c_arr(i-1,j);
 				}
 				// add consumption term
 				A.set(k0,k0,A.get(k0,k0)
-					-uptake_per_cell(m,i,j));
+				-uptake_per_cell(m,phi_arr,psi_arr,i,j));
 			}
 		}
 	} catch (SparseMatrixException& e) {
@@ -199,8 +209,9 @@ throw(MeshException) {
 		auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
 		// initial estimate (previous solution)
 		vector<double> c(kenum.size());
+		array2d c_arr=(*m2)[CO2];
 		for (int k=0; k<kenum.size(); ++k) {
-			c.at(k)=m2->get(CO2,kenum.i(k),kenum.j(k));
+			c.at(k)=c_arr(kenum.i(k),kenum.j(k));
 		}
 		auto_ptr<ASparseMatrix> pA(build_sle_solver_matrix(
 			kenum.size(), c, Method::it().p_solver_accuracy));
@@ -242,13 +253,12 @@ throw(MeshException) {
 	m2->add_function(C_RESIDUAL);
 	// WARNING: ignoring boundary points
 	// inner points
+	array2d c=(*m2)[CO2];
 	for (int i=1; (i<m2->get_xdim()-1) ; ++i) {
 		for (int j=1; (j<m2->get_ydim()-1) ; ++j) {
 			double loc_res=0.0;
-			loc_res=(m2->get(CO2,i+1,j)-2*m2->get(CO2,i,j)
-					+m2->get(CO2,i-1,j))/(dx*dx)+
-				(m2->get(CO2,i,j+1)-2*m2->get(CO2,i,j)
-				 	+m2->get(CO2,i,j-1))/(dy*dy)-
+			loc_res=(c(i+1,j)-2*c(i,j)+c(i-1,j))/(dx*dx)+
+				(c(i,j+1)-2*c(i,j)+c(i,j-1))/(dy*dy)-
 				uptake_term(*m2,i,j);
 			loc_res=fabs(loc_res);
 			m2->set(C_RESIDUAL,i,j,loc_res);

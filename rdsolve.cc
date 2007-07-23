@@ -271,22 +271,42 @@ rd_step_adi
 throw(MeshException) {
 	try {
 	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
+	fid_t D=Dvar;
+	fid_t R=Rvar;
+	if (Dvar == NONE) {
+		m2->add_function_ifndef(D_ONE);
+		array2d d=(*m2)[D_ONE];
+		d=1.0;
+		D=D_ONE;
+	}
+	if (Rvar == NONE) {
+		m2->add_function_ifndef(R_ZERO);
+		array2d r=(*m2)[R_ZERO];
+		r=0.0;
+		R=R_ZERO;
+	}
 	// ADI
 #ifdef ENABLE_ADI_ISO_FIX
 	if (rand()%2) { // choose sequence of directions: 50% x,y - 50% y,x
 #endif
 		m2.reset(step_peaceman_rachford_adi_x<fid_t>
-			(bcs, 0.5*dt, *m2, var, Dvar, Rvar));
+			(bcs, 0.5*dt, *m2, var, D, R));
 		m2.reset(step_peaceman_rachford_adi_y<fid_t>
-			(bcs, 0.5*dt, *m2, var, Dvar, Rvar));
+			(bcs, 0.5*dt, *m2, var, D, R));
 #ifdef ENABLE_ADI_ISO_FIX
 	} else {
 		m2.reset(step_peaceman_rachford_adi_y<fid_t>
-			(bcs, 0.5*dt, *m2, var, Dvar, Rvar));
+			(bcs, 0.5*dt, *m2, var, D, R));
 		m2.reset(step_peaceman_rachford_adi_x<fid_t>
-			(bcs, 0.5*dt, *m2, var, Dvar, Rvar));
+			(bcs, 0.5*dt, *m2, var, D, R));
 	}
 #endif
+	if (Dvar == NONE) {
+		m2->remove_function_ifdef(D_ONE);
+	}
+	if (Rvar == NONE) {
+		m2->remove_function_ifdef(R_ZERO);
+	}
 	return m2.release();
 	} catch(MeshException& e) {
 		ostringstream ss;
