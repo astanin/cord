@@ -28,43 +28,42 @@ using std::make_pair;
 
 template<class fid_t>
 string id2str(fid_t& id) {
-        std::ostringstream ss;
-        ss << id;
-        return ss.str();
-}
-
-template<>
-string id2str<int>(int& id) {
-	switch (id) {
-	case PHI:
-		return "phi";
-		break;
-	case CO2:
-		return "c";
-		break;
-	case PSI:
-		return "psi";
-		break;
-	case VX:
-		return "vx";
-		break;
-	case VY:
-		return "vy";
-		break;
-	case PHI_T:
-		return "phi_t";
-		break;
-	case PHI_H:
-		return "phi_h";
-		break;
-	case PHI_GROWTH:
-		return "phi_growth";
-		break;
-	default:
+	if (typeid(id) == typeid(int)) {
+		switch (id) {
+		case PHI:
+			return "phi";
+			break;
+		case CO2:
+			return "c";
+			break;
+		case PSI:
+			return "psi";
+			break;
+		case VX:
+			return "vx";
+			break;
+		case VY:
+			return "vy";
+			break;
+		case PHI_T:
+			return "phi_t";
+			break;
+		case PHI_H:
+			return "phi_h";
+			break;
+		case PHI_GROWTH:
+			return "phi_growth";
+			break;
+		default:
+			std::ostringstream ss;
+			ss << "fid_" << id;
+			return ss.str();
+			break;
+		}
+	} else {
 		std::ostringstream ss;
-		ss << "fid_" << id;
+		ss << id;
 		return ss.str();
-		break;
 	}
 }
 
@@ -826,5 +825,4 @@ const throw(MeshException) {
 
 // templates
 template string id2str<int>(int& id);
-template string id2str<string>(string& id);
 template class DMesh<int>;
