@@ -33,7 +33,8 @@ double g_atp_per_oxygen(double const c);
 
 template<class fid_t>
 double net_growth_term
-(AMesh2D<fid_t> const& m, int const i, int const j, const fid_t& fid);
+(AMesh2D<fid_t> const& m, array2d const& phi, array2d const& c,
+	array2d const& psi, int const i, int const j);
 
 /** @brief take @c m1 and evaluate growth-death (ODE)
  * @param dt	time step

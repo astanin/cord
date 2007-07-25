@@ -63,15 +63,13 @@ double death_term(double const phi, double const c,
 
 template<class fid_t>
 double net_growth_term
-(AMesh2D<fid_t> const& m, int const i, int const j, const fid_t& fid) {
-	double phi=m[fid](i,j);
-	double c=m[CO2](i,j);
-	double psi=m[PSI](i,j);
+(AMesh2D<fid_t> const& m, array2d const& phi, array2d const& c,
+	array2d const& psi, int const i, int const j) {
 	double theta=m.get_attr("upkeep_per_cell");
 	double epsilon=m.get_attr("death_rate");
 	double host_activity=m.get_attr("host_activity");
-	return growth_term(phi,c,theta,psi)
-		-death_term(phi,c,theta,psi,epsilon,host_activity);
+	return growth_term(phi(i,j),c(i,j),theta,psi(i,j))
+	-death_term(phi(i,j),c(i,j),theta,psi(i,j),epsilon,host_activity);
 }
 
 /** right hand side function for GSL ode-solver
@@ -108,9 +106,14 @@ throw(MeshException) {
 	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
 	fid_t gfid=PHI_GROWTH;
 	m2->add_function_ifndef(gfid);
+	// shortcuts to arrays
+	array2d m2_phi=(*m2)[fid];
+	array2d m2_c=(*m2)[CO2];
+	array2d m2_psi=(*m2)[PSI];
+	array2d m2_gphi=(*m2)[gfid];
 	for (int i=0; i<m2->get_xdim(); ++i) {
 		for (int j=0; j<m2->get_ydim(); ++j) {
-			m2->set(gfid,i,j,net_growth_term(*m2,i,j,fid));
+			m2_gphi(i,j)=net_growth_term(*m2,m2_phi,m2_c,m2_psi,i,j);
 		}
 	}
 	double params[5];
@@ -125,22 +128,22 @@ throw(MeshException) {
 		throw MeshException
 			("step_growth_death: cannot alloc gsl_odeiv_step");
 	}
-	array2d phi_arr=m1[fid];
-	array2d c_arr=m1[CO2];
-	array2d psi_arr=m1[PSI];
+	array2d m1_phi=m1[fid];
+	array2d m1_c=m1[CO2];
+	array2d m1_psi=m1[PSI];
 	for (int i=0; i<m1.get_xdim(); ++i) {
 		for (int j=0; j<m1.get_ydim(); ++j) {
 			double err=0.0;
-			double phi=phi_arr(i,j);
-			params[0]=c_arr(i,j);
+			double phi=m1_phi(i,j);
+			params[0]=m1_c(i,j);
 			params[1]=m1.get_attr("upkeep_per_cell");
-			params[2]=psi_arr(i,j);
+			params[2]=m1_psi(i,j);
 			params[3]=m1.get_attr("death_rate");
 			params[4]=m1.get_attr("host_activity");
 			gsl_odeiv_step_reset(step);
 			gsl_odeiv_step_apply(step, m1.get_time(), 
 					dt, &phi, &err, 0, 0, &sys);
-			m2->set(fid,i,j,phi);
+			m2_phi(i,j)=phi;
 		}
 	}
 	gsl_odeiv_step_free(step);

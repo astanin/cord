@@ -71,7 +71,7 @@ throw(MeshException) {
 
 template<class fid_t>
 blitz::Array<double,1>
-smart_grad(const AMesh2D<fid_t>& m, fid_t const fid, const int i, const int j)
+smart_grad(const AMesh2D<fid_t>& m, array2d const& u, const int i, const int j)
 throw(MeshException) {
 	try {
 	if (!m.is_inner(i,j)) {
@@ -104,8 +104,8 @@ throw(MeshException) {
 	}
 	// evaluating gradient
 	blitz::Array<double,1> g(2);
-	g(0)=(m.get(fid,i2,j)-m.get(fid,i1,j))/(m.x(i2,j)-m.x(i1,j));
-	g(1)=(m.get(fid,i,j2)-m.get(fid,i,j1))/(m.y(i,j2)-m.y(i,j1));
+	g(0)=(u(i2,j)-u(i1,j))/(m.x(i2,j)-m.x(i1,j));
+	g(1)=(u(i,j2)-u(i,j1))/(m.y(i,j2)-m.y(i,j1));
 	return g;
 	} catch (MeshException& e) {
 		ostringstream ss;
@@ -122,30 +122,39 @@ throw(MeshException) {
 	m.add_function_ifndef(TERM_PHI_SIGMA);
 	m.add_function_ifndef(vx);
 	m.add_function_ifndef(vy);
+	array2d m_phi=m[PHI];
+	array2d m_psi=m[PSI];
+	array2d m_phi_sigma=m[TERM_PHI_SIGMA];
+	array2d m_vx=m[VX];
+	array2d m_vy=m[VY];
 	TumourSigma<fid_t> tumour(m);
+	auto_ptr<ADoubleFunction> t_sigma(tumour.build_sigma());
 	HostSigma<fid_t> host(m);
-	for (int i=0; i<m.get_xdim(); ++i) {
-		for (int j=0; j<m.get_ydim(); ++j) {
-			double phi=m[PHI](i,j);
-			double psi=m[PSI](i,j);
-			auto_ptr<ADoubleFunction> sigma;
+	auto_ptr<ADoubleFunction> h_sigma(host.build_sigma());
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	for (int i=0; i<xdim; ++i) {
+		for (int j=0; j<ydim; ++j) {
+			double phi=m_phi(i,j);
+			double psi=m_psi(i,j);
+			ADoubleFunction* sigma;
 			if (psi>0) {
-				sigma.reset(tumour.build_sigma());
+				sigma=t_sigma.get();
 			} else {
-				sigma.reset(host.build_sigma());
+				sigma=h_sigma.get();
 			}
-			m.set(TERM_PHI_SIGMA,i,j,phi*sigma->eval(phi));
+			m_phi_sigma(i,j)=phi*sigma->eval(phi);
 		}
 	}
-	for (int i=0; i<m.get_xdim(); ++i) {
-		for (int j=0; j<m.get_ydim(); ++j) {
+	for (int i=0; i<xdim; ++i) {
+		for (int j=0; j<ydim; ++j) {
 			blitz::Array<double,1> g=
-				smart_grad<int>(m,TERM_PHI_SIGMA,i,j);
+				smart_grad<int>(m,m_phi_sigma,i,j);
 			double mu=m.get_attr("cell_motility");
 			double vxval=(i>0)?(-g(0)*mu):0;
 			double vyval=(j>0)?(-g(1)*mu):0;
-			m.set(vx,i,j,vxval);
-			m.set(vy,i,j,vyval);
+			m_vx(i,j)=vxval;
+			m_vy(i,j)=vyval;
 		}
 	}
 	m.remove_function_ifdef(TERM_PHI_SIGMA);
@@ -230,11 +239,15 @@ throw(MeshException) {
 		throw MeshException("v_max: vx or vy not defined");
 	}
 	double vmax=0.0;
-	for (int i=0; i < (m.get_xdim()); ++i) {
-		for (int j=0; j < (m.get_ydim()); ++j) {
+	array2d m_vx=m[VX];
+	array2d m_vy=m[VY];
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	for (int i=0; i < xdim; ++i) {
+		for (int j=0; j < ydim; ++j) {
 			double vx, vy, v;
-			vx=m[VX](i,j);
-			vy=m[VY](i,j);
+			vx=m_vx(i,j);
+			vy=m_vy(i,j);
 			v=sqrt(vx*vx+vy*vy);
 			if (v > vmax) {
 				vmax=v;
@@ -248,19 +261,25 @@ throw(MeshException) {
 template<class fid_t>
 double
 phi_pseudo_diff_coef
-(const AMesh2D<fid_t>& m, const int i, const int j, fid_t const var) {
-	auto_ptr<ADoubleFunction> sigma;
-	auto_ptr<ADoubleFunction> sigma_prime;
-	double psi=m[PSI](i,j);
+(AMesh2D<fid_t> const& m,
+	array2d const& phi_a, array2d const& psi_a, double mu,
+	const int i, const int j) {
+	// WARNING: assuming that Sigmas do not change with time
+	static ADoubleFunction *t_s=TumourSigma<fid_t>(m).build_sigma();
+	static ADoubleFunction *t_s_p=TumourSigma<fid_t>(m).build_sigma_prime();
+	static ADoubleFunction *h_s=HostSigma<fid_t>(m).build_sigma();
+	static ADoubleFunction *h_s_p=HostSigma<fid_t>(m).build_sigma_prime();
+	ADoubleFunction *sigma;
+	ADoubleFunction *sigma_prime;
+	double phi=phi_a(i,j);
+	double psi=psi_a(i,j);
 	if (psi > 0) {
-		sigma.reset(TumourSigma<fid_t>(m).build_sigma());
-		sigma_prime.reset(TumourSigma<fid_t>(m).build_sigma_prime());
+		sigma=t_s;
+		sigma_prime=t_s_p;
 	} else {
-		sigma.reset(HostSigma<fid_t>(m).build_sigma());
-		sigma_prime.reset(HostSigma<fid_t>(m).build_sigma_prime());
+		sigma=h_s;
+		sigma_prime=h_s_p;
 	}
-	double mu=m.get_attr("cell_motility");
-	double phi=m.get(var,i,j);
 	double pseudoD=mu*(phi*sigma->eval(phi)+phi*phi*sigma_prime->eval(phi));
 	return pseudoD;
 }
@@ -271,9 +290,13 @@ phi_init_pseudo_D(AMesh2D<fid_t>& m, fid_t const var, fid_t const Dvar) {
 	// init diffusion coefficient values
 	m.remove_function_ifdef(Dvar);
 	m.add_function_ifndef(Dvar,0.0);
+	array2d m_D=m[Dvar];
+	array2d m_phi=m[var];
+	array2d m_psi=m[PSI];
+	double mu=m.get_attr("cell_motility");
 	for (int i=0; i < (m.get_xdim()); ++i) {
 		for (int j=0; j < (m.get_ydim()); ++j) {
-			m.set(Dvar,i,j,phi_pseudo_diff_coef(m,i,j,var));
+			m_D(i,j)=phi_pseudo_diff_coef(m,m_phi,m_psi,mu,i,j);
 		}
 	}
 	// debug output
@@ -329,46 +352,48 @@ throw(MeshException) {
 	// WARNING: will work for uniform rectangular grid only
 	double dx=m.get_dx();
 	double dy=m.get_dy();
+	array2d psi_a=m[PSI];
+	array2d vx_a=m[VX];
+	array2d vy_a=m[VY];
+	array2d newpsi_a=m[NEWPSI];
 	for (int i=1; i < (m.get_xdim()-1); ++i) {
 		for (int j=1; j < (m.get_ydim()-1); ++j) {
 			double psi, vx, vy;
-			psi=m[PSI](i,j);
-			vx=m[VX](i,j);
-			vy=m[VY](i,j);
+			psi=psi_a(i,j);
+			vx=vx_a(i,j);
+			vy=vy_a(i,j);
 			double vdotgradpsi;
 			vdotgradpsi=0.5*(vx+fabs(vx))*
-				(m[PSI](i,j)-m[PSI](i-1,j))/dx
+				(psi_a(i,j)-psi_a(i-1,j))/dx
 				+0.5*(vx-fabs(vx))*
-				(m[PSI](i+1,j)-m[PSI](i,j))/dx
+				(psi_a(i+1,j)-psi_a(i,j))/dx
 				+0.5*(vy+fabs(vy))*
-				(m[PSI](i,j)-m[PSI](i,j-1))/dy
+				(psi_a(i,j)-psi_a(i,j-1))/dy
 				+0.5*(vy-fabs(vy))*
-				(m[PSI](i,j+1)-m[PSI](i,j))/dy;
-			m.set(NEWPSI,i,j,psi-dt*vdotgradpsi);
+				(psi_a(i,j+1)-psi_a(i,j))/dy;
+			newpsi_a(i,j)=psi-dt*vdotgradpsi;
 		}
 	}
 	// apply boundary conditions
 	// WARNING: valid for rectangular grid only
 	for (int j=1; j<(m.get_ydim()-1); ++j) {
 		double psi_in;
-		psi_in=m.get(NEWPSI,1,j);
-		m.set(NEWPSI,0,j,psi_in);
-		psi_in=m.get(NEWPSI,m.get_xdim()-2,j);
-		m.set(NEWPSI,m.get_xdim()-1,j,psi_in);
+		psi_in=newpsi_a(1,j);
+		newpsi_a(0,j)=psi_in;
+		psi_in=newpsi_a(m.get_xdim()-2,j);
+		newpsi_a(m.get_xdim()-1,j)=psi_in;
 	}
 	for (int i=0; i<m.get_xdim(); ++i) {
 		double psi_in;
-		psi_in=m.get(NEWPSI,i,1);
-		m.set(NEWPSI,i,0,psi_in);
-		psi_in=m.get(NEWPSI,i,m.get_ydim()-2);
-		m.set(NEWPSI,i,m.get_ydim()-1,psi_in);
+		psi_in=newpsi_a(i,1);
+		newpsi_a(i,0)=psi_in;
+		psi_in=newpsi_a(i,m.get_ydim()-2);
+		newpsi_a(i,m.get_ydim()-1)=psi_in;
 	}
 	// overwrite old psi
 	for (int i=0; i < (m.get_xdim()); ++i) {
 		for (int j=0; j < (m.get_ydim()); ++j) {
-			double newpsi;
-			newpsi=m[NEWPSI](i,j);
-			m.set(PSI,i,j,newpsi);
+			psi_a(i,j)=newpsi_a(i,j);
 		}
 	}
 	m.remove_function_ifdef(NEWPSI);
