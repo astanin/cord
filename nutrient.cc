@@ -57,15 +57,9 @@ best_dt(AMesh2D<fid_t> const& m) throw(MeshException) {
 	return dt;
 }
 
-template<class fid_t>
 double
-uptake_per_cell(AMesh2D<fid_t> const& m, array2d const& phi, array2d const& psi,
-			int const i, int const j) {
-	double consume=0.0;
-	if (psi(i,j) > 0) { // tumour point
-		double p=phi(i,j);
-		consume=p*f_atp_per_cell(p)*m.get_attr("o2_uptake");
-	}
+uptake_per_cell(double const phi, double const psi, double const o2_uptake) {
+	double consume=H(psi)*phi*f_atp_per_cell(phi)*o2_uptake;
 	return consume;
 }
 
@@ -73,20 +67,27 @@ template<class fid_t>
 double
 uptake_per_cell(AMesh2D<fid_t> const& m, int const i, int const j)
 throw(MeshException) {
-	return uptake_per_cell(m,m[PHI],m[PSI],i,j);
+	return uptake_per_cell(m[PHI](i,j),m[PSI](i,j),
+					m.get_attr("o2_uptake"),i,j);
+}
+
+double
+uptake_term(array2d const& phi, array2d const& c, array2d const& psi,
+	double const host_activity, double const theta, double const o2_uptake,
+	int const i, int const j)
+throw(MeshException) {
+	double h=H(-psi(i,j))*host_activity*theta*o2_uptake*N_ATP_PER_GLUCOSE/6;
+	return c(i,j)*uptake_per_cell(phi(i,j),psi(i,j),o2_uptake) + h;
 }
 
 template<class fid_t>
 double
 uptake_term(AMesh2D<fid_t> const& m, int const i, int const j)
 throw(MeshException) {
-	double psi=m[PSI](i,j);
 	double host_activity=m.get_attr("host_activity");
 	double theta=m.get_attr("upkeep_per_cell");
 	double alpha=m.get_attr("o2_uptake");
-	double host_uptake=H(-psi)*host_activity
-				*theta*alpha*N_ATP_PER_GLUCOSE/6;
-	return m[CO2](i,j)*uptake_per_cell(m,i,j) + host_uptake;
+	return uptake_term(m[PHI],m[CO2],m[PSI],host_activity,theta,alpha,i,j);
 }
 
 template<class fid_t>
@@ -101,6 +102,7 @@ throw(MeshException) {
 		array2d c_arr=m[CO2];
 		array2d phi_arr=m[PHI];
 		array2d psi_arr=m[PSI];
+		double alpha=m.get_attr("o2_uptake");
 		for (i=1; i<(xdim-1); ++i) {
 			for (j=1; j<(ydim-1); ++j) {
 				/* div(grad(c)) stencil:
@@ -148,7 +150,8 @@ throw(MeshException) {
 				}
 				// add consumption term
 				A.set(k0,k0,A.get(k0,k0)
-				-uptake_per_cell(m,phi_arr,psi_arr,i,j));
+				-uptake_per_cell(phi_arr(i,j),psi_arr(i,j),
+						alpha));
 			}
 		}
 	} catch (SparseMatrixException& e) {
@@ -262,15 +265,21 @@ throw(MeshException) {
 	m2->add_function(C_RESIDUAL);
 	// WARNING: ignoring boundary points
 	// inner points
+	array2d phi=(*m2)[PHI];
+	array2d psi=(*m2)[PSI];
 	array2d c=(*m2)[CO2];
+	double h_a=m.get_attr("host_activity");
+	double theta=m.get_attr("upkeep_per_cell");
+	double alpha=m.get_attr("o2_uptake");
+	array2d res=(*m2)[C_RESIDUAL];
 	for (int i=1; (i<m2->get_xdim()-1) ; ++i) {
 		for (int j=1; (j<m2->get_ydim()-1) ; ++j) {
 			double loc_res=0.0;
 			loc_res=(c(i+1,j)-2*c(i,j)+c(i-1,j))/(dx*dx)+
 				(c(i,j+1)-2*c(i,j)+c(i,j-1))/(dy*dy)-
-				uptake_term(*m2,i,j);
+				uptake_term(phi,c,psi,h_a,theta,alpha,i,j);
 			loc_res=fabs(loc_res);
-			m2->set(C_RESIDUAL,i,j,loc_res);
+			res(i,j)=loc_res;
 		}
 	}
 	global_res=norm_1<fid_t>(*m2,C_RESIDUAL);
@@ -284,9 +293,16 @@ eval_nutrient_init_consumption(AMesh2D<fid_t>& m, fid_t const consumption) {
 	// initialize consumption variable
 	int xdim=m.get_xdim();
 	int ydim=m.get_ydim();
+	array2d phi=m[PHI];
+	array2d psi=m[PSI];
+	array2d c=m[CO2];
+	double h_a=m.get_attr("host_activity");
+	double theta=m.get_attr("upkeep_per_cell");
+	double alpha=m.get_attr("o2_uptake");
+	array2d cons=m[consumption];
 	for (int i=0; i<xdim ; ++i) {
 		for (int j=0; j<ydim ; ++j) {
-			m.set(consumption,i,j,uptake_term(m,i,j));
+			cons(i,j)=uptake_term(phi,c,psi,h_a,theta,alpha,i,j);
 		}
 	}
 }

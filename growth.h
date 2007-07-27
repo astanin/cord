@@ -26,10 +26,39 @@
 #endif
 
 #include "dmesh.h"
+#include "utils.h"
 
-double f_atp_per_cell(double const phi);
+inline
+double f_atp_per_cell(double const phi) {
+	return (1-phi);
+}
 
-double g_atp_per_oxygen(double const c);
+// TODO: update nutrient solver if g != c.
+inline
+double g_atp_per_oxygen(double const c) {
+	return c;
+}
+
+inline
+double atp_balance(double const phi, double const c, double const theta) {
+	return phi*f_atp_per_cell(phi)*g_atp_per_oxygen(c)-theta*phi;
+}
+
+inline
+double growth_term(double const phi, double const c,
+	double const theta, double const psi=1.0, double const gamma=1.0) {
+	double atp=atp_balance(phi,c,theta);
+	return H(atp)*atp*H(psi);
+}
+
+inline
+double death_term(double const phi, double const c,
+	double const theta, double const psi=1.0, double const epsilon=1.0,
+	double const host_activity=0.0) {
+	double atp=atp_balance(phi,c,theta);
+	return epsilon*H(-atp)*(-atp)*H(psi) // tumour death
+		+ epsilon*H(-psi)*H(-atp)*(-atp)*host_activity; // host death
+}
 
 template<class fid_t>
 double net_growth_term

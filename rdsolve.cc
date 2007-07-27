@@ -142,10 +142,14 @@ throw(MeshException) {
 	double fy=0.5*dt/(dy*dy);
 	fid_t D=Dvar;
 	// reset right hand side
-	for (int i=0; i<k.size(); ++i) {
+	int ksize=k.size();
+	for (int i=0; i<ksize; ++i) {
 		rhs.at(i)=0.0;
 	}
 	// for inner points
+	array2d m_D=m[D];
+	array2d m_var=m[var];
+	array2d m_R=m[Rvar];
 	for (int i=1; i<(xdim-1); ++i) {
 		for (int j=1; j<(ydim-1); ++j) {
 			int k0 =k(i  ,j);
@@ -154,38 +158,38 @@ throw(MeshException) {
 			int k0m=k(i  ,j-1);
 			int km0=k(i-1,j);
 			// approximate diffusion term
-			A.set(k0,k0,1.0+fx*(m[D](i+1,j))+
-				2*(fx+fy)*(m[D](i,j))+fx*(m[D](i-1,j))
-				+fy*(m[D](i,j+1))+fy*(m[D](i,j-1)));
+			A.set(k0,k0,1.0+fx*(m_D(i+1,j))+
+				2*(fx+fy)*(m_D(i,j))+fx*(m_D(i-1,j))
+				+fy*(m_D(i,j+1))+fy*(m_D(i,j-1)));
 			// the following is valid for stationary boundary
 			// conditions only, using var from the previous time
 			// step instead of bc.c()/bc.a()
 			if (k0p >= 0) {
-				A.set(k0,k0p,-fy*(m[D](i,j)+m[D](i,j+1)));
+				A.set(k0,k0p,-fy*(m_D(i,j)+m_D(i,j+1)));
 			} else {
-				rhs.at(k0)+=fy*(m[D](i,j)+m[D](i,j+1))
-						*m[var](i,j+1);
+				rhs.at(k0)+=fy*(m_D(i,j)+m_D(i,j+1))
+						*m_var(i,j+1);
 			}
 			if (k0m >= 0) {
-				A.set(k0,k0m,-fy*(m[D](i,j)+m[D](i,j-1)));
+				A.set(k0,k0m,-fy*(m_D(i,j)+m_D(i,j-1)));
 			} else {
-				rhs.at(k0)+=fy*(m[D](i,j)+m[D](i,j-1))
-						*m[var](i,j-1);
+				rhs.at(k0)+=fy*(m_D(i,j)+m_D(i,j-1))
+						*m_var(i,j-1);
 			}
 			if (kp0 >= 0) {
-				A.set(k0,kp0,-fx*(m[D](i,j)+m[D](i+1,j)));
+				A.set(k0,kp0,-fx*(m_D(i,j)+m_D(i+1,j)));
 			} else {
-				rhs.at(k0)+=fx*(m[D](i,j)+m[D](i+1,j))
-						*m[var](i+1,j);
+				rhs.at(k0)+=fx*(m_D(i,j)+m_D(i+1,j))
+						*m_var(i+1,j);
 			}
 			if (km0 >= 0) {
-				A.set(k0,km0,-fx*(m[D](i,j)+m[D](i-1,j)));
+				A.set(k0,km0,-fx*(m_D(i,j)+m_D(i-1,j)));
 			} else {
-				rhs.at(k0)+=fx*(m[D](i,j)+m[D](i-1,j))
-						*m[var](i-1,j);
+				rhs.at(k0)+=fx*(m_D(i,j)+m_D(i-1,j))
+						*m_var(i-1,j);
 			}
 			// approximate reaction term
-			rhs.at(k0)+=m[var](i,j)+dt*m[Rvar](i,j);
+			rhs.at(k0)+=m_var(i,j)+dt*m_R(i,j);
 		}
 	}
 	// construct equations for boundary points

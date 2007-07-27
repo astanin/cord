@@ -31,43 +31,13 @@
 
 using std::auto_ptr;
 
-double f_atp_per_cell(double const phi) {
-	return (1-phi);
-}
-
-// TODO: update nutrient solver if g != c.
-double g_atp_per_oxygen(double const c) {
-	return c;
-}
-
-double atp_balance(double const phi, double const c, double const theta) {
-	return phi*f_atp_per_cell(phi)*g_atp_per_oxygen(c)-theta*phi;
-}
-
 #include <iostream>
 using std::cerr;
 
-double growth_term(double const phi, double const c,
-	double const theta, double const psi=1.0, double const gamma=1.0) {
-	double atp=atp_balance(phi,c,theta);
-	return H(atp)*atp*H(psi);
-}
-
-double death_term(double const phi, double const c,
-	double const theta, double const psi=1.0, double const epsilon=1.0,
-	double const host_activity=0.0) {
-	double atp=atp_balance(phi,c,theta);
-	return epsilon*H(-atp)*(-atp)*H(psi) // tumour death
-		+ epsilon*H(-psi)*H(-atp)*(-atp)*host_activity; // host death
-}
-
-template<class fid_t>
 double net_growth_term
-(AMesh2D<fid_t> const& m, array2d const& phi, array2d const& c,
-	array2d const& psi, int const i, int const j) {
-	double theta=m.get_attr("upkeep_per_cell");
-	double epsilon=m.get_attr("death_rate");
-	double host_activity=m.get_attr("host_activity");
+(array2d const& phi, array2d const& c, array2d const& psi,
+	double const theta, double const epsilon, double const host_activity,
+	int const i, int const j) {
 	return growth_term(phi(i,j),c(i,j),theta,psi(i,j))
 	-death_term(phi(i,j),c(i,j),theta,psi(i,j),epsilon,host_activity);
 }
@@ -111,9 +81,15 @@ throw(MeshException) {
 	array2d m2_c=(*m2)[CO2];
 	array2d m2_psi=(*m2)[PSI];
 	array2d m2_gphi=(*m2)[gfid];
-	for (int i=0; i<m2->get_xdim(); ++i) {
-		for (int j=0; j<m2->get_ydim(); ++j) {
-			m2_gphi(i,j)=net_growth_term(*m2,m2_phi,m2_c,m2_psi,i,j);
+	double theta=m2->get_attr("upkeep_per_cell");
+	double epsilon=m2->get_attr("death_rate");
+	double h_a=m2->get_attr("host_activity");
+	int xdim=m2->get_xdim();
+	int ydim=m2->get_ydim();
+	for (int i=0; i<xdim; ++i) {
+		for (int j=0; j<ydim; ++j) {
+			m2_gphi(i,j)=net_growth_term(m2_phi,m2_c,m2_psi,
+						theta,epsilon,h_a,i,j);
 		}
 	}
 	double params[5];
@@ -131,15 +107,18 @@ throw(MeshException) {
 	array2d m1_phi=m1[fid];
 	array2d m1_c=m1[CO2];
 	array2d m1_psi=m1[PSI];
-	for (int i=0; i<m1.get_xdim(); ++i) {
-		for (int j=0; j<m1.get_ydim(); ++j) {
+	double upkeep_per_cell=m1.get_attr("upkeep_per_cell");
+	double death_rate=m1.get_attr("death_rate");
+	double host_activity=m1.get_attr("host_activity");
+	for (int i=0; i<xdim; ++i) {
+		for (int j=0; j<ydim; ++j) {
 			double err=0.0;
 			double phi=m1_phi(i,j);
 			params[0]=m1_c(i,j);
-			params[1]=m1.get_attr("upkeep_per_cell");
+			params[1]=upkeep_per_cell;
 			params[2]=m1_psi(i,j);
-			params[3]=m1.get_attr("death_rate");
-			params[4]=m1.get_attr("host_activity");
+			params[3]=death_rate;
+			params[4]=host_activity;
 			gsl_odeiv_step_reset(step);
 			gsl_odeiv_step_apply(step, m1.get_time(), 
 					dt, &phi, &err, 0, 0, &sys);

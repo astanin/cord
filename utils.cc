@@ -708,14 +708,6 @@ double norm_2(AMesh2D<fid_t> const& m, fid_t const fid) {
 	return norm;
 }
 
-int H(double const x) {
-	if (x >= 0.0) {
-		return 1;
-	} else {
-		return 0;
-	}
-}
-
 // templates
 
 template double get_x_size<int>(const AMesh2D<int>& m);

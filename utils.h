@@ -81,7 +81,14 @@ template<class fid_t>
 double norm_2(AMesh2D<fid_t> const& m, fid_t const fid);
 
 /** @brief Heaviside funcion */
-int H(double const x);
+inline
+int H(double const x) {
+	if (x >= 0.0) {
+		return 1;
+	} else {
+		return 0;
+	}
+}
 
 #endif
 
