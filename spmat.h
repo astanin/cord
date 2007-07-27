@@ -252,22 +252,24 @@ private:
 	std::vector<int> Ti; ///< triplets' first index
 	std::vector<int> Tj; ///< triplets' second index
 	std::vector<double> Ta; ///< triplets' value;
-	/** n*n vector, describes matrix pattern, -1 -- empty cell,
-	    otherwise, index in triplet form */
-	std::vector<int> pattern;
 	lsolver_method method;
 	int gmres_restart;
+	int find_entry(int const i, int const j) const {
+		int n=Ti.size();
+		for (int k=0; k<n; ++k) {
+			if ((Ti[k]==i) && (Tj[k]==j)) {
+				return k;
+			}
+		}
+		return -1;
+	}
 public:
 	LSolverMatrix(int const rows, const std::vector<double>& x0,
 		double const accuracy, int const max_iterations,
 		lsolver_method const method=BICGstab, int gmres_restart=-1)
 		: n(rows), x(x0), accuracy(accuracy),
-		max_iterations(max_iterations), pattern(n*n), method(method),
+		max_iterations(max_iterations), method(method),
 		gmres_restart(gmres_restart) {
-		std::vector<int>::iterator i;
-		for (i=pattern.begin(); i!=pattern.end(); ++i) {
-			*i=-1; // empty cell;
-		}
 	}
 	virtual ~LSolverMatrix() {
 	}
@@ -284,20 +286,19 @@ public:
 				<< n << "," << n << ")";
 			throw SparseMatrixException(ss.str(), -1);
 		}
-		// do change triplet, if it is already there
-		if (pattern.at(k(i,j)) != -1) {
-			int Ta_index=pattern.at(k(i,j));
-			Ta.at(Ta_index)=value;
-		} else { // add new triplet
+		// WARNING: DOES NOT CHECK IF THE TRIPLET EXISTS
+	//	// do change triplet, if it is already there
+	//	int k=find_entry(i,j);
+	//	if (k != -1) {
+	//		Ta.at(k)=value;
+	//	} else { // add new triplet
 			Ti.push_back(i);
 			Tj.push_back(j);
 			Ta.push_back(value);
-			// pattern contains indices of triplet arrays
-			pattern.at(k(i,j))=Ta.size()-1;
-		}
+	//	}
 	}
 	virtual double get(int const i, int const j) const {
-		int Ta_index=pattern.at(k(i,j));
+		int Ta_index=find_entry(i,j);
 		if (Ta_index == -1) {
 			return 0.0; // empty cell
 		} else {
