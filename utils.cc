@@ -256,14 +256,14 @@ int init_params(Params& p, int argc, const char *argv[]) {
 		{ "config", 'c', POPT_ARG_STRING|onedash, &conffile, 0,
 			"use alternative configuration file", "filename" },
 #ifdef HAVE_LIBHDF5
-		{ "hdf2dx", 0, arg_val_hidden_arg, &p.hdf2dx, 1,
+		{ "h5todx", 0, arg_val_hidden_arg, &p.hdf2dx, 1,
 			"convert HDF5 data to OpenDX format", 0 },
-		{ "hdf2gp", 0, arg_val_hidden_arg, &p.hdf2gp, 1,
+		{ "h5togp", 0, arg_val_hidden_arg, &p.hdf2gp, 1,
 			"convert HDF5 data to gnuplot format", 0 },
 		{ "load", 'i', POPT_ARG_STRING|onedash, &ifile, 0,
-			"start with given initial conditions", "filename.hdf" },
+			"start with given initial conditions", "filename.h5" },
 		{ "save", 'o', POPT_ARG_STRING|onedash, &ofile, 0,
-			"save the final state as HDF5 file","filename.hdf"},
+			"save the final state as HDF5 file","filename.h5"},
 #endif // ifdef HAVE_LIBHDF5
 		{ "dt", 'd', POPT_ARG_DOUBLE|onedash, &p.dt, 0,
 			"evaluate with specified time step", "timestep" },
@@ -626,7 +626,7 @@ dump_mesh(AMesh2D<fid_t>& m, int timestamp) {
 #ifdef HAVE_LIBHDF5
 	// Save complete HDF file
 	ostringstream ss;
-	ss << "dmp" << timestamp2str(timestamp) << ".hdf";
+	ss << "dmp" << timestamp2str(timestamp) << ".h5";
 	m.save(ss.str());
 #else
 	// Dump to OpenDX

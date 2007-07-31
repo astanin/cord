@@ -42,11 +42,11 @@ hdf2dx(const Params& p) {
 	DMesh<fid_t> m;
 	if ((p.inputfile.empty())) {
 		cerr << "should specify file for conversion "
-			<< "(use -i filename.hdf)\n";
+			<< "(use -i filename.h5)\n";
 		return 1;
 	}
 	string convertedname=p.inputfile;
-	int extpos=convertedname.find(".hdf");
+	int extpos=convertedname.find(".h5");
 	if ((unsigned)extpos != string::npos) {
 		convertedname.replace(extpos,4,".dx");
 	} else { // not found
@@ -62,11 +62,11 @@ int hdf2gp(const Params& p) {
 	DMesh<fid_t> m;
 	if ((p.inputfile.empty())) {
 		cerr << "should specify file for conversion "
-			<< "(use -i filename.hdf)\n";
+			<< "(use -i filename.h5)\n";
 		return 1;
 	}
 	string convertedname=p.inputfile;
-	int extpos=convertedname.find(".hdf");
+	int extpos=convertedname.find(".h5");
 	if ((unsigned)extpos != string::npos) {
 		convertedname.replace(extpos,4,".gp");
 	} else { // not found

@@ -27,10 +27,10 @@ Tumour cord growth model
 	files may be generated for visualization.
 	
 	OpenDX (.dx) files may be generated from HDF files like this:
-	$ cord_hdf2dx *.hdf
+	$ cord_h5todx *.h5
 
 	Gnuplot (.gp) files may be generated from HDF files like this:
-	$ cord_hdf2gp *.hdf
+	$ cord_h5togp *.h5
 
 	To produce visualizations from Gnuplot (.gp) files using Tioga:
 	$ cord_gp2pdf *.gp
@@ -40,6 +40,17 @@ Tumour cord growth model
 
 	To produce visualizations from Gnuplot (.gp) files using gnuplot:
 	$ cord_gp2eps -gnuplot *.gp
+
+	With HDF5 utils you can also convert HDF data to VTK format, suitable
+	for further processing with VTK or MayaVi. To extract packing density
+	profile (variable phi) from the data file do
+	$ h5tovtk -d '/mesh/phi' file.h5
+
+	to extract oxygen distribution (variable c) do
+	$ h5tovtk -d '/mesh/c' file.h5
+
+	and to extract level set function (variable psi) do
+	$ h5tovtk -d '/mesh/psi' file.h5
 
 Requirements
 	
