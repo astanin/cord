@@ -488,7 +488,6 @@ int level_set_function_reset(AMesh2D<fid_t>& m) {
 	array2d psi2_a=m[PSI2];
 	for (int i=0; i<xdim; ++i) {
 		for (int j=0; j<ydim; ++j) {
-//			m.set(PSI,i,j,m.get(PSI2,i,j));
 			psi_a(i,j)=psi2_a(i,j);
 		}
 	}
