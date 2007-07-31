@@ -43,6 +43,7 @@ throw(MeshException) {
 	array2d u=m1[var];
 	array2d D=m1[D_coef_var];
 	array2d R=m1[reaction_term_var];
+	array2d m2_u=(*m2)[var];
 	for (int j=1; j<(ydim-1); ++j) {
 		// solution vector
 		vector<double> u2(xdim);
@@ -95,7 +96,7 @@ throw(MeshException) {
 		// solution
 		u2=A.solve(rhs);
 		for (int i=0; i<xdim; ++i) {
-			m2->set(var,i,j,u2[i]);
+			m2_u(i,j)=u2[i];
 		}
 	}
 	// satisfy other boundary conditions (along y-axis)
@@ -103,12 +104,11 @@ throw(MeshException) {
 		BoundaryCondition bc;
 		// north boundary
 		bc=bcs.get_north();
-		m2->set(var,i,ydim-1,(bc.c()*dy+bc.b()*m2->get(var,i,ydim-2))/
-					(bc.a()*dy+bc.b()));
+		m2_u(i,ydim-1)=(bc.c()*dy+bc.b()*m2_u(i,ydim-2))/
+					(bc.a()*dy+bc.b());
 		// south boundary
 		bc=bcs.get_south();
-		m2->set(var,i,0,(bc.c()*dy+bc.b()*m2->get(var,i,1))/
-					(bc.a()*dy+bc.b()));
+		m2_u(i,0)=(bc.c()*dy+bc.b()*m2_u(i,1))/(bc.a()*dy+bc.b());
 	}
 	return m2.release();
 	} catch(MeshException& e) {
@@ -134,6 +134,7 @@ throw(MeshException) {
 	array2d u=m1[var];
 	array2d D=m1[D_coef_var];
 	array2d R=m1[reaction_term_var];
+	array2d m2_u=(*m2)[var];
 	for (int i=1; i<(xdim-1); ++i) {
 		// solution vector
 		vector<double> u2(ydim);
@@ -186,7 +187,7 @@ throw(MeshException) {
 		// solution
 		u2=A.solve(rhs);
 		for (int j=0; j<ydim; ++j) {
-			m2->set(var,i,j,u2[j]);
+			m2_u(i,j)=u2[j];
 		}
 	}
 	// satisfy other boundary conditions (along x-axis)
@@ -194,12 +195,11 @@ throw(MeshException) {
 		BoundaryCondition bc;
 		// west
 		bc=bcs.get_west();
-		m2->set(var,0,j,(bc.c()*dx+bc.b()*m2->get(var,1,j))/
-					(bc.a()*dx+bc.b()));
+		m2_u(0,j)=(bc.c()*dx+bc.b()*m2_u(1,j))/(bc.a()*dx+bc.b());
 		// east
 		bc=bcs.get_east();
-		m2->set(var,xdim-1,j,(bc.c()*dx+bc.b()*m2->get(var,xdim-2,j))/
-					(bc.a()*dx+bc.b()));
+		m2_u(xdim-1,j)=(bc.c()*dx+bc.b()*m2_u(xdim-2,j))/
+					(bc.a()*dx+bc.b());
 	}
 	return m2.release();
 	} catch(MeshException& e) {

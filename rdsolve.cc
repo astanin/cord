@@ -39,16 +39,16 @@ using std::auto_ptr;
 #include <iostream>
 using std::cerr;
 
-template<class fid_t>
 double
-div_term(const AMesh2D<fid_t>& m, fid_t var, fid_t Dvar, int i, int j) {
-	double fx=0.5/(m.get_dx()*m.get_dx());
-	double fy=0.5/(m.get_dy()*m.get_dy());
-	return fx*((m[Dvar](i+1,j)+m[Dvar](i,j))*(m[var](i+1,j)-m[var](i,j))
-		  -(m[Dvar](i,j)+m[Dvar](i-1,j))*(m[var](i,j)-m[var](i-1,j)))
+div_term(array2d const& var, array2d const& Dvar, int i, int j,
+	double dx, double dy) {
+	double fx=0.5/(dx*dx);
+	double fy=0.5/(dy*dy);
+	return fx*((Dvar(i+1,j)+Dvar(i,j))*(var(i+1,j)-var(i,j))
+		  -(Dvar(i,j)+Dvar(i-1,j))*(var(i,j)-var(i-1,j)))
 		+
-	       fy*((m[Dvar](i,j+1)+m[Dvar](i,j))*(m[var](i,j+1)-m[var](i,j))
-	          -(m[Dvar](i,j)+m[Dvar](i,j-1))*(m[var](i,j)-m[var](i,j-1)));
+	       fy*((Dvar(i,j+1)+Dvar(i,j))*(var(i,j+1)-var(i,j))
+	          -(Dvar(i,j)+Dvar(i,j-1))*(var(i,j)-var(i,j-1)));
 }
 
 template<class fid_t>
@@ -61,38 +61,40 @@ throw(MeshException) {
 	int xdim=m2->get_xdim();
 	int ydim=m2->get_ydim();
 	// for inner points
+	array2d m1_var=m1[var];
+	array2d m1_R=m1[Rvar];
+	array2d m1_D=m1[Dvar];
+	array2d m2_var=(*m2)[var];
+	double dx=m1.get_dx();
+	double dy=m1.get_dy();
 	for (int i=1; i<(xdim-1); ++i) {
 		for (int j=1; j<(ydim-1); ++j) {
-			double var2=m1.get(var,i,j)
-				+dt*div_term(m1,var,Dvar,i,j)
-				+dt*m1.get(Rvar,i,j);
-			m2->set(var,i,j,var2);
+			double var2=m1_var(i,j)
+				+dt*div_term(m1_var,m1_D,i,j,dx,dy)
+				+dt*m1_R(i,j);
+			m2_var(i,j)=var2;
 		}
 	}
 	// boundary points
 	for (int j=1; j < (ydim-1); ++j) {
-		double dx=m2->get_dx();
 		BoundaryCondition bc;
 		// east boundary
 		bc=bcs.get_east();
-		m2->set(var,xdim-1,j,(bc.c()*dx+bc.b()*m2->get(var,xdim-2,j))/
-					(bc.a()*dx+bc.b()));
+		m2_var(xdim-1,j)=(bc.c()*dx+bc.b()*m2_var(xdim-2,j))/
+					(bc.a()*dx+bc.b());
 		// west boundary
 		bc=bcs.get_west();
-		m2->set(var,0,j,(bc.c()*dx+bc.b()*m2->get(var,1,j))/
-					(bc.a()*dx+bc.b()));
+		m2_var(0,j)=(bc.c()*dx+bc.b()*m2_var(1,j))/(bc.a()*dx+bc.b());
 	}
 	for (int i=0; i < xdim; ++i) {
-		double dy=m2->get_dy();
 		BoundaryCondition bc;
 		// north boundary
 		bc=bcs.get_north();
-		m2->set(var,i,ydim-1,(bc.c()*dy+bc.b()*m2->get(var,i,ydim-2))/
-					(bc.a()*dy+bc.b()));
+		m2_var(i,ydim-1)=(bc.c()*dy+bc.b()*m2_var(i,ydim-2))/
+					(bc.a()*dy+bc.b());
 		// south boundary
 		bc=bcs.get_south();
-		m2->set(var,i,0,(bc.c()*dy+bc.b()*m2->get(var,i,1))/
-					(bc.a()*dy+bc.b()));
+		m2_var(i,0)=(bc.c()*dy+bc.b()*m2_var(i,1))/(bc.a()*dy+bc.b());
 	}
 	return m2.release();
 	} catch(MeshException& e) {
