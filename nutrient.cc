@@ -124,7 +124,7 @@ throw(MeshException) {
 				double dx2f=1.0/(m.get_dx()*m.get_dx());
 				double dy2f=1.0/(m.get_dy()*m.get_dy());
 				// fill in laplacian matrix
-				A.set(k0,k0, -2.0*(dx2f+dy2f));
+				double A_k0_k0=-2.0*(dx2f+dy2f);
 	// WARNING/TODO: this is valid only for stationary boundary conditions,
 	// should use bc.c()/bc.a() for appropriate bc instead of m.get(CO2)
 	// from the previous time step
@@ -149,7 +149,7 @@ throw(MeshException) {
 					rhs.at(k0)=-dx2f*c_arr(i-1,j);
 				}
 				// add consumption term
-				A.set(k0,k0,A.get(k0,k0)
+				A.set(k0,k0,A_k0_k0
 				-uptake_per_cell(phi_arr(i,j),psi_arr(i,j),
 						alpha));
 			}
