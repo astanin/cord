@@ -336,7 +336,7 @@ throw(MeshException) {
 	return m2.release();
 	} catch(MeshException& e) {
 		ostringstream ss;
-		ss << "phi_step_adi: " << e.what();
+		ss << "phi_step: " << e.what();
 		throw MeshException(ss.str());
 	}
 }
