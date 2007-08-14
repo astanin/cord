@@ -30,32 +30,32 @@ bool is_solution(ASparseMatrix &A, vector<double>& x, vector<double>& rhs) {
 	double enorm=numeric_limits<double>::epsilon();
 	for (int i=0; i<N; ++i) {
 		sum=0.0;
-		cout << "|";
+//		cout << "|";
 		for (int j=0; j<N; ++j) {
-			cout.width(6);
-			cout << A.get(i,j) << " ";
+//			cout.width(6);
+//			cout << A.get(i,j) << " ";
 			sum+=A.get(i,j)*x[j];
 		}
-		cout << "|";
-		cout << " |";
-		cout.width(6);
-		cout << x[i];
-		cout << "|";
-		if (i==N/2) {
-			cout << " = ";
-		} else {
-			cout << "   ";
-		}
-		cout << "|";
-		cout.width(6);
-		cout << rhs[i];
-		cout << "|";
+//		cout << "|";
+//		cout << " |";
+//		cout.width(6);
+//		cout << x[i];
+//		cout << "|";
+//		if (i==N/2) {
+//			cout << " = ";
+//		} else {
+//			cout << "   ";
+//		}
+//		cout << "|";
+//		cout.width(6);
+//		cout << rhs[i];
+//		cout << "|";
 		sum-=rhs[i];
-		cout << "\n";
+//		cout << "\n";
 		xnorm+=fabs(x[i]);
 		enorm+=fabs(sum);
 	}
-	cout << "Error: "<<enorm<<"; relative error: "<<enorm/xnorm<<"\n";
+	cout << "error: "<<enorm<<"; rel.error: "<<enorm/xnorm << "; ";
 	if (enorm < 0.01*xnorm) {
 		cout << "OK\n";
 		return true;
@@ -224,32 +224,51 @@ int is_symm_test(int const N) {
 
 int main(int argc, char *argv[]) {
 	int ret=0;
-	const int N=8;
+	const int N=100;
 	const double DIAG=10;
 	srand(time(0));
 	std::vector<double> x(N);
-	LSolverMatrix Asg(N,x,1e-5,1000,LSolverMatrix::GMRES,N/2);
-	cout << "LSolverMatrix set-get test:\n";
-	ret+=test_set_get(Asg,N);
-	cout << "LSolverMatrix mult test:\n";
-	ret+=test_mult(N);
-	LSolverMatrix B(N,x,1e-5,1000,LSolverMatrix::BICG);
-	cout << "LSolverMatrix (BiCG):\n";
-	ret+=test(B,N,DIAG);
-	LSolverMatrix A(N,x,1e-5,1000,LSolverMatrix::GMRES,N/2);
-	cout << "LSolverMatrix (GMRES):\n";
-	ret+=test(A,N,DIAG);
+	{
+		LSolverMatrix A(N,x,1e-5,1000,LSolverMatrix::GMRES,N/2);
+		cout << "LSolverMatrix set-get test: ";
+		ret+=test_set_get(A,N);
+	}
+	{
+		cout << "LSolverMatrix mult test: ";
+		ret+=test_mult(N);
+	}
+	{
+		LSolverMatrix A(N,x,1e-5,1000,LSolverMatrix::BICG);
+		cout << "LSolverMatrix (BiCG) solve test: ";
+		ret+=test(A,N,DIAG);
+	}
+	{
+		LSolverMatrix A(N,x,1e-5,1000,LSolverMatrix::GMRES,N);
+		cout << "LSolverMatrix (GMRES) solve test: ";
+		ret+=test(A,N,DIAG);
+	}
 #ifdef HAVE_LIBUMFPACK
-	cout << "UMFPACKMatrix:\n";
-	UMFPACKMatrix C(N,N);
-	ret+=test(C,N,DIAG);
+	{
+		cout << "UMFPACKMatrix set-get test: ";
+		UMFPACKMatrix C(N,N);
+		ret+=test_set_get(C,N);
+	}
+	{
+		cout << "UMFPACKMatrix solve test: ";
+		UMFPACKMatrix C(N,N);
+		ret+=test(C,N,DIAG);
+	}
 #endif
 #ifdef HAVE_LIBLAPACK
-	cout << "TridiagMatrix:\n";
-	TridiagMatrix T(N);
-	ret+=td_test(T,N);
+	{
+		cout << "TridiagMatrix solve test: ";
+		TridiagMatrix T(N);
+		ret+=td_test(T,N);
+	}
 #endif
-	ret+=is_symm_test(N);
+	{
+		ret+=is_symm_test(N);
+	}
 	return ret;
 }
 
