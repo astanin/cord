@@ -235,6 +235,8 @@ public:
 #include "lsolver/bicgstab.h"
 #include "lsolver/gmres.h"
 
+#include <map>
+
 class LSolverMatrix : public ASparseMatrix, public ALSolverMatrix {
 public:
 	typedef enum {
@@ -244,7 +246,6 @@ public:
 		GMRES=3
 	} lsolver_method;
 private:
-	int k(int const i, int const j) const { return i*n+j; };
 	int n;
 	std::vector<double> x;
 	double accuracy;
@@ -254,14 +255,19 @@ private:
 	std::vector<double> Ta; ///< triplets' value;
 	lsolver_method method;
 	int gmres_restart;
+
+	int k_index(int const i, int const j) const { return i*n+j; }
+	std::map<int,int> pattern; ///< k-index of non-zero points -> Ta index
 	int find_entry(int const i, int const j) const {
-		int n=Ti.size();
-		for (int k=0; k<n; ++k) {
-			if ((Ti[k]==i) && (Tj[k]==j)) {
-				return k;
-			}
+		int k=k_index(i,j);
+		std::map<int,int>::const_iterator entry=pattern.find(k);
+		if (entry != pattern.end()) {
+			return entry->second;
+		} else { // not found
+			return -1;
 		}
-		return -1;
+	}
+	int add_entry(int const i,int const j, double const val) {
 	}
 public:
 	LSolverMatrix(int const rows, const std::vector<double>& x0,
@@ -270,6 +276,7 @@ public:
 		: n(rows), x(x0), accuracy(accuracy),
 		max_iterations(max_iterations), method(method),
 		gmres_restart(gmres_restart) {
+		pattern.clear();
 	}
 	virtual ~LSolverMatrix() {
 	}
@@ -286,16 +293,24 @@ public:
 				<< n << "," << n << ")";
 			throw SparseMatrixException(ss.str(), -1);
 		}
-		// WARNING: DOES NOT CHECK IF THE TRIPLET EXISTS
-	//	// do change triplet, if it is already there
-	//	int k=find_entry(i,j);
-	//	if (k != -1) {
-	//		Ta.at(k)=value;
-	//	} else { // add new triplet
+		// do change triplet, if it is already there
+		int Ta_index=find_entry(i,j);
+		if (Ta_index != -1) {
+			Ta.at(Ta_index)=value;
+		} else {
+			Ta_index=Ta.size();
 			Ti.push_back(i);
 			Tj.push_back(j);
 			Ta.push_back(value);
-	//	}
+			pattern[k_index(i,j)]=Ta_index;
+		}
+		if (pattern.size() != Ta.size()) {
+			std::ostringstream ss;
+			ss << "LSolverMatrix::get: broken matrix pattern: "
+				<< "pattern.size=" << pattern.size()
+				<< "triplets=" << Ta.size();
+			throw SparseMatrixException(ss.str());
+		}
 	}
 	virtual double get(int const i, int const j) const {
 		int Ta_index=find_entry(i,j);
