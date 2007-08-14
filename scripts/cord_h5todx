@@ -4,7 +4,7 @@
 
 if [ $# -lt 1 ]; then
 	echo usage:
-	echo     $(echo $0|sed 's/.*\///g') datafile1.hdf \[ datafile2.hdf ... \]
+	echo     $(echo $0|sed 's/.*\///g') datafile1.h5 \[ datafile2.h5 ... \]
 	exit -1
 fi
 
@@ -12,7 +12,7 @@ while [ $# -gt 0 ]; do
 	f=$1
 	shift
         if [ ! \( -f ${f%.hdf}.dx -a \( ${f%.hdf}.dx -nt $f \) \) ]; then
-                cord --hdf2dx -i "$f";
+                cord --h5todx -i "$f";
         fi
 done
 
