@@ -65,6 +65,75 @@ bool is_solution(ASparseMatrix &A, vector<double>& x, vector<double>& rhs) {
 	}
 }
 
+int test_mult(const int N) {
+	std::vector<double> x(N);
+	std::vector<double> y(N);
+	LSolverMatrix A(N,x,1e-5,1000,LSolverMatrix::CG);
+	// identity matrix multiplication
+	for (int i=0; i<N; ++i) {
+		x[i]=1.0;
+		A.set(i,i,2.0);
+	}
+	A.mult(x.empty()?NULL:&x[0],y.empty()?NULL:&y[0]);
+	for (int i=0; i<N; ++i) {
+		if (fabs(y[i]-2.0) > numeric_limits<double>::epsilon()) {
+			cout << "2 I[][] * ones[]  != twos[], i=" << i << "\n";
+			cout << "FAILED\n";
+			return 1;
+		}
+	}
+	// tridiagonal matrix multiplication now
+	A.set(0,1,-2.0);
+	A.set(N-1,N-2,-2.0);
+	for (int i=1; i<(N-1); ++i) {
+		A.set(i,i-1,-1.0);
+		A.set(i,i+1,-1.0);
+	}
+	A.mult(x.empty()?NULL:&x[0],y.empty()?NULL:&y[0]);
+	for (int i=0; i<N; ++i) {
+		if (fabs(y[i]) > numeric_limits<double>::epsilon()) {
+			cout << "D[][] * ones[]  != zeros[], "
+				"y[" << i << "]=" << y[i] << "\n";
+			cout << "FAILED\n";
+			return 1;
+		}
+	}
+	cout << "OK\n";
+	return 0;
+}
+
+int test_set_get(ASparseMatrix &A,const int N) {
+	for (int i=0; i<N; ++i) {
+		for (int j=0; j<N; ++j) {
+			A.set(i,j,(i+j));
+			double g=A.get(i,j);
+			if (fabs(g-(i+j)*1.0) >
+				numeric_limits<double>::epsilon()) {
+				cout << "set at (" << i << "," << j << "): "
+					<< (i+j) << "; found: " << g << "\n";
+				cout << "FAILED\n";
+				return 1;
+			}
+		}
+	}
+	// once again
+	for (int i=0; i<N; ++i) {
+		for (int j=0; j<N; ++j) {
+			double g=A.get(i,j);
+			if (fabs(g-(i+j)*1.0) >
+				numeric_limits<double>::epsilon()) {
+				cout << "at (" << i << "," << j << "): "
+					<< "found: " << g << " instead of "
+					<< (i+j) << "\n";
+				cout << "FAILED\n";
+				return 1;
+			}
+		}
+	}
+	cout << "OK\n";
+	return 0;
+}
+
 int test(ASparseMatrix &A,const int N, const double DIAG) {
 	vector<double> rhs(N);
 	A.set(0,0,1.0);
@@ -159,12 +228,17 @@ int main(int argc, char *argv[]) {
 	const double DIAG=10;
 	srand(time(0));
 	std::vector<double> x(N);
-	LSolverMatrix A(N,x,1e-5,1000,LSolverMatrix::GMRES,N/2);
-	cout << "LSolverMatrix (GMRES):\n";
-	ret+=test(A,N,DIAG);
+	LSolverMatrix Asg(N,x,1e-5,1000,LSolverMatrix::GMRES,N/2);
+	cout << "LSolverMatrix set-get test:\n";
+	ret+=test_set_get(Asg,N);
+	cout << "LSolverMatrix mult test:\n";
+	ret+=test_mult(N);
 	LSolverMatrix B(N,x,1e-5,1000,LSolverMatrix::BICG);
 	cout << "LSolverMatrix (BiCG):\n";
 	ret+=test(B,N,DIAG);
+	LSolverMatrix A(N,x,1e-5,1000,LSolverMatrix::GMRES,N/2);
+	cout << "LSolverMatrix (GMRES):\n";
+	ret+=test(A,N,DIAG);
 #ifdef HAVE_LIBUMFPACK
 	cout << "UMFPACKMatrix:\n";
 	UMFPACKMatrix C(N,N);
