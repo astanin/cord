@@ -216,17 +216,8 @@ throw(MeshException) {
 		for (int k=0; k<kenum.size(); ++k) {
 			c.at(k)=c_arr(kenum.i(k),kenum.j(k));
 		}
-		// WARNING:
-		// We have sparse matrix with the same sparsity pattern
-		// all the time as we have only one nutrient equation
-		// This allows to save time by avoid construction of a new
-		// matrix object every time. Later, LSolverMatrix should be
-		// optimized.
-		static ASparseMatrix *pA=0;
-		if (!pA) {
-			pA=build_sle_solver_matrix(kenum.size(), c,
-					Method::it().p_solver_accuracy);
-		}
+		auto_ptr<ASparseMatrix> pA(build_sle_solver_matrix
+			(kenum.size(), c,Method::it().p_solver_accuracy));
 		vector<double> rhs(kenum.size());// right hand side vector
 		eval_nutrient_fill_sle_matrix(*m2,p.c_bc,*pA,rhs,kenum);
 		// solve SLE
