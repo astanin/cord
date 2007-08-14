@@ -27,6 +27,10 @@
 #include <iostream>
 #include <sstream>
 #include <exception>
+#include <map>
+#include <memory>
+
+using std::auto_ptr;
 
 extern "C" {
 #if HAVE_UFSPARSE_UMFPACK_H
@@ -74,7 +78,7 @@ public:
 class UMFPACKMatrix : public ASparseMatrix {
 private:
 	/// unidimensional index bijected on (i,j) index-space
-	int k(int const i, int const j) const {
+	int k_index(int const i, int const j) const {
 		return (i+j*n_cols);
 	}
 
@@ -83,18 +87,22 @@ private:
 	std::vector<int> Ti; ///< triplets' first index
 	std::vector<int> Tj; ///< triplets' second index
 	std::vector<double> Tx; ///< triplets' value;
-	/** n_rows*n_cols vector, describes matrix pattern, -1 -- empty cell,
-	    otherwise, index in triplet form */
-	std::vector<int> pattern;
+
+	std::map<int,int> pattern; ///< k-index of non-zero points -> Tx index
+	int find_entry(int const i, int const j) const {
+		int k=k_index(i,j);
+		std::map<int,int>::const_iterator entry=pattern.find(k);
+		if (entry != pattern.end()) {
+			return entry->second;
+		} else { // not found
+			return -1;
+		}
+	}
 
 public:
 	UMFPACKMatrix(int const _rows, int const _cols) :
-		n_rows(_rows), n_cols(_cols), Ti(0), Tj(0), Tx(0),
-		pattern(_rows*_cols) {
-		std::vector<int>::iterator i;
-		for (i=pattern.begin(); i!=pattern.end(); ++i) {
-			*i=-1; // empty cell;
-		}
+		n_rows(_rows), n_cols(_cols), Ti(0), Tj(0), Tx(0) {
+		pattern.clear();
 	}
 
 	virtual UMFPACKMatrix* clone(void) const {
@@ -120,20 +128,20 @@ public:
 			throw SparseMatrixException(ss.str(), -1);
 		}
 		// do change triplet, if it is already there
-		if (pattern.at(k(i,j)) != -1) {
-			int Tx_index=pattern.at(k(i,j));
+		int Tx_index=find_entry(i,j);
+		if (Tx_index != -1) {
 			Tx.at(Tx_index)=value;
-		} else { // add new triplet
+		} else {
+			Tx_index=Tx.size();
 			Ti.push_back(i);
 			Tj.push_back(j);
 			Tx.push_back(value);
-			// pattern contains indices of triplet arrays
-			pattern.at(k(i,j))=Tx.size()-1;
+			pattern[k_index(i,j)]=Tx_index;
 		}
 	}
 
 	virtual double get(int const i, int const j) const {
-		int Tx_index=pattern.at(k(i,j));
+		int Tx_index=find_entry(i,j);
 		if (Tx_index == -1) {
 			return 0.0; // empty cell
 		} else {
@@ -149,80 +157,65 @@ public:
 		}
 		// convert to compressed-column form
 		int nz=Tx.size();
-		int *Ap=new int[n_cols+1];
-		int *Ai=new int[nz];
-		double *Ax=new double[nz];
-		if ((Ap == (int*)0) || (Ai == (int*)0) || (Ax == (double*)0)) {
-			if (Ap) {
-				delete[] Ap; Ap=0;
-			}
-			if (Ai) {
-				delete[] Ai; Ai=0;
-			}
-			if (Ax) {
-				delete[] Ax; Ax=0;
-			}
+		auto_ptr<int> Ap(new int[n_cols+1]);
+		auto_ptr<int> Ai(new int[nz]);
+		auto_ptr<double> Ax(new double[nz]);
+		if ((Ap.get() == NULL) || (Ai.get() == NULL)
+			|| (Ax.get() == NULL)) {
 			throw SparseMatrixException("solve: cannot alloc "
 				"memory for compressed-column form");
 		}
 		int status=umfpack_di_triplet_to_col(n_rows, n_cols, nz,
-				&*Ti.begin(), &*Tj.begin(), &*Tx.begin(),
-				Ap, Ai, Ax, (int*)0);
+				Ti.empty()?NULL:&Ti[0],
+				Tj.empty()?NULL:&Tj[0],
+				Tx.empty()?NULL:&Tx[0],
+				Ap.get(), Ai.get(), Ax.get(), (int*)0);
 		if (status) {
-			delete[] Ap; Ap=0;
-			delete[] Ai; Ai=0;
-			delete[] Ax; Ax=0;
 			throw SparseMatrixException("solve: triplet_to_col "
 				"failed", status);
 		}
 		// start solving
-		double *px=new double[n_rows];
-		if (px == (double*)0) {
-			delete[] Ap; Ap=0;
-			delete[] Ai; Ai=0;
-			delete[] Ax; Ax=0;
+		auto_ptr<double> px(new double[n_rows]);
+		if (px.get() == NULL) {
 			throw SparseMatrixException("solve: cannot alloc "
 				"solution vector", status);
 		}
 		void *symbolic, *numeric;
-		status=umfpack_di_symbolic(n_rows, n_cols, Ap, Ai, Ax,
+		status=umfpack_di_symbolic(n_rows, n_cols,
+				Ap.get(), Ai.get(), Ax.get(),
 				&symbolic, (double*)0, (double*)0);
 		if (status) {
-			delete[] Ap; Ap=0;
-			delete[] Ai; Ai=0;
-			delete[] Ax; Ax=0;
-			delete[] px; px=0;
 			throw SparseMatrixException("solve: symbolic failed",
 					status);
 		}
-		status=umfpack_di_numeric(Ap, Ai, Ax, symbolic, &numeric,
-				(double*)0, (double*)0);
-		if (status) {
-			delete[] Ap; Ap=0;
-			delete[] Ai; Ai=0;
-			delete[] Ax; Ax=0;
-			delete[] px; px=0;
-			throw SparseMatrixException("solve: numeric failed",
-					status);
+		status=umfpack_di_numeric(Ap.get(), Ai.get(), Ax.get(),
+				symbolic, &numeric, (double*)0, (double*)0);
+		if (status < 0) {
+			std::ostringstream ss;
+			ss << "solve: numeric failed: ";
+			switch (status) {
+			case UMFPACK_WARNING_singular_matrix:
+				ss << "singular matrix";
+				break;
+			case UMFPACK_ERROR_out_of_memory:
+				ss << "insufficient memory for factorization";
+				break;
+			default:
+				ss << "UMFPACK_STATS=" << status;
+				break;
+			}
+			throw SparseMatrixException(ss.str());
 		}
 		umfpack_di_free_symbolic(&symbolic);
-		status=umfpack_di_solve(UMFPACK_A, Ap, Ai, Ax, px,
-				&*rhs.begin(), numeric, (double*)0, (double*)0);
+		status=umfpack_di_solve(UMFPACK_A,Ap.get(),Ai.get(),Ax.get(),
+				px.get(), rhs.empty()?NULL:&rhs[0], numeric,
+				(double*)0, (double*)0);
 		umfpack_di_free_numeric(&numeric);
 		if (status) {
-			delete[] Ap; Ap=0;
-			delete[] Ai; Ai=0;
-			delete[] Ax; Ax=0;
-			delete[] px; px=0;
 			throw SparseMatrixException("solve: solve failed",
 					status);
 		}
-		std::vector<double> x(px,px+n_rows);
-		// clean up
-		delete[] Ap; Ap=0;
-		delete[] Ai; Ai=0;
-		delete[] Ax; Ax=0;
-		delete[] px; px=0;
+		std::vector<double> x(px.get(),px.get()+n_rows);
 		return x;
 	}
 
@@ -234,8 +227,6 @@ public:
 #include "lsolver/bicgsq.h"
 #include "lsolver/bicgstab.h"
 #include "lsolver/gmres.h"
-
-#include <map>
 
 class LSolverMatrix : public ASparseMatrix, public ALSolverMatrix {
 public:
@@ -266,8 +257,6 @@ private:
 		} else { // not found
 			return -1;
 		}
-	}
-	int add_entry(int const i,int const j, double const val) {
 	}
 public:
 	LSolverMatrix(int const rows, const std::vector<double>& x0,
