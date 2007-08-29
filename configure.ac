@@ -114,35 +114,36 @@ AC_CHECK_LIB([lapack],[main],
 AC_CHECK_LIB([gsl],[gsl_block_alloc],,
 	     AC_MSG_ERROR([Required GSL library not found]))
 
-AC_ARG_WITH([umfpack],
-	[AS_HELP_STRING([--with-umfpack[=PATH]],
-		[use direct linear solvers from UMFPACK])],
-	[],
-	[with_umfpack=try])
-if test "x$with_umfpack" != "xno" ; then
-	if test "x$with_umfpack" != "xyes" ; then
-		LDFLAGS="${LDFLAGS} -L${with_umfpack}"
-	fi
-	AC_CHECK_LIB([amd],[amd_l_valid],
-	[
-	 LIBS="-lamd ${LIBS}"
-	 AC_DEFINE([HAVE_LIBAMD],[1],[Define if you have libamd])
-	 AC_CHECK_LIB([umfpack],[umf_l_malloc],,
-		[ # libumfpack not found
-		if test "x$with_umfpack" != "xtry" ; then
-		 AC_MSG_ERROR([--with-umfpack given, but libumfpack not found])
-		fi
-		with_umfpack=no
-		])
-	 with_umfpack=yes
-	],
-	[ # libamd not found
-	if test "x$with_umfpack" != "xtry" ; then
-	 AC_MSG_ERROR([--with-umfpack given, but libamd not found])
-	fi
-	with_umfpack=no
-	])
-fi
+with_umfpack=no
+#AC_ARG_WITH([umfpack],
+#	[AS_HELP_STRING([--with-umfpack[=PATH]],
+#		[use direct linear solvers from UMFPACK])],
+#	[],
+#	[with_umfpack=try])
+#if test "x$with_umfpack" != "xno" ; then
+#	if test "x$with_umfpack" != "xyes" ; then
+#		LDFLAGS="${LDFLAGS} -L${with_umfpack}"
+#	fi
+#	AC_CHECK_LIB([amd],[amd_l_valid],
+#	[
+#	 LIBS="-lamd ${LIBS}"
+#	 AC_DEFINE([HAVE_LIBAMD],[1],[Define if you have libamd])
+#	 AC_CHECK_LIB([umfpack],[umf_l_malloc],,
+#		[ # libumfpack not found
+#		if test "x$with_umfpack" != "xtry" ; then
+#		 AC_MSG_ERROR([--with-umfpack given, but libumfpack not found])
+#		fi
+#		with_umfpack=no
+#		])
+#	 with_umfpack=yes
+#	],
+#	[ # libamd not found
+#	if test "x$with_umfpack" != "xtry" ; then
+#	 AC_MSG_ERROR([--with-umfpack given, but libamd not found])
+#	fi
+#	with_umfpack=no
+#	])
+#fi
 
 AC_CHECK_LIB([blitz],[main],,
 	AC_MSG_ERROR([Required library Blitz++ not found]))
@@ -239,12 +240,12 @@ else
 	echo "no" ;
 fi
 echo "    GNU Scientific library: yes" ;
-echo -n "    UMFPACK linear solvers: " ;
-if test "x$with_umfpack" == "xyes" ; then
-	echo "yes" ;
-else
-	echo "no" ;
-fi
+#echo -n "    UMFPACK linear solvers: " ;
+#if test "x$with_umfpack" == "xyes" ; then
+#	echo "yes" ;
+#else
+#	echo "no" ;
+#fi
 echo "    Blitz++ library: yes" ;
 echo -n "    HDF5 data files: " ;
 if test "x$with_hdf5" == "xyes" ; then
