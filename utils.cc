@@ -198,6 +198,12 @@ read_params(dictionary *ini, Params& p) {
 		"params:death_rate",p.death_rate);
 	p.host_active=iniparser_getboolean(ini,
 		"params:active_host",p.host_active);
+	p.glc_switch=iniparser_getboolean(ini,
+		"params:glucose_switch",p.glc_switch);
+	p.anaerobic_rate=iniparser_getdouble(ini,
+		"params:anaerobic_rate",p.anaerobic_rate);
+	p.D_glc=iniparser_getdouble(ini,
+		"params:glucose_diffusion",p.D_glc);
 	p.tk1=iniparser_getdouble(ini,"params:tumour_stress_on_compress",p.tk1);
 	p.ts1=iniparser_getdouble(ini,"params:tumour_stress_on_stretch",p.ts1);
 	p.hk1=iniparser_getdouble(ini,"params:host_stress_on_compress",p.hk1);
@@ -313,7 +319,7 @@ int init_params(Params& p, int argc, const char *argv[]) {
 			"hs1"},
 		{ "nutrient-equation", 0, POPT_ARG_STRING|onedash, &c_eq, 0,
 			"equation type: Poisson | diffusion", "type"},
-		{ "upkeep-per-cell", 'u', POPT_ARG_DOUBLE|onedash,
+		{ "upkeep-per-cell", 0, POPT_ARG_DOUBLE|onedash,
 			&p.upkeep_per_cell, 0,
 			"minimal energy consumption by cells", "theta" },
 		{ "death-rate", 'e', POPT_ARG_DOUBLE|onedash,
@@ -324,6 +330,14 @@ int init_params(Params& p, int argc, const char *argv[]) {
 			"rate of oxygen consumption", "alpha" },
 		{ "active-host", 0, arg_val_hidden_arg, &p.host_active, true,
 			"host tissue consumes oxygen and may die", 0 },
+		{ "glucose-switch", 0, arg_val_hidden_arg, &p.glc_switch, true,
+			"tumour may switch to anaerobic catabolism", 0 },
+		{ "glucose-diffusion", 0, POPT_ARG_DOUBLE|onedash,
+			&p.D_glc, 0.1,
+			"glucose diffusion coefficient", "Dg" },
+		{ "anaerobic-rate", 'k', POPT_ARG_DOUBLE|onedash,
+			&p.anaerobic_rate, 1.0,
+			"relative rate of anaerobic ATP production", "k" },
 		{ "verbose", 'v', arg_val_hidden_arg, &verbose, 1,
 			"be verbose", 0},
 		{ "extraverbose", 0, arg_val_hidden_arg, &verbose, 2,
