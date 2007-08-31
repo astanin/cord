@@ -234,8 +234,6 @@ throw(MeshException) {
 	try {
 	SkipDirichletEnumerator<fid_t> kenum(m1,bcs);
 	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
-	int xdim=m2->get_xdim();
-	int ydim=m2->get_ydim();
 	// initial estimate (previous solution)
 	vector<double> u0(kenum.size());
 	for (int k=0; k<kenum.size(); ++k) {

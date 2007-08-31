@@ -63,6 +63,20 @@ build_mesh(const Params& p) {
 		if (!m.defined(PHI)) {
 			m.add_function(PHI,p.phi_stress_free);
 		}
+		if (p.glc_switch) {
+			if (!m.defined(PHI1)) { // first subpopulation
+				m.add_function(PHI1,0.0);
+				array2d phi=m[PHI];
+				array2d phi1=m[PHI1];
+				phi=phi1;
+			}
+			if (!m.defined(PHI2)) { // second subpopulation
+				m.add_function(PHI2,0.0);
+			}
+			if (!m.defined(GLC)) { // glucose
+				m.add_function(GLC,0.0);
+			}
+		}
 		// levelset potential
 		if (!m.defined(PSI)) {
 			m.add_function(PSI);

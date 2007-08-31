@@ -50,6 +50,19 @@ template<class fid_t>
 double
 estimate_optimal_dt(const AMesh2D<fid_t>& m);
 
+// binutrient tissue evaluation
+template<class fid_t>
+AMesh2D<fid_t>*
+eval_bn_tissue(const Params& p, double const dt, const AMesh2D<fid_t>& m1,
+	fid_t density, fid_t phase) {
+	// growth-death (ODE)
+//	auto_ptr<AMesh2D<fid_t> > tmp(step_growth_death<fid_t>(dt,m1,density));
+//	auto_ptr<AMesh2D<fid_t> > m2(phi_step<fid_t>(p, dt, *tmp, density));
+//	return m2.release();
+	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
+	return m2.release();
+}
+
 template<class fid_t>
 AMesh2D<fid_t>*
 eval_tissue(const Params& p, double const dt, const AMesh2D<fid_t>& m1,
@@ -80,6 +93,11 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 		m1->add_function_ifndef(PHI_T);
 		m1->add_function_ifndef(PHI_H);
 	}
+	if (use_ghostfluidmethod && p.glc_switch) {
+		// unsupported combination of parameters
+		throw MeshException("solve: different Sigmas are unsupported "
+			"for glucose switch model");
+	}
 	TumourHostSplitter<fid_t> gfm(*m1);
 	while (m1->get_time() < final_t) {
 		double eff_dt=0.0;
@@ -105,6 +123,18 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 			m2.reset(eval_tissue<fid_t>(p,eff_dt,*m2,PHI_H));
 			// re-construct solution
 			gfm.merge(*m2,PHI,PSI,PHI_T,PHI_H);
+		} else if (p.glc_switch) {
+			// TODO:
+			// 1. extrapolate PHI_H, PHI1, PHI2
+			// 2. run modified eval_tissue for all of them
+			// 3. construct new PHI from PHI_H, PHI1, PHI2
+			m2.reset(extrapolate_subphases<fid_t>
+					(*m1,PSI,PHI1,PHI2,PHI_H));
+			m2.reset(eval_bn_tissue<fid_t>(p,eff_dt,*m2,PHI1,PSI));
+			m2.reset(eval_bn_tissue<fid_t>(p,eff_dt,*m2,PHI2,PSI));
+			m2.reset(eval_tissue<fid_t>(p,eff_dt,*m2,PHI_H));
+			reconstruct_total_density<fid_t>(*m2,PSI,PHI,
+							PHI1,PHI2,PHI_H);
 		} else {
 			// evaluate tissue behaviour
 			m2.reset(eval_tissue<fid_t>(p,eff_dt,*m1,PHI));

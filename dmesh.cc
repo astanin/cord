@@ -33,6 +33,12 @@ string id2str(fid_t& id) {
 		case PHI:
 			return "phi";
 			break;
+		case PHI1:
+			return "phi1";
+			break;
+		case PHI2:
+			return "phi2";
+			break;
 		case CO2:
 			return "c";
 			break;
@@ -53,6 +59,12 @@ string id2str(fid_t& id) {
 			break;
 		case PHI_GROWTH:
 			return "phi_growth";
+			break;
+		case TMP1:
+			return "tmp1";
+			break;
+		case TMP2:
+			return "tmp2";
 			break;
 		default:
 			std::ostringstream ss;
@@ -637,6 +649,14 @@ throw(MeshFileException, MeshException) {
 		 	add_function(PHI);
 		}
 		load_dataset_2d(savegroup,"phi",mf[PHI]);
+		if (!defined(PHI1)) {
+		 	add_function(PHI1);
+		}
+		load_dataset_2d(savegroup,"phi1",mf[PHI]);
+		if (!defined(PHI2)) {
+		 	add_function(PHI2);
+		}
+		load_dataset_2d(savegroup,"phi2",mf[PHI]);
 		if (!defined(PSI)) {
 		 	add_function(PSI);
 		}

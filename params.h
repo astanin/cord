@@ -34,7 +34,10 @@ using std::string;
 
 typedef enum {
 	PHI=0,
+	PHI1,
+	PHI2,
 	CO2,
+	GLC,
 	PSI,
 	VX,
 	VY,
@@ -55,6 +58,8 @@ typedef enum {
 	SPSI,
 	PSI2,
 	DPSI2_DT,
+	TMP1,
+	TMP2,
 	NONE=-1
 } fid_enum;
 

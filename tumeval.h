@@ -69,5 +69,19 @@ AMesh2D<fid_t>*
 step_level_set(double dt, const AMesh2D<fid_t>& m1)
 throw(MeshException);
 
+template<class fid_t>
+AMesh2D<fid_t>*
+extrapolate_var(const AMesh2D<fid_t>& m, fid_t var, fid_t var_ls, double v);
+
+template<class fid_t>
+AMesh2D<fid_t>*
+extrapolate_subphases(const AMesh2D<fid_t>& m, fid_t var_ls,
+	fid_t var_t1, fid_t var_t2, fid_t var_h);
+
+template<class fid_t>
+void
+reconstruct_total_density(AMesh2D<fid_t>& m, fid_t var_ls,
+	fid_t var, fid_t var_t1, fid_t var_t2, fid_t var_h);
+
 #endif
 

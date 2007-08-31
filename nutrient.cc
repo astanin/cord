@@ -97,7 +97,7 @@ eval_nutrient_fill_sle_matrix(const AMesh2D<fid_t>& m, const BCSet& bcs,
 throw(MeshException) {
 	int xdim=m.get_xdim();
 	int ydim=m.get_ydim();
-	int i, j;
+	int i=0, j=0;
 	try {
 		array2d c_arr=m[CO2];
 		array2d phi_arr=m[PHI];

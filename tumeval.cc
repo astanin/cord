@@ -544,6 +544,136 @@ throw(MeshException) {
 	}
 }
 
+/**
+ * Extrapolate var using
+ *
+ * d var
+ * ----- + v * grad(var_ls)/|grad(var_ls)| * grad(var) = 0
+ *  d t
+ *
+ * for t=1
+ */
+template<class fid_t>
+AMesh2D<fid_t>*
+extrapolate_var(const AMesh2D<fid_t>& m, fid_t var, fid_t var_ls, double v) {
+	auto_ptr<AMesh2D<fid_t> > m2(m.clone());
+//	cerr << dbg_stamp(m.get_time()) << "extrapolate_var: " << var << "\n";
+	m2->remove_function_ifdef(TMP1);
+	m2->add_function_ifndef(TMP1); // v*n_x
+	m2->remove_function_ifdef(TMP2);
+	m2->add_function_ifndef(TMP2); // v*n_y
+	// init vector of normal to the interface
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	array2d nx=(*m2)[TMP1];
+	array2d ny=(*m2)[TMP2];
+	array2d psi=(*m2)[var_ls];
+	// init normal vecotr nx, ny
+//	cerr << dbg_stamp(m.get_time()) << "extrapolate_var: init nx, ny\n";
+	for (int i=1; i<(xdim-1); ++i) {
+		for (int j=1; j<(ydim-1); ++j) {
+			double gx=psi(i+1,j)-psi(i-1,j);
+			double gy=psi(i,j+1)-psi(i,j-1);
+			nx(i,j)=v*gx/sqrt(gx*gx+gy*gy);
+			nx(i,j)=v*gy/sqrt(gx*gx+gy*gy);
+		}
+	}
+	// evaluate
+	double dx=m.get_dx();
+	double dy=m.get_dy();
+	double dt=0.5*fabs(std::min(m.get_dx(),m.get_dy())/v);
+	double t=0.0;
+	array2d u=m[var];
+	array2d u2=(*m2)[var];
+//	cerr << dbg_stamp(m.get_time()) << "extrapolate_var: dt=" << dt << "\n";
+	while (t < 1.0) {
+		// inner points
+		for (int i=1; i<(xdim-1); ++i) {
+			for (int j=1; j<(ydim-1); ++j) {
+				if (v*psi(i,j) > 0) { // ignore the other domain
+					double ax=nx(i,j);
+					double ay=ny(i,j);
+					double g= 0.5*(ax+fabs(ax))*
+							(u(i,j)-u(i-1,j))/dx
+						+ 0.5*(ax-fabs(ax))*
+							(u(i+1,j)-u(i,j))/dx
+						+ 0.5*(ay+fabs(ay))*
+							(u(i,j)-u(i,j-1))/dy
+						+ 0.5*(ay-fabs(ay))*
+							(u(i,j+1)-u(i,j))/dy;
+					u2(i,j)=u(i,j)+g*dt;
+				}
+			}
+		}
+		// boundaries (zero flux)
+		for (int i=1; i<(xdim-1); ++i) {
+			if (psi(i,0)*v > 0) {
+				u2(i,0)=u2(i,1);
+			}
+			if (psi(i,ydim-1)*v > 0) {
+				u2(i,ydim-1)=u2(i,ydim-2);
+			}
+		}
+		for (int j=1; j<(ydim-1); ++j) {
+			if (psi(0,j)*v > 0) {
+				u2(0,j)=u2(1,j);
+			}
+			if (psi(xdim-1,j)*v > 0) {
+				u2(xdim-1,j)=u2(xdim-2,j);
+			}
+		}
+		// avoid extremums in corner points
+		u2(0,0)=0.5*(u2(1,0)+u2(0,1));
+		u2(xdim-1,0)=0.5*(u2(xdim-2,0)+u2(xdim-1,1));
+		u2(0,ydim-1)=0.5*(u2(1,ydim-1)+u2(0,ydim-2));
+		u2(xdim-1,ydim-1)=0.5*(u2(xdim-2,ydim-1)+u2(xdim-1,ydim-2));
+		// increment time counter
+		t+=dt;
+	}
+	m2->remove_function_ifdef(TMP1);
+	m2->remove_function_ifdef(TMP2);
+	return m2.release();
+}
+
+template<class fid_t>
+AMesh2D<fid_t>*
+extrapolate_subphases(const AMesh2D<fid_t>& m, fid_t var_ls,
+	fid_t var_t1, fid_t var_t2, fid_t var_h) {
+//	cerr << dbg_stamp(m.get_time()) << "extrapolate_subphases\n";
+	auto_ptr<AMesh2D<fid_t> > m2(m.clone());
+	array2d psi=(*m2)[var_ls];
+	array2d phi_h=(*m2)[var_h];
+	array2d phi2=(*m2)[var_t2];
+	array2d phi1=(*m2)[var_t1];
+	m2.reset(extrapolate_var(*m2,var_h, var_ls,+1.0));
+	m2.reset(extrapolate_var(*m2,var_t1,var_ls,-1.0));
+	m2.reset(extrapolate_var(*m2,var_t2,var_ls,-1.0));
+	return m2.release();
+}
+
+template<class fid_t>
+void
+reconstruct_total_density(AMesh2D<fid_t>& m, fid_t var_ls,
+	fid_t var, fid_t var_t1, fid_t var_t2, fid_t var_h) {
+//	cerr << dbg_stamp(m.get_time()) << "reconstruct_total_density\n";
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	array2d phi=m[var];
+	array2d psi=m[var_ls];
+	array2d phi1=m[var_t1];
+	array2d phi2=m[var_t2];
+	array2d phih=m[var_h];
+	for (int i=0; i<xdim; ++i) {
+		for (int j=0; j<ydim; ++j) {
+			if (psi(i,j) > 0) { // tumour
+				phi(i,j)=phi1(i,j)+phi2(i,j);
+			} else {
+				phi(i,j)=phih(i,j);
+			}
+		}
+	}
+}
+
 // tepmlates
 template
 AMesh2D<int>*
@@ -557,3 +687,18 @@ step_level_set<int>(double dt, const AMesh2D<int>& m1);
 template
 double
 estimate_optimal_dt<int>(const AMesh2D<int>& m);
+
+template
+AMesh2D<int>*
+extrapolate_var(const AMesh2D<int>& m, int var, int var_ls, double v);
+
+template
+AMesh2D<int>*
+extrapolate_subphases(const AMesh2D<int>& m, int var_ls,
+	int var_t1, int var_t2, int var_h);
+
+template
+void
+reconstruct_total_density(AMesh2D<int>& m, int var_ls,
+	int var, int var_t1, int var_t2, int var_h);
+
