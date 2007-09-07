@@ -52,6 +52,9 @@ template<class fid_t>
 int
 hdf2gp(const Params& p);
 
+#include <limits>
+using std::numeric_limits;
+
 template<class fid_t>
 DMesh<fid_t>
 build_mesh(const Params& p) {
@@ -63,12 +66,12 @@ build_mesh(const Params& p) {
 		if (!m.defined(PHI)) {
 			m.add_function(PHI,p.phi_stress_free);
 		}
-		if (p.glc_switch) {
+		if (p.conversion_rate > numeric_limits<double>::epsilon()) {
 			if (!m.defined(PHI1)) { // first subpopulation
 				m.add_function(PHI1,0.0);
 				array2d phi=m[PHI];
 				array2d phi1=m[PHI1];
-				phi=phi1;
+				phi1=phi;
 			}
 			if (!m.defined(PHI2)) { // second subpopulation
 				m.add_function(PHI2,0.0);
@@ -105,6 +108,8 @@ build_mesh(const Params& p) {
 		m.set_attr("hk1",p.hk1);
 		m.set_attr("hs1",p.hs1);
 		m.set_attr("host_activity",p.host_active?1.0:0.0);
+		m.set_attr("conversion_rate",p.conversion_rate);
+		m.set_attr("anaerobic_rate",p.anaerobic_rate);
 #ifdef HAVE_LIBHDF5
 	} else {
 		m.load(p.inputfile);

@@ -79,4 +79,12 @@ AMesh2D<fid_t>*
 step_growth_death(const double dt, const AMesh2D<fid_t>& m1, const fid_t& fid)
 throw(MeshException);
 
+/** @brief ODE step in bicomponent tissue */
+template<class fid_t>
+AMesh2D<fid_t>*
+step_bc_tumour_growth_death(const double dt, const AMesh2D<fid_t>& m1,
+	const fid_t& fid1, const fid_t& fid2,
+	const fid_t& phase, const double where)
+throw(MeshException);
+
 #endif

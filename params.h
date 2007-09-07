@@ -100,7 +100,7 @@ public:
 	BCSet c_bc; ///< boundary conditions for c
 	eq_type c_equation; ///< type of equation for c
 	bool host_active; ///< host tissue dies and consumes
-	bool glc_switch; ///< tumour may switch to anaerobic catabolism
+	double conversion_rate; ///< rate of conversion to anaerobic catabolism
 	double anaerobic_rate; ///< rate of anaerobic ATP production (k)
 	double D_glc; /// glucose diffusion coefficient
 	/// default parameters
@@ -122,7 +122,7 @@ public:
 			BC::createDirichletBC(1.0),BC::createNeumannBC()),
 		c_equation(EQ_POISSON),
 		host_active(false),
-		glc_switch(false), anaerobic_rate(1.0), D_glc(0.1)
+		conversion_rate(0.0), anaerobic_rate(1.0), D_glc(0.1)
 		{}
 };
 

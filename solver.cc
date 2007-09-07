@@ -50,16 +50,19 @@ template<class fid_t>
 double
 estimate_optimal_dt(const AMesh2D<fid_t>& m);
 
-// binutrient tissue evaluation
+/// @brief multicomponent tissue evaluation
+/// evaluate behaviour of the tissiu compomnent @c density
+/// in the subdomain where @c phase * @c where  > 0
 template<class fid_t>
 AMesh2D<fid_t>*
-eval_bn_tissue(const Params& p, double const dt, const AMesh2D<fid_t>& m1,
-	fid_t density, fid_t phase) {
+eval_mc_tissue(const Params& p, double const dt, const AMesh2D<fid_t>& m1,
+	const fid_t& phi1, const fid_t& phi2, const fid_t& phi_h,
+	const fid_t& phase, double const where) {
 	// growth-death (ODE)
-//	auto_ptr<AMesh2D<fid_t> > tmp(step_growth_death<fid_t>(dt,m1,density));
-//	auto_ptr<AMesh2D<fid_t> > m2(phi_step<fid_t>(p, dt, *tmp, density));
-//	return m2.release();
-	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
+	auto_ptr<AMesh2D<fid_t> > mt(step_bc_tumour_growth_death<fid_t>
+					(dt,m1, phi1,phi2,phase,where));
+	auto_ptr<AMesh2D<fid_t> > m2(mt->clone());
+	// TODO: PDE step
 	return m2.release();
 }
 
@@ -92,8 +95,11 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 		// we need these functions anyway to maintain save compatibility
 		m1->add_function_ifndef(PHI_T);
 		m1->add_function_ifndef(PHI_H);
+		array2d phi_h=(*m1)[PHI_H];
+		phi_h=(*m1)[PHI];
 	}
-	if (use_ghostfluidmethod && p.glc_switch) {
+	if (use_ghostfluidmethod &&
+		(p.conversion_rate > numeric_limits<double>::epsilon())) {
 		// unsupported combination of parameters
 		throw MeshException("solve: different Sigmas are unsupported "
 			"for glucose switch model");
@@ -123,18 +129,17 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 			m2.reset(eval_tissue<fid_t>(p,eff_dt,*m2,PHI_H));
 			// re-construct solution
 			gfm.merge(*m2,PHI,PSI,PHI_T,PHI_H);
-		} else if (p.glc_switch) {
-			// TODO:
+		} else if (p.conversion_rate >
+				numeric_limits<double>::epsilon()) {
 			// 1. extrapolate PHI_H, PHI1, PHI2
 			// 2. run modified eval_tissue for all of them
 			// 3. construct new PHI from PHI_H, PHI1, PHI2
 			m2.reset(extrapolate_subphases<fid_t>
 					(*m1,PSI,PHI1,PHI2,PHI_H));
-			m2.reset(eval_bn_tissue<fid_t>(p,eff_dt,*m2,PHI1,PSI));
-			m2.reset(eval_bn_tissue<fid_t>(p,eff_dt,*m2,PHI2,PSI));
-			m2.reset(eval_tissue<fid_t>(p,eff_dt,*m2,PHI_H));
-			reconstruct_total_density<fid_t>(*m2,PSI,PHI,
-							PHI1,PHI2,PHI_H);
+			m2.reset(eval_mc_tissue<fid_t>
+					(p,eff_dt,*m2,PHI1,PHI2,PHI_H,PSI,+1));
+			reconstruct_total_density<fid_t>
+					(*m2,PSI,PHI,PHI1,PHI2,PHI_H);
 		} else {
 			// evaluate tissue behaviour
 			m2.reset(eval_tissue<fid_t>(p,eff_dt,*m1,PHI));
@@ -155,6 +160,42 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 				<< "\n";
 		}
 		if (verbose > 1) { // extra verbose
+			if (p.conversion_rate >
+				numeric_limits<double>::epsilon()) {
+			cerr << dbg_stamp(m1->get_time())
+				<<setprecision(5)<<setiosflags(ios::scientific)
+				<< "max(phi1)= " << max((*m1)[PHI1]) << " "
+				<< "min(phi1)= " << min((*m1)[PHI1])
+				<< "\n";
+			cerr << dbg_stamp(m1->get_time())
+				<<setprecision(5)<<setiosflags(ios::scientific)
+				<< "max(phi2)= " << max((*m1)[PHI2]) << " "
+				<< "min(phi2)= " << min((*m1)[PHI2])
+				<< "\n";
+			cerr << dbg_stamp(m1->get_time())
+				<<setprecision(5)<<setiosflags(ios::scientific)
+				<< "max(phi_h)= " << max((*m1)[PHI_H]) << " "
+				<< "min(phi_h)= " << min((*m1)[PHI_H])
+				<< "\n";
+			}
+			cerr << dbg_stamp(m1->get_time())
+				<<setprecision(5)<<setiosflags(ios::scientific)
+				<< "max(c)= " << max((*m1)[CO2]) << " "
+				<< "min(c)= " << min((*m1)[CO2])
+				<< "\n";
+			if (p.conversion_rate >
+				numeric_limits<double>::epsilon()) {
+			cerr << dbg_stamp(m1->get_time())
+				<<setprecision(5)<<setiosflags(ios::scientific)
+				<< "max(c_g)= " << max((*m1)[GLC]) << " "
+				<< "min(c_g)= " << min((*m1)[GLC])
+				<< "\n";
+			}
+			cerr << dbg_stamp(m1->get_time())
+				<<setprecision(5)<<setiosflags(ios::scientific)
+				<< "max(psi)= " << max((*m1)[PSI]) << " "
+				<< "min(psi)= " << min((*m1)[PSI])
+				<< "\n";
 			double xsize=get_x_size(*m1);
 			double ysize=get_y_size(*m1);
 			double vx=(xsize-prevxsize)/eff_dt;
@@ -165,16 +206,6 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 				<< "ysize=" << ysize << " vy=" << vy << "\n";
 			prevxsize=xsize;
 			prevysize=ysize;
-			cerr << dbg_stamp(m1->get_time())
-				<<setprecision(5)<<setiosflags(ios::scientific)
-				<< "max(c)= " << max((*m1)[CO2]) << " "
-				<< "min(c)= " << min((*m1)[CO2])
-				<< "\n";
-			cerr << dbg_stamp(m1->get_time())
-				<<setprecision(5)<<setiosflags(ios::scientific)
-				<< "max(psi)= " << max((*m1)[PSI]) << " "
-				<< "min(psi)= " << min((*m1)[PSI])
-				<< "\n";
 		}
 		// dump state
 		if (m1->get_time() >= (last_dump_t+p.dump_every

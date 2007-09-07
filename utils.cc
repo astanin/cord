@@ -198,10 +198,10 @@ read_params(dictionary *ini, Params& p) {
 		"params:death_rate",p.death_rate);
 	p.host_active=iniparser_getboolean(ini,
 		"params:active_host",p.host_active);
-	p.glc_switch=iniparser_getboolean(ini,
-		"params:glucose_switch",p.glc_switch);
 	p.anaerobic_rate=iniparser_getdouble(ini,
 		"params:anaerobic_rate",p.anaerobic_rate);
+	p.conversion_rate=iniparser_getdouble(ini,
+		"params:conversion_rate",p.conversion_rate);
 	p.D_glc=iniparser_getdouble(ini,
 		"params:glucose_diffusion",p.D_glc);
 	p.tk1=iniparser_getdouble(ini,"params:tumour_stress_on_compress",p.tk1);
@@ -330,10 +330,11 @@ int init_params(Params& p, int argc, const char *argv[]) {
 			"rate of oxygen consumption", "alpha" },
 		{ "active-host", 0, arg_val_hidden_arg, &p.host_active, true,
 			"host tissue consumes oxygen and may die", 0 },
-		{ "glucose-switch", 0, arg_val_hidden_arg, &p.glc_switch, true,
-			"tumour may switch to anaerobic catabolism", 0 },
 		{ "glucose-diffusion", 0, POPT_ARG_DOUBLE|onedash,
 			&p.D_glc, 0, "glucose diffusion coefficient", "Dg" },
+		{ "conversion-rate", 0, POPT_ARG_DOUBLE|onedash,
+			&p.conversion_rate, 0,
+			"rate of conversion to anaerobic catabolism", "nu" },
 		{ "anaerobic-rate", 'k', POPT_ARG_DOUBLE|onedash,
 			&p.anaerobic_rate, 0,
 			"relative rate of anaerobic ATP production", "k" },
