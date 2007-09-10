@@ -110,6 +110,14 @@ read_boundary_condition(dictionary *ini, Params& p, const string side) {
 		cerr << "read_boundary_condition: c conditions at "
 			<< side << " not defined\n";
 	}
+	type=iniparser_getstring(ini,(side+":glc_condition_type").c_str(),0);
+	val=iniparser_getdouble(ini,(side+":glc_condition_value").c_str(),nanv);
+	if (type && (val != nanv)) {
+		p.glc_bc.set_bc(side,create_boundary_condition(type,val));
+	} else {
+		cerr << "read_boundary_condition: glc conditions at "
+			<< side << " not defined\n";
+	}
 }
 
 void

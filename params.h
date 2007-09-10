@@ -97,7 +97,8 @@ public:
 	double upkeep_per_cell; ///< minimal energy requirement per cell
 	double death_rate; ///< rate of cellular death
 	BCSet phi_bc; ///< boundary conditions for phi
-	BCSet c_bc; ///< boundary conditions for c
+	BCSet c_bc; ///< boundary conditions for oxygen
+	BCSet glc_bc; ///< boundary conditions for glucose
 	eq_type c_equation; ///< type of equation for c
 	bool host_active; ///< host tissue dies and consumes
 	double conversion_rate; ///< rate of conversion to anaerobic catabolism
@@ -119,6 +120,8 @@ public:
 			BC::createDirichletBC(this->phi_stress_free),
 			BC::createNeumannBC(),BC::createNeumannBC()),
 		c_bc(BC::createNeumannBC(),BC::createNeumannBC(),
+			BC::createDirichletBC(1.0),BC::createNeumannBC()),
+		glc_bc(BC::createNeumannBC(),BC::createNeumannBC(),
 			BC::createDirichletBC(1.0),BC::createNeumannBC()),
 		c_equation(EQ_POISSON),
 		host_active(false),

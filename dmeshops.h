@@ -77,7 +77,7 @@ build_mesh(const Params& p) {
 				m.add_function(PHI2,0.0);
 			}
 			if (!m.defined(GLC)) { // glucose
-				m.add_function(GLC,0.0);
+				m.add_function(GLC,1.0);
 			}
 		}
 		// levelset potential
