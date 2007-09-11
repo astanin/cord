@@ -341,6 +341,65 @@ throw(MeshException) {
 	}
 }
 
+/** Pseudo diffusion coefficient for phi */
+template<class fid_t>
+double
+bc_phi_pseudo_diff_coef(AMesh2D<fid_t>& m,
+	array2d& phi1, array2d& phi2, double mu, int i, int j) {
+	// WARNING: assuming that Sigmas do not change with time
+	static ADoubleFunction *t_s=TumourSigma<fid_t>(m).build_sigma();
+	static ADoubleFunction *t_s_p=TumourSigma<fid_t>(m).build_sigma_prime();
+	double p1=phi1(i,j);
+	double p2=phi2(i,j);
+	double phi=p1+p2;
+	double pseudoD=mu*p1*(t_s->eval(phi)+(phi)*t_s_p->eval(phi));
+	return pseudoD;
+}
+
+template<class fid_t>
+void
+bc_phi_init_pseudo_D(AMesh2D<fid_t>& m, fid_t const phi1, fid_t const phi2,
+	fid_t const Dvar) {
+	// init diffusion coefficient values
+	m.remove_function_ifdef(Dvar);
+	m.add_function_ifndef(Dvar,0.0);
+	array2d m_D=m[Dvar];
+	array2d m_phi1=m[phi1];
+	array2d m_phi2=m[phi2];
+	array2d m_psi=m[PSI];
+	double mu=m.get_attr("cell_motility");
+	for (int i=0; i < (m.get_xdim()); ++i) {
+		for (int j=0; j < (m.get_ydim()); ++j) {
+			m_D(i,j)=bc_phi_pseudo_diff_coef<fid_t>
+						(m,m_phi1,m_phi2,mu,i,j);
+		}
+	}
+}
+
+template<class fid_t>
+AMesh2D<fid_t>*
+bc_phi_step
+(const Params& p, double dt, const AMesh2D<fid_t>& m1, fid_t const phi1,
+	fid_t const phi2, fid_t const phase, double const where)
+throw(MeshException) {
+	try {
+	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
+	m2->remove_function_ifdef(PSEUDO_D);
+	m2->add_function_ifndef(PSEUDO_D,0.0);
+	bc_phi_init_pseudo_D<fid_t>(*m2,phi1,phi2,PSEUDO_D);
+	m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,phi1,
+					PSEUDO_D,NONE,Method::it().rd_solver));
+	bc_phi_init_pseudo_D<fid_t>(*m2,phi2,phi1,PSEUDO_D);
+	m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,phi2,
+					PSEUDO_D,NONE,Method::it().rd_solver));
+	return m2.release();
+	} catch(MeshException& e) {
+		ostringstream ss;
+		ss << "bc_phi_step: " << e.what();
+		throw MeshException(ss.str());
+	}
+}
+
 template<class fid_t>
 void
 substep_level_set(double dt, AMesh2D<fid_t>& m)
@@ -682,6 +741,12 @@ phi_step<int>
 
 template
 AMesh2D<int>*
+bc_phi_step<int>
+(const Params& p, double dt, const AMesh2D<int>& m1, int const phi1,
+	int const phi2, int const phase, double const where);
+
+template
+AMesh2D<int>*
 step_level_set<int>(double dt, const AMesh2D<int>& m1);
 
 template
@@ -701,4 +766,10 @@ template
 void
 reconstruct_total_density(AMesh2D<int>& m, int var_ls,
 	int var, int var_t1, int var_t2, int var_h);
+
+template
+double
+bc_phi_pseudo_diff_coef(AMesh2D<int>& m,
+	array2d& phi1, array2d& phi2,
+	double mu, int i, int j);
 

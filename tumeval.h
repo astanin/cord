@@ -83,5 +83,12 @@ void
 reconstruct_total_density(AMesh2D<fid_t>& m, fid_t var_ls,
 	fid_t var, fid_t var_t1, fid_t var_t2, fid_t var_h);
 
+template<class fid_t>
+AMesh2D<fid_t>*
+bc_phi_step
+(const Params& p, double dt, const AMesh2D<fid_t>& m1, fid_t const phi1,
+	fid_t const phi2, fid_t const phase, double const where)
+throw(MeshException);
+
 #endif
 

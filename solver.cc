@@ -55,14 +55,16 @@ estimate_optimal_dt(const AMesh2D<fid_t>& m);
 /// in the subdomain where @c phase * @c where  > 0
 template<class fid_t>
 AMesh2D<fid_t>*
-eval_mc_tissue(const Params& p, double const dt, const AMesh2D<fid_t>& m1,
+eval_bc_tissue(const Params& p, double const dt, const AMesh2D<fid_t>& m1,
 	const fid_t& phi1, const fid_t& phi2, const fid_t& phi_h,
 	const fid_t& phase, double const where) {
 	// growth-death (ODE)
 	auto_ptr<AMesh2D<fid_t> > mt(step_bc_tumour_growth_death<fid_t>
 					(dt,m1, phi1,phi2,phase,where));
-	auto_ptr<AMesh2D<fid_t> > m2(mt->clone());
-	// TODO: PDE step
+	// PDE step
+	auto_ptr<AMesh2D<fid_t> > m2(bc_phi_step<fid_t>
+					(p,dt,*mt,phi1,phi2,phase,where));
+	m2.reset(phi_step<fid_t>(p, dt, *m2, phi_h));
 	return m2.release();
 }
 
@@ -136,7 +138,7 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 			// 3. construct new PHI from PHI_H, PHI1, PHI2
 			m2.reset(extrapolate_subphases<fid_t>
 					(*m1,PSI,PHI1,PHI2,PHI_H));
-			m2.reset(eval_mc_tissue<fid_t>
+			m2.reset(eval_bc_tissue<fid_t>
 					(p,eff_dt,*m2,PHI1,PHI2,PHI_H,PSI,+1));
 			reconstruct_total_density<fid_t>
 					(*m2,PSI,PHI,PHI1,PHI2,PHI_H);
@@ -226,7 +228,7 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 				<< "min(phi)= " << min((*m1)[PHI]) << " "
 				<< "max(c)= " << max((*m1)[CO2]) << " "
 				<< "min(c)= " << min((*m1)[CO2]);
-			throw MeshException(ss.str());
+//			throw MeshException(ss.str());
 		}
 	}
 	return m1.release();
