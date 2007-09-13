@@ -88,6 +88,11 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 	double prevysize=0.0;
 	double eff_dt_initial=-1;
 	bool use_ghostfluidmethod; // true if we need to use ghost fluid method
+	bool use_bicomponenttissue; // true if tumour tissue is bicomponent
+	if (m1->get_attr("conversion_rate")
+		> numeric_limits<double>::epsilon()) {
+		use_bicomponenttissue=true;
+	}
 	if ((fabs(m1->get_attr("tk1")-m1->get_attr("hk1"))+
 		fabs(m1->get_attr("ts1")-m1->get_attr("hs1"))) > 1e-99) {
 		use_ghostfluidmethod=true;
@@ -100,8 +105,7 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 		array2d phi_h=(*m1)[PHI_H];
 		phi_h=(*m1)[PHI];
 	}
-	if (use_ghostfluidmethod &&
-		(p.conversion_rate > numeric_limits<double>::epsilon())) {
+	if (use_ghostfluidmethod && use_bicomponenttissue) {
 		// unsupported combination of parameters
 		throw MeshException("solve: different Sigmas are unsupported "
 			"for glucose switch model");
@@ -131,8 +135,7 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 			m2.reset(eval_tissue<fid_t>(p,eff_dt,*m2,PHI_H));
 			// re-construct solution
 			gfm.merge(*m2,PHI,PSI,PHI_T,PHI_H);
-		} else if (p.conversion_rate >
-				numeric_limits<double>::epsilon()) {
+		} else if (use_bicomponenttissue) {
 			// 1. extrapolate PHI_H, PHI1, PHI2
 			// 2. run modified eval_tissue for all of them
 			// 3. construct new PHI from PHI_H, PHI1, PHI2
@@ -162,8 +165,7 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 				<< "\n";
 		}
 		if (verbose > 1) { // extra verbose
-			if (p.conversion_rate >
-				numeric_limits<double>::epsilon()) {
+			if (use_bicomponenttissue) {
 			cerr << dbg_stamp(m1->get_time())
 				<<setprecision(5)<<setiosflags(ios::scientific)
 				<< "max(phi1)= " << max((*m1)[PHI1]) << " "
@@ -185,9 +187,8 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 				<< "max(c)= " << max((*m1)[CO2]) << " "
 				<< "min(c)= " << min((*m1)[CO2])
 				<< "\n";
-			if (p.conversion_rate >
-				numeric_limits<double>::epsilon()) {
-			cerr << dbg_stamp(m1->get_time())
+			if (use_bicomponenttissue) {
+				cerr << dbg_stamp(m1->get_time())
 				<<setprecision(5)<<setiosflags(ios::scientific)
 				<< "max(c_g)= " << max((*m1)[GLC]) << " "
 				<< "min(c_g)= " << min((*m1)[GLC])

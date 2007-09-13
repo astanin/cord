@@ -42,6 +42,9 @@ string id2str(fid_t& id) {
 		case CO2:
 			return "c";
 			break;
+		case GLC:
+			return "c_g";
+			break;
 		case PSI:
 			return "psi";
 			break;
@@ -460,6 +463,7 @@ const throw(MeshException) {
 		dataset.write(m_y.data(), H5::PredType::NATIVE_DOUBLE);
 		typename pile_of_arrays::const_iterator i = mf.begin();
 		for (; i != mf.end(); ++i) {
+			cerr << "saved: " << id2str(i->first) << "\n";
 			dataset = savegroup.createDataSet(id2str(i->first),
 					doubletype, ds2d);
 			dataset.write(i->second.data(),
@@ -640,6 +644,12 @@ throw(MeshFileException, MeshException) {
 		savegroup.openAttribute("host_activity")
 			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
 		set_attr("host_activity",attr_value);
+		savegroup.openAttribute("conversion_rate")
+			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
+		set_attr("conversion_rate",attr_value);
+		savegroup.openAttribute("anaerobic_rate")
+			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
+		set_attr("anaerobic_rate",attr_value);
 		// load mesh geometry
 		resize(xdim,ydim);
 		load_dataset_2d(savegroup,"x",m_x);
@@ -652,11 +662,11 @@ throw(MeshFileException, MeshException) {
 		if (!defined(PHI1)) {
 		 	add_function(PHI1);
 		}
-		load_dataset_2d(savegroup,"phi1",mf[PHI]);
+		load_dataset_2d(savegroup,"phi1",mf[PHI1]);
 		if (!defined(PHI2)) {
 		 	add_function(PHI2);
 		}
-		load_dataset_2d(savegroup,"phi2",mf[PHI]);
+		load_dataset_2d(savegroup,"phi2",mf[PHI2]);
 		if (!defined(PSI)) {
 		 	add_function(PSI);
 		}
@@ -665,6 +675,10 @@ throw(MeshFileException, MeshException) {
 		 	add_function(CO2);
 		}
 		load_dataset_2d(savegroup,"c",mf[CO2]);
+		if (!defined(GLC)) {
+		 	add_function(GLC);
+		}
+		load_dataset_2d(savegroup,"c_g",mf[GLC]);
 		if (!defined(VX)) {
 		 	add_function(VX);
 		}
@@ -681,10 +695,10 @@ throw(MeshFileException, MeshException) {
 		 	add_function(PHI_H);
 		}
 		load_dataset_2d(savegroup,"phi_h",mf[PHI_H]);
-		if (!defined(PHI_GROWTH)) {
-		 	add_function(PHI_GROWTH);
-		}
-		load_dataset_2d(savegroup,"phi_growth",mf[PHI_GROWTH]);
+//		if (!defined(PHI_GROWTH)) {
+//		 	add_function(PHI_GROWTH);
+//		}
+//		load_dataset_2d(savegroup,"phi_growth",mf[PHI_GROWTH]);
 	}
 	catch (H5::FileIException filerr) {
 		ostringstream ss;

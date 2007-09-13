@@ -112,7 +112,7 @@ build_mesh(const Params& p) {
 		m.set_attr("anaerobic_rate",p.anaerobic_rate);
 #ifdef HAVE_LIBHDF5
 	} else {
-		m.load(p.inputfile);
+		m.load(p.inputfile); 
 	}
 #endif
 	return m;
