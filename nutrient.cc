@@ -299,6 +299,34 @@ eval_nutrient_init_consumption(AMesh2D<fid_t>& m, fid_t const consumption) {
 }
 
 template<class fid_t>
+void
+eval_glucose_consumption(AMesh2D<fid_t>& m, fid_t const consumption) {
+	m.add_function_ifndef(consumption);
+	// initialize consumption variable
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	array2d phi1=m[PHI1];
+	array2d phi2=m[PHI2];
+	array2d psi=m[PSI];
+	array2d o2=m[GLC];
+	array2d glc=m[GLC];
+	double h_a=m.get_attr("host_activity");
+	double theta=m.get_attr("upkeep_per_cell");
+	double alpha=m.get_attr("o2_uptake");
+	double kappa=m.get_attr("anaerobic_rate");
+	array2d cons=m[consumption];
+	for (int i=0; i<xdim ; ++i) {
+		for (int j=0; j<ydim ; ++j) {
+			cons(i,j)=H(psi(i,j))*(
+				(1.0/6)*alpha*phi1(i,j)*(1-phi1(i,j))*o2(i,j)
+				+(1.0/12)*kappa*N_ATP_PER_GLUCOSE
+					*alpha*phi2(i,j)*(1-phi2(i,j))*glc(i,j)
+				);
+		}
+	}
+}
+
+template<class fid_t>
 AMesh2D<fid_t>*
 eval_nutrient_iteratively(const Params& p, const AMesh2D<fid_t>& m,
 		double const epsilon)
@@ -374,11 +402,27 @@ eval_nutrient_diffusion
 throw(MeshException) {
 	auto_ptr< AMesh2D<fid_t> > m2(m1.clone());
 	eval_nutrient_init_consumption<fid_t>(*m2,Q_TMP);
-	m2->remove_function_ifdef(D_C_TMP);
-	m2->add_function(D_C_TMP,1.0);
-	m2.reset(reaction_diffusion_step<fid_t>(p.c_bc,dt,*m2,CO2,D_C_TMP,Q_TMP));
+	m2->remove_function_ifdef(D_TMP);
+	m2->add_function(D_TMP,1.0);
+	m2.reset(reaction_diffusion_step<fid_t>(p.c_bc,dt,*m2,CO2,D_TMP,Q_TMP));
 	m2->remove_function_ifdef(Q_TMP);
-	m2->remove_function_ifdef(D_C_TMP);
+	m2->remove_function_ifdef(D_TMP);
+	return m2.release();
+}
+
+template<class fid_t>
+AMesh2D<fid_t>*
+eval_glucose_diffusion
+(Params const& p, double const dt, AMesh2D<fid_t> const& m1)
+throw(MeshException) {
+	auto_ptr< AMesh2D<fid_t> > m2(m1.clone());
+	eval_glucose_consumption<fid_t>(*m2,Q_TMP);
+	m2->remove_function_ifdef(D_TMP);
+	m2->add_function(D_TMP,m1.get_attr("glc_diffusion"));
+	m2.reset(reaction_diffusion_step<fid_t>
+		(p.glc_bc,dt,*m2,GLC,D_TMP,Q_TMP));
+	m2->remove_function_ifdef(Q_TMP);
+	m2->remove_function_ifdef(D_TMP);
 	return m2.release();
 }
 
@@ -442,4 +486,8 @@ AMesh2D<int>*
 eval_nutrient<int>(const Params& p, const AMesh2D<int>& m1,
 	double const epsilon, double const dt);
 
+template
+AMesh2D<int>*
+eval_glucose_diffusion
+(Params const& p, double const dt, AMesh2D<int> const& m1);
 

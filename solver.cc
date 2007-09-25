@@ -92,6 +92,8 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 	if (m1->get_attr("conversion_rate")
 		> numeric_limits<double>::epsilon()) {
 		use_bicomponenttissue=true;
+	} else {
+		use_bicomponenttissue=false;
 	}
 	if ((fabs(m1->get_attr("tk1")-m1->get_attr("hk1"))+
 		fabs(m1->get_attr("ts1")-m1->get_attr("hs1"))) > 1e-99) {
@@ -152,8 +154,13 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 		// level set (interface tracking)
 		m2.reset(step_level_set<fid_t>(eff_dt,*m2));
 		// nutrient (eliptic)
+		// oxygen
 		m2.reset(eval_nutrient<fid_t>(p,*m2,Method::it().
 					p_solver_accuracy,eff_dt));
+		// glucose
+		if (use_bicomponenttissue) {
+			m2.reset(eval_glucose_diffusion<fid_t>(p,eff_dt,*m2));
+		}
 		// done all sub steps
 		m2->inc_time(eff_dt);
 		m1.reset(m2->clone());
