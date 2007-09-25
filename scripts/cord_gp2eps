@@ -44,6 +44,37 @@ ${DRAW_C_TITLE}
 ENDGRI
 }
 
+function plot_glc {
+	if [ "x$NGLC" == "x" ] ; then
+		return
+	fi
+	f=$1;
+	fo=$(echo $TIME|perl -e 'while(<>){printf("Glucose_%07.0f.eps",10*$_);}');
+	gri -b -c0 -output "$fo" << ENDGRI
+set x size $(echo "scale=2;$PLOTHEIGHT*($XMAX-$XMIN)/($YMAX-$YMIN)"|bc -s)
+set y size $PLOTHEIGHT
+set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
+set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
+draw axes
+# c
+set x grid $XMIN $XMAX /$XSIZE
+set y grid $YMIN $YMAX /$YSIZE
+open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NGLC],\" \"; } else { print \"\n\";} }'|"
+read grid data $XSIZE $YSIZE bycolumns
+close
+${PLOT_GLC_DATA}
+# psi
+set x grid $XMIN $XMAX /$XSIZE
+set y grid $YMIN $YMAX /$YSIZE
+open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NPSI],\" \"; } else { print \"\n\";} }'|"
+read grid data $XSIZE $YSIZE bycolumns
+close
+set line width rapidograph 1
+draw contour 0.0 unlabelled
+${DRAW_GLC_TITLE}
+ENDGRI
+}
+
 function plot_phi {
 	f=$1
 	fo=$(echo $TIME|perl -e 'while(<>){printf("Phi_%07.0f.eps",10*$_);}');
@@ -73,6 +104,9 @@ ENDGRI
 }
 
 function plot_phi_growth {
+	if [ "x$NGROWTH" == "x" ]; then
+		return
+	fi
 	f=$1
 	fo=$(echo $TIME|perl -e 'while(<>){printf("Growth_%07.0f.eps",10*$_);}');
 	gri -b -c0 -output "$fo" << ENDGRI
@@ -153,11 +187,16 @@ draw image
 draw image palette axisleft left -0.06 right 0.06 box 3.5 6 4.5 16
 END);
 	fi
+	PLOT_GLC_DATA=$PLOT_C_DATA
 	if [ "x$TITLE" != "xno" ]; then
 		TS=$(echo $TIME|perl -e "while(<>){printf('t=%5.1f',\$_);}");
 		DRAW_C_TITLE=$(cat << END
 set font size 12
 draw title "Oxygen, $TS"
+END);
+		DRAW_GLC_TITLE=$(cat << END
+set font size 12
+draw title "Glucose, $TS"
 END);
 		DRAW_PHI_TITLE=$(cat << END
 set font size 12
@@ -173,6 +212,7 @@ END);
 		DRAW_GROWTH_TITLE=""
 	fi
 	plot_c $f;
+	plot_glc $f;
 	plot_phi $f;
 	plot_phi_growth $f;
 }
@@ -190,6 +230,25 @@ ${PLOT_C_TITLE}
 set output "$fo"
 ${PLOT_MODE}
 splot "$f" u 1:2:$((NC+1)) w l
+END
+}
+
+function gnuplot_plot_glc {
+	if [ "x$NGLC" == "x" ] ; then
+		return
+	fi
+	f=$1
+	fo=$(echo $TIME|perl -e 'while(<>){printf("Glucose_%07.0f.eps",10*$_);}');
+	gnuplot << END
+set view 45,135
+set xlabel "x"
+set ylabel "y"
+unset zlabel
+unset key
+${PLOT_GLC_TITLE}
+set output "$fo"
+${PLOT_MODE}
+splot "$f" u 1:2:$((NGLC+1)) w l
 END
 }
 
@@ -235,14 +294,17 @@ function gnuplot_plot {
 	if [ "x$TITLE" != "xno" ]; then
 		TS=$(echo $TIME|perl -e "while(<>){printf('t=%5.1f',\$_);}");
 		PLOT_C_TITLE="set title \"Oxygen, $TS\""
+		PLOT_GLC_TITLE="set title \"Glucose, $TS\""
 		PLOT_PHI_TITLE="set title \"Packing density, $TS\""
 		PLOT_PSI_TITLE="set title \"Level set function, $TS\""
 	else
 		PLOT_C_TITLE=""
+		PLOT_GLC_TITLE=""
 		PLOT_PHI_TITLE=""
 		PLOT_PSI_TITLE=""
 	fi
 	gnuplot_plot_c $f
+	gnuplot_plot_glc $f
 	gnuplot_plot_phi $f
 	gnuplot_plot_psi $f
 }
@@ -306,6 +368,8 @@ while [ $# -gt 0 ]; do
 	VARS=$(head -5 $f|tail -1|sed 's/#//g');
 	NC=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
 		foreach $v(@vars){if("c" eq $v){print $i,"\n";}++$i;};');
+	NGLC=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
+		foreach $v(@vars){if("c_g" eq $v){print $i,"\n";}++$i;};');
 	NPHI=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
 		foreach $v(@vars){if("phi" eq $v){print $i,"\n";}++$i;};');
 	NPSI=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
