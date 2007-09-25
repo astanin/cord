@@ -650,6 +650,9 @@ throw(MeshFileException, MeshException) {
 		savegroup.openAttribute("anaerobic_rate")
 			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
 		set_attr("anaerobic_rate",attr_value);
+		savegroup.openAttribute("glc_diffusion")
+			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
+		set_attr("glc_diffusion",attr_value);
 		// load mesh geometry
 		resize(xdim,ydim);
 		load_dataset_2d(savegroup,"x",m_x);
