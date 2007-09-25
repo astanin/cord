@@ -314,25 +314,25 @@ phi_step(const Params& p, double dt, const AMesh2D<fid_t>& m1, fid_t const var)
 throw(MeshException) {
 	try {
 	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
-	phi_init_pseudo_D<fid_t>(*m2,var,PSEUDO_D);
+	phi_init_pseudo_D<fid_t>(*m2,var,D_TMP);
 	switch (Method::it().rd_solver) {
 	case MethodParams::RDS_EXPLICIT:
 		m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,var,
-			PSEUDO_D,NONE,MP::RDS_EXPLICIT));
+			D_TMP,NONE,MP::RDS_EXPLICIT));
 		break;
 	case MethodParams::RDS_ADI:
 		m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,var,
-			PSEUDO_D,NONE,MP::RDS_ADI));
+			D_TMP,NONE,MP::RDS_ADI));
 		break;
 	case MethodParams::RDS_IMPLICIT:
 		m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,var,
-			PSEUDO_D,NONE,MP::RDS_IMPLICIT));
+			D_TMP,NONE,MP::RDS_IMPLICIT));
 		break;
 	default:
 		throw MeshException("phi_step: method unknown");
 		break;
 	}
-	m2->remove_function_ifdef(PSEUDO_D);
+	m2->remove_function_ifdef(D_TMP);
 	return m2.release();
 	} catch(MeshException& e) {
 		ostringstream ss;
@@ -384,14 +384,14 @@ bc_phi_step
 throw(MeshException) {
 	try {
 	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
-	m2->remove_function_ifdef(PSEUDO_D);
-	m2->add_function_ifndef(PSEUDO_D,0.0);
-	bc_phi_init_pseudo_D<fid_t>(*m2,phi1,phi2,PSEUDO_D);
+	m2->remove_function_ifdef(D_TMP);
+	m2->add_function_ifndef(D_TMP,0.0);
+	bc_phi_init_pseudo_D<fid_t>(*m2,phi1,phi2,D_TMP);
 	m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,phi1,
-					PSEUDO_D,NONE,Method::it().rd_solver));
-	bc_phi_init_pseudo_D<fid_t>(*m2,phi2,phi1,PSEUDO_D);
+					D_TMP,NONE,Method::it().rd_solver));
+	bc_phi_init_pseudo_D<fid_t>(*m2,phi2,phi1,D_TMP);
 	m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,phi2,
-					PSEUDO_D,NONE,Method::it().rd_solver));
+					D_TMP,NONE,Method::it().rd_solver));
 	return m2.release();
 	} catch(MeshException& e) {
 		ostringstream ss;

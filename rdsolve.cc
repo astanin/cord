@@ -378,14 +378,14 @@ reaction_diffusion_step(BCSet const& bcs, double dt,
 	MP::rd_solver_t solver)
 throw(MeshException) {
 	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
-	m2->remove_function_ifdef(DVAR_TMP);
-	m2->remove_function_ifdef(RVAR_TMP);
-	m2->add_function(DVAR_TMP,D);
-	m2->add_function(RVAR_TMP,R);
+	m2->remove_function_ifdef(D_TMP);
+	m2->remove_function_ifdef(Q_TMP);
+	m2->add_function(D_TMP,D);
+	m2->add_function(Q_TMP,R);
 	m2.reset(reaction_diffusion_step(bcs,dt,m1,var,
-				DVAR_TMP,RVAR_TMP,solver));
-	m2->remove_function_ifdef(DVAR_TMP);
-	m2->remove_function_ifdef(RVAR_TMP);
+				D_TMP,Q_TMP,solver));
+	m2->remove_function_ifdef(D_TMP);
+	m2->remove_function_ifdef(Q_TMP);
 	return m2.release();
 }
 
