@@ -110,6 +110,7 @@ build_mesh(const Params& p) {
 		m.set_attr("host_activity",p.host_active?1.0:0.0);
 		m.set_attr("conversion_rate",p.conversion_rate);
 		m.set_attr("anaerobic_rate",p.anaerobic_rate);
+		m.set_attr("glc_diffusion",p.D_glc);
 #ifdef HAVE_LIBHDF5
 	} else {
 		m.load(p.inputfile); 
