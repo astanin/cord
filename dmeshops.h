@@ -101,6 +101,7 @@ build_mesh(const Params& p) {
 		m.set_attr("phi0", p.phi_stress_free);
 		m.set_attr("o2_uptake",p.o2_uptake);
 		m.set_attr("upkeep_per_cell",p.upkeep_per_cell);
+		m.set_attr("growth_rate",p.growth_rate);
 		m.set_attr("death_rate",p.death_rate);
 		m.set_attr("cell_motility", p.cell_motility);
 		m.set_attr("tk1",p.tk1);

@@ -36,9 +36,9 @@ using std::cerr;
 
 double net_growth_term
 (array2d const& phi, array2d const& c, array2d const& psi,
-	double const theta, double const epsilon, double const host_activity,
-	int const i, int const j) {
-	return growth_term(phi(i,j),c(i,j),theta,psi(i,j))
+	double const theta, double const gamma, double const epsilon,
+	double const host_activity, int const i, int const j) {
+	return gamma*growth_term(phi(i,j),c(i,j),theta,psi(i,j))
 	-death_term(phi(i,j),c(i,j),theta,psi(i,j),epsilon,host_activity);
 }
 
@@ -55,14 +55,16 @@ pos(double const value) {
  * params[1] := theta (upkeep per cell)
  * params[2] := psi (kind of tissue)
  * params[3] := epsilon (death rate)
- * params[4] := host_activity (1 if host dies, 0 if not) */
+ * params[4] := gamma (growth rate)
+ * params[5] := host_activity (1 if host dies, 0 if not) */
 int rhs_f(double t, const double y[], double dydt[], void *params) {
 	double c=*(((double*)(params))+0);
 	double theta=*(((double*)(params))+1);
 	double psi=*(((double*)(params))+2);
 	double eps=*(((double*)(params))+3);
-	double host_activity=*(((double*)(params))+4);
-	dydt[0]=growth_term(y[0],c,theta,psi)
+	double gamma=*(((double*)(params))+4);
+	double host_activity=*(((double*)(params))+5);
+	dydt[0]=gamma*growth_term(y[0],c,theta,psi)
 		-death_term(y[0],c,theta,psi,eps,host_activity);
 	return 0;
 }
@@ -97,11 +99,11 @@ int bc_tumour_rhs_f(double t, const double y[], double dydt[], void *params) {
 		double atp_per_aerobic=(1-phi1)*c_o-theta;
 		double atp_per_anaerobic=k*(1-phi2)*c_g-theta;
 		double switch_rate=nu*phi1*(atp_per_aerobic<0?1.0:0.0);
-		dydt[0]=//gamma*phi1*pos(atp_per_aerobic)
-			//-eps*phi1*pos(-atp_per_aerobic)
+		dydt[0]=gamma*phi1*pos(atp_per_aerobic)
+			-eps*phi1*pos(-atp_per_aerobic)
 			-switch_rate;
-		dydt[1]=//gamma*phi2*pos(atp_per_anaerobic)
-			//-eps*phi2*pos(-atp_per_anaerobic)
+		dydt[1]=gamma*phi2*pos(atp_per_anaerobic)
+			-eps*phi2*pos(-atp_per_anaerobic)
 			+switch_rate;
 	} else {
 		dydt[0]=0.0;
@@ -151,10 +153,10 @@ throw(MeshException) {
 	array2d m1_c_g=m1[GLC];
 	array2d m1_psi=m1[PSI];
 	double theta=m1.get_attr("upkeep_per_cell");
+	double gamma=m1.get_attr("growth_rate");
 	double eps=m1.get_attr("death_rate");
 	double k=m1.get_attr("anaerobic_rate");
 	double nu=m1.get_attr("conversion_rate");
-	double gamma=1.0;
 	int xdim=m1.get_xdim();
 	int ydim=m1.get_ydim();
 	// results
@@ -209,6 +211,7 @@ throw(MeshException) {
 	array2d m2_psi=(*m2)[PSI];
 	array2d m2_gphi=(*m2)[gfid];
 	double theta=m2->get_attr("upkeep_per_cell");
+	double gamma=m2->get_attr("growth_rate");
 	double epsilon=m2->get_attr("death_rate");
 	double h_a=m2->get_attr("host_activity");
 	int xdim=m2->get_xdim();
@@ -216,10 +219,10 @@ throw(MeshException) {
 	for (int i=0; i<xdim; ++i) {
 		for (int j=0; j<ydim; ++j) {
 			m2_gphi(i,j)=net_growth_term(m2_phi,m2_c,m2_psi,
-						theta,epsilon,h_a,i,j);
+						theta,gamma,epsilon,h_a,i,j);
 		}
 	}
-	double params[5];
+	double params[6];
 	gsl_odeiv_system sys;
 	sys.function=rhs_f;
 	sys.jacobian=0;
@@ -235,6 +238,7 @@ throw(MeshException) {
 	array2d m1_c=m1[CO2];
 	array2d m1_psi=m1[PSI];
 	double upkeep_per_cell=m1.get_attr("upkeep_per_cell");
+	double growth_rate=m1.get_attr("growth_rate");
 	double death_rate=m1.get_attr("death_rate");
 	double host_activity=m1.get_attr("host_activity");
 	for (int i=0; i<xdim; ++i) {
@@ -245,7 +249,8 @@ throw(MeshException) {
 			params[1]=upkeep_per_cell;
 			params[2]=m1_psi(i,j);
 			params[3]=death_rate;
-			params[4]=host_activity;
+			params[4]=growth_rate;
+			params[5]=host_activity;
 			gsl_odeiv_step_reset(step);
 			gsl_odeiv_step_apply(step, m1.get_time(), 
 					dt, &phi, &err, 0, 0, &sys);

@@ -69,6 +69,7 @@ print_model_params(const DMesh<fid_t>& m, const Params& p,
 	cerr<<"\thost sigma="<<m.get_attr("hs1")<<"*(phi-phi0),phi<phi0\n";
 	cerr<<"\tcell motility: "<<m.get_attr("cell_motility")<<"\n";
 	cerr<<"\tupkeep per cell: "<<m.get_attr("upkeep_per_cell")<<"\n";
+	cerr<<"\tgrowth rate: "<<m.get_attr("growth_rate")<<"\n";
 	cerr<<"\tdeath rate: "<<m.get_attr("death_rate")<<"\n";
 	cerr<<"\toxygen uptake: "<<m.get_attr("o2_uptake")<<"\n";
 	cerr<<"\thost tissue consumes and dies: "

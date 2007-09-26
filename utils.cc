@@ -204,6 +204,8 @@ read_params(dictionary *ini, Params& p) {
 		"params:upkeep_per_cell",p.upkeep_per_cell);
 	p.death_rate=iniparser_getdouble(ini,
 		"params:death_rate",p.death_rate);
+	p.growth_rate=iniparser_getdouble(ini,
+		"params:growth_rate",p.growth_rate);
 	p.host_active=iniparser_getboolean(ini,
 		"params:active_host",p.host_active);
 	p.anaerobic_rate=iniparser_getdouble(ini,
@@ -330,6 +332,9 @@ int init_params(Params& p, int argc, const char *argv[]) {
 		{ "upkeep-per-cell", 0, POPT_ARG_DOUBLE|onedash,
 			&p.upkeep_per_cell, 0,
 			"minimal energy consumption by cells", "theta" },
+		{ "growth-rate", 'g', POPT_ARG_DOUBLE|onedash,
+			&p.growth_rate, 0,
+			"rate of cells' growth", "gamma" },
 		{ "death-rate", 'e', POPT_ARG_DOUBLE|onedash,
 			&p.death_rate, 0,
 			"rate of cellular death", "epsilon" },

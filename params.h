@@ -92,6 +92,7 @@ public:
 	double cell_motility; ///< motility of the cellular phase
 	double o2_uptake; ///< rate of oxygen consumption
 	double upkeep_per_cell; ///< minimal energy requirement per cell
+	double growth_rate; ///< rate of cells' growth
 	double death_rate; ///< rate of cellular death
 	BCSet phi_bc; ///< boundary conditions for phi
 	BCSet c_bc; ///< boundary conditions for oxygen
@@ -112,7 +113,8 @@ public:
 		initial_cord_length(0.5), initial_cord_width(0.5),
 		initial_cord_x(0.0), initial_cord_y(0.0),
 		cell_motility(1e-2),
-		o2_uptake(200), upkeep_per_cell(0.15), death_rate(0.8),
+		o2_uptake(200), upkeep_per_cell(0.15),
+		growth_rate(1.0), death_rate(0.8),
 		phi_bc(BC::createDirichletBC(this->phi_stress_free),
 			BC::createDirichletBC(this->phi_stress_free),
 			BC::createNeumannBC(),BC::createNeumannBC()),
