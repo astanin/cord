@@ -378,7 +378,7 @@ while [ $# -gt 0 ]; do
 		foreach $v(@vars){if("phi_growth" eq $v){print $i,"\n";}++$i;};');
 	echo "time=$TIME";
 	echo "size=${XSIZE}x${YSIZE} [$XMIN:$XMAX]x[$YMIN:$YMAX]";
-	echo "vars: C[$NC] PHI[$NPHI] PSI[$NPSI] GROWTH[$NGROWTH]";
+	echo "vars: C[$NC] GLC[$NGLC] PHI[$NPHI] PSI[$NPSI] GROWTH[$NGROWTH]";
 
 	if [ "x$PLOTTER" == "xgnuplot" ] ; then
 		gnuplot_plot $f
