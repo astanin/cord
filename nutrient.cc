@@ -310,8 +310,8 @@ eval_glucose_consumption(AMesh2D<fid_t>& m, fid_t const consumption) {
 	array2d psi=m[PSI];
 	array2d o2=m[GLC];
 	array2d glc=m[GLC];
-	double h_a=m.get_attr("host_activity");
-	double theta=m.get_attr("upkeep_per_cell");
+	//double h_a=m.get_attr("host_activity");
+	//double theta=m.get_attr("upkeep_per_cell");
 	double alpha=m.get_attr("o2_uptake");
 	double kappa=m.get_attr("anaerobic_rate");
 	array2d cons=m[consumption];
