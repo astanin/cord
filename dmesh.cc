@@ -505,7 +505,13 @@ DMesh<fid_t>::load_dataset_2d(H5::Group const g, string const& setname,
 	blitz::Array<double,2>& array) {
 	try {
 	hsize_t dims[2];
-	H5::DataSet set=g.openDataSet(setname);
+	H5::DataSet set;
+	try {
+		set=g.openDataSet(setname);
+	} catch (H5::Exception h5err) { // cannot open data set
+		array=0.0;
+		return;
+	}
 	H5::DataSpace space=set.getSpace();
 	if (space.getSimpleExtentNdims() != 2) {
 		string errmsg="DMesh::load_dataset_2d: dataset `FOO' is not 2D";
@@ -538,6 +544,7 @@ DMesh<fid_t>::load_dataset_2d(H5::Group const g, string const& setname,
 	memcpy(array.data(),buffer,sizeof(double)*xdim*ydim);
 	delete[] buffer;
 	buffer=(double*)0;
+	return;
 	} catch (H5::Exception h5err) {
 		ostringstream ss;
 		ss << "DMesh::load_dataset_2d: "
@@ -626,6 +633,9 @@ throw(MeshFileException, MeshException) {
 		savegroup.openAttribute("death_rate")
 			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
 		set_attr("death_rate",attr_value);
+		savegroup.openAttribute("growth_rate")
+			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
+		set_attr("growth_rate",attr_value);
 		savegroup.openAttribute("o2_uptake")
 			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
 		set_attr("o2_uptake",attr_value);
