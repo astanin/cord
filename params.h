@@ -97,6 +97,7 @@ public:
 	BCSet phi_bc; ///< boundary conditions for phi
 	BCSet c_bc; ///< boundary conditions for oxygen
 	BCSet glc_bc; ///< boundary conditions for glucose
+	BCSet phi2_bc; ///< boundary conditions for anaerobic cells
 	eq_type c_equation; ///< type of equation for c
 	bool host_active; ///< host tissue dies and consumes
 	double conversion_rate; ///< rate of conversion to anaerobic catabolism
@@ -122,6 +123,8 @@ public:
 			BC::createDirichletBC(1.0),BC::createNeumannBC()),
 		glc_bc(BC::createNeumannBC(),BC::createNeumannBC(),
 			BC::createDirichletBC(1.0),BC::createNeumannBC()),
+		phi2_bc(BC::createNeumannBC(),BC::createNeumannBC(),
+			BC::createNeumannBC(),BC::createNeumannBC()),
 		c_equation(EQ_POISSON),
 		host_active(false),
 		conversion_rate(0.0), anaerobic_rate(1.0), D_glc(0.1)
