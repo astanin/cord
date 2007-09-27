@@ -78,6 +78,18 @@ eval_tissue(const Params& p, double const dt, const AMesh2D<fid_t>& m1,
 	return m2.release();
 }
 
+void
+validate_var(const string varname, array2d const& var,
+	double const min, double const max, double const err=1e-6) {
+	if ((blitz::max(var) > (max+err)) || (blitz::min(var) < (min-err))) {
+		ostringstream ss;
+		ss << "solution out of valid range: "
+			<< "max(" << varname << ")= " << blitz::max(var) << " "
+			<< "min(" << varname << ")= " << blitz::min(var);
+		throw MeshException(ss.str());
+	}
+}
+
 template<class fid_t>
 AMesh2D<fid_t>*
 solve(const Params& p, const AMesh2D<fid_t>& initial) {
@@ -217,6 +229,7 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 			prevxsize=xsize;
 			prevysize=ysize;
 		}
+		// TODO: reset variables nicely outside of their subdomains
 		// dump state
 		if (m1->get_time()>=(last_dump_t+p.dump_every-double_epsilon)){
 			if (verbose) {
@@ -226,16 +239,12 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 			}
 		}
 		// validate solution range
-		if ((max((*m1)[PHI]) > (1.0+1e-9)) ||
-			(min((*m1)[PHI]) < (-1e-9)) ||
-			(min((*m1)[CO2]) < (-1e-9))) {
-			ostringstream ss;
-			ss << "solve: solution out of valid range: "
-				<< "max(phi)= " << max((*m1)[PHI]) << " "
-				<< "min(phi)= " << min((*m1)[PHI]) << " "
-				<< "max(c)= " << max((*m1)[CO2]) << " "
-				<< "min(c)= " << min((*m1)[CO2]);
-//			throw MeshException(ss.str());
+		validate_var("phi",(*m1)[PHI],0.0,1.0);
+		validate_var("c",(*m1)[CO2],0.0,1.0);
+		if (use_bicomponenttissue) {
+			validate_var("c_g",(*m1)[GLC],0.0,1.0,0.05);
+			validate_var("phi1",(*m1)[PHI1],0.0,1.0,1e-3);
+			validate_var("phi2",(*m1)[PHI2],0.0,1.0,1e-3);
 		}
 	}
 	return m1.release();
