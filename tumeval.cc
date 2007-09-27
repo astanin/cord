@@ -315,23 +315,8 @@ throw(MeshException) {
 	try {
 	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
 	phi_init_pseudo_D<fid_t>(*m2,var,D_TMP);
-	switch (Method::it().rd_solver) {
-	case MethodParams::RDS_EXPLICIT:
-		m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,var,
-			D_TMP,NONE,MP::RDS_EXPLICIT));
-		break;
-	case MethodParams::RDS_ADI:
-		m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,var,
-			D_TMP,NONE,MP::RDS_ADI));
-		break;
-	case MethodParams::RDS_IMPLICIT:
-		m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,var,
-			D_TMP,NONE,MP::RDS_IMPLICIT));
-		break;
-	default:
-		throw MeshException("phi_step: method unknown");
-		break;
-	}
+	m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,var,
+			D_TMP,NONE,Method::it().rd_solver));
 	m2->remove_function_ifdef(D_TMP);
 	return m2.release();
 	} catch(MeshException& e) {
@@ -368,8 +353,10 @@ bc_phi_init_pseudo_D(AMesh2D<fid_t>& m, fid_t const phi1, fid_t const phi2,
 	array2d m_phi2=m[phi2];
 	array2d m_psi=m[PSI];
 	double mu=m.get_attr("cell_motility");
-	for (int i=0; i < (m.get_xdim()); ++i) {
-		for (int j=0; j < (m.get_ydim()); ++j) {
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	for (int i=1; i < (xdim-1); ++i) {
+		for (int j=1; j < (ydim-1); ++j) {
 			m_D(i,j)=bc_phi_pseudo_diff_coef<fid_t>
 						(m,m_phi1,m_phi2,mu,i,j);
 		}
@@ -390,7 +377,7 @@ throw(MeshException) {
 	m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,phi1,
 					D_TMP,NONE,Method::it().rd_solver));
 	bc_phi_init_pseudo_D<fid_t>(*m2,phi2,phi1,D_TMP);
-	m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,phi2,
+	m2.reset(reaction_diffusion_step<fid_t>(p.phi2_bc,dt,*m2,phi2,
 					D_TMP,NONE,Method::it().rd_solver));
 	return m2.release();
 	} catch(MeshException& e) {
@@ -616,7 +603,6 @@ template<class fid_t>
 AMesh2D<fid_t>*
 extrapolate_var(const AMesh2D<fid_t>& m, fid_t var, fid_t var_ls, double v) {
 	auto_ptr<AMesh2D<fid_t> > m2(m.clone());
-//	cerr << dbg_stamp(m.get_time()) << "extrapolate_var: " << var << "\n";
 	m2->remove_function_ifdef(TMP1);
 	m2->add_function_ifndef(TMP1); // v*n_x
 	m2->remove_function_ifdef(TMP2);
@@ -628,7 +614,6 @@ extrapolate_var(const AMesh2D<fid_t>& m, fid_t var, fid_t var_ls, double v) {
 	array2d ny=(*m2)[TMP2];
 	array2d psi=(*m2)[var_ls];
 	// init normal vecotr nx, ny
-//	cerr << dbg_stamp(m.get_time()) << "extrapolate_var: init nx, ny\n";
 	for (int i=1; i<(xdim-1); ++i) {
 		for (int j=1; j<(ydim-1); ++j) {
 			double gx=psi(i+1,j)-psi(i-1,j);
@@ -644,12 +629,11 @@ extrapolate_var(const AMesh2D<fid_t>& m, fid_t var, fid_t var_ls, double v) {
 	double t=0.0;
 	array2d u=m[var];
 	array2d u2=(*m2)[var];
-//	cerr << dbg_stamp(m.get_time()) << "extrapolate_var: dt=" << dt << "\n";
 	while (t < 1.0) {
 		// inner points
 		for (int i=1; i<(xdim-1); ++i) {
 			for (int j=1; j<(ydim-1); ++j) {
-				if (v*psi(i,j) > 0) { // ignore the other domain
+				if (v*psi(i,j) > 0) {//ignore the other domain
 					double ax=nx(i,j);
 					double ay=ny(i,j);
 					double g= 0.5*(ax+fabs(ax))*
@@ -698,13 +682,22 @@ template<class fid_t>
 AMesh2D<fid_t>*
 extrapolate_subphases(const AMesh2D<fid_t>& m, fid_t var_ls,
 	fid_t var_t1, fid_t var_t2, fid_t var_h) {
-//	cerr << dbg_stamp(m.get_time()) << "extrapolate_subphases\n";
 	auto_ptr<AMesh2D<fid_t> > m2(m.clone());
 	array2d psi=(*m2)[var_ls];
 	array2d phi_h=(*m2)[var_h];
 	array2d phi2=(*m2)[var_t2];
 	array2d phi1=(*m2)[var_t1];
-	m2.reset(extrapolate_var(*m2,var_h, var_ls,+1.0));
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	// extrapolate phi_h in tumour domain as phi1+phi2
+	for (int i=0; i<xdim; ++i) {
+		for (int j=0; j<ydim; ++j) {
+			if (psi(i,j) >= 0) { //tumour
+				phi_h(i,j)=phi1(i,j)+phi2(i,j);
+			}
+		}
+	}
+	// extrapolate conintinually phi1 and phi2 in host domain
 	m2.reset(extrapolate_var(*m2,var_t1,var_ls,-1.0));
 	m2.reset(extrapolate_var(*m2,var_t2,var_ls,-1.0));
 	return m2.release();
@@ -714,7 +707,6 @@ template<class fid_t>
 void
 reconstruct_total_density(AMesh2D<fid_t>& m, fid_t var_ls,
 	fid_t var, fid_t var_t1, fid_t var_t2, fid_t var_h) {
-//	cerr << dbg_stamp(m.get_time()) << "reconstruct_total_density\n";
 	int xdim=m.get_xdim();
 	int ydim=m.get_ydim();
 	array2d phi=m[var];
