@@ -463,7 +463,6 @@ const throw(MeshException) {
 		dataset.write(m_y.data(), H5::PredType::NATIVE_DOUBLE);
 		typename pile_of_arrays::const_iterator i = mf.begin();
 		for (; i != mf.end(); ++i) {
-			cerr << "saved: " << id2str(i->first) << "\n";
 			dataset = savegroup.createDataSet(id2str(i->first),
 					doubletype, ds2d);
 			dataset.write(i->second.data(),
