@@ -82,6 +82,7 @@ template<class fid_t>
 AMesh2D<fid_t>*
 solve(const Params& p, const AMesh2D<fid_t>& initial) {
 	auto_ptr<AMesh2D<fid_t> > m1(initial.clone());
+	double double_epsilon=numeric_limits<double>::epsilon();
 	double last_dump_t=m1->get_time();
 	double final_t=m1->get_time()+p.eval_t;
 	double prevxsize=0.0;
@@ -89,8 +90,7 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 	double eff_dt_initial=-1;
 	bool use_ghostfluidmethod; // true if we need to use ghost fluid method
 	bool use_bicomponenttissue; // true if tumour tissue is bicomponent
-	if (m1->get_attr("conversion_rate")
-		> numeric_limits<double>::epsilon()) {
+	if (m1->get_attr("conversion_rate") > double_epsilon) {
 		use_bicomponenttissue=true;
 	} else {
 		use_bicomponenttissue=false;
@@ -218,8 +218,7 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 			prevysize=ysize;
 		}
 		// dump state
-		if (m1->get_time() >= (last_dump_t+p.dump_every
-				-numeric_limits<double>::epsilon())) {
+		if (m1->get_time()>=(last_dump_t+p.dump_every-double_epsilon)){
 			if (verbose) {
 			cerr << dbg_stamp(m1->get_time()) << "dumping state\n";
 			dump_mesh<fid_t>(*m1,(int)(floor(m1->get_time()*1e5)));
