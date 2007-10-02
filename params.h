@@ -36,7 +36,7 @@ typedef enum {
 	PHI=0,
 	PHI1,
 	PHI2,
-	CO2,
+	CO2, // TODO: rename to O2, CO2 is confusing
 	GLC,
 	PSI,
 	VX,
@@ -45,7 +45,6 @@ typedef enum {
 	PHI_H,
 	PHI_GROWTH,
 	DEATH_RATE,
-	C_RESIDUAL,
 	TERM_PHI_SIGMA,
 	Q_TMP,
 	D_TMP,

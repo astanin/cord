@@ -165,13 +165,16 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 		}
 		// level set (interface tracking)
 		m2.reset(step_level_set<fid_t>(eff_dt,*m2));
-		// nutrient (eliptic)
-		// oxygen
-		m2.reset(eval_nutrient<fid_t>(p,*m2,Method::it().
-					p_solver_accuracy,eff_dt));
-		// glucose
+		// nutrient
 		if (use_bicomponenttissue) {
+			// oxygen
+			m2.reset(eval_bc_oxygen_diffusion<fid_t>(p,eff_dt,*m2));
+			// glucose
 			m2.reset(eval_glucose_diffusion<fid_t>(p,eff_dt,*m2));
+		} else {
+			// only oxygen
+			m2.reset(eval_nutrient<fid_t>(p,*m2,Method::it().
+						p_solver_accuracy,eff_dt));
 		}
 		// done all sub steps
 		m2->inc_time(eff_dt);
@@ -240,11 +243,11 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 		}
 		// validate solution range
 		validate_var("phi",(*m1)[PHI],0.0,1.0);
-		validate_var("c",(*m1)[CO2],0.0,1.0);
+		validate_var("c",(*m1)[CO2],0.0,1.0,1e-2);
 		if (use_bicomponenttissue) {
 			validate_var("c_g",(*m1)[GLC],0.0,1.0,0.05);
-			validate_var("phi1",(*m1)[PHI1],0.0,1.0,1e-3);
-			validate_var("phi2",(*m1)[PHI2],0.0,1.0,1e-3);
+			validate_var("phi1",(*m1)[PHI1],0.0,1.0,1e-2);
+			validate_var("phi2",(*m1)[PHI2],0.0,1.0,1e-2);
 		}
 	}
 	return m1.release();

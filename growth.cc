@@ -96,8 +96,8 @@ int bc_tumour_rhs_f(double t, const double y[], double dydt[], void *params) {
 	double k=param[7];
 	double nu=param[8];
 	if (psi*where >= 0) {
-		double atp_per_aerobic=(1-phi1)*c_o-theta;
-		double atp_per_anaerobic=k*(1-phi2)*c_g-theta;
+		double atp_per_aerobic=(1-phi1-phi2)*c_o*c_g-theta;
+		double atp_per_anaerobic=k*(1-phi1-phi2)*c_g-theta;
 		double switch_rate=nu*phi1*(atp_per_aerobic<0?1.0:0.0);
 		dydt[0]=gamma*phi1*pos(atp_per_aerobic)
 			-eps*phi1*pos(-atp_per_aerobic)

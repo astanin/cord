@@ -252,8 +252,8 @@ throw(MeshException) {
 	double dx=m.get_dx();
 	double dy=m.get_dy();
 	const auto_ptr<AMesh2D<fid_t> > m2(m.clone());
-	m2->remove_function_ifdef(C_RESIDUAL);
-	m2->add_function(C_RESIDUAL);
+	m2->remove_function_ifdef(TMP1);
+	m2->add_function(TMP1);
 	// WARNING: ignoring boundary points
 	// inner points
 	array2d phi=(*m2)[PHI];
@@ -262,7 +262,7 @@ throw(MeshException) {
 	double h_a=m.get_attr("host_activity");
 	double theta=m.get_attr("upkeep_per_cell");
 	double alpha=m.get_attr("o2_uptake");
-	array2d res=(*m2)[C_RESIDUAL];
+	array2d res=(*m2)[TMP1];
 	for (int i=1; (i<m2->get_xdim()-1) ; ++i) {
 		for (int j=1; (j<m2->get_ydim()-1) ; ++j) {
 			double loc_res=0.0;
@@ -273,7 +273,7 @@ throw(MeshException) {
 			res(i,j)=loc_res;
 		}
 	}
-	global_res=norm_1<fid_t>(*m2,C_RESIDUAL);
+	global_res=norm_1<fid_t>(*m2,TMP1);
 	return global_res;
 }
 
@@ -300,6 +300,59 @@ eval_nutrient_init_consumption(AMesh2D<fid_t>& m, fid_t const consumption) {
 
 template<class fid_t>
 void
+eval_bc_oxygen_consumption(AMesh2D<fid_t>& m, fid_t const consumption) {
+	m.add_function_ifndef(consumption);
+	// initialize consumption variable
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	array2d phi1=m[PHI1];
+	array2d phi2=m[PHI2];
+	array2d psi=m[PSI];
+	array2d o2=m[GLC];
+	array2d glc=m[GLC];
+	double alpha=m.get_attr("o2_uptake");
+	array2d cons=m[consumption];
+	for (int i=0; i<xdim ; ++i) {
+		for (int j=0; j<ydim ; ++j) {
+			cons(i,j)=H(psi(i,j))*( alpha*phi1(i,j)
+				*(1-phi1(i,j)-phi2(i,j))*o2(i,j)*glc(i,j) );
+		}
+	}
+}
+
+template<class fid_t>
+double
+eval_bc_oxygen_residual(const AMesh2D<fid_t>& m)
+throw(MeshException) {
+	double global_res=0.0;
+	double dx=m.get_dx();
+	double dy=m.get_dy();
+	const auto_ptr<AMesh2D<fid_t> > m2(m.clone());
+	m2->remove_function_ifdef(TMP1);
+	m2->add_function(TMP1); // abs(residual)
+	eval_bc_oxygen_consumption<fid_t>(*m2,Q_TMP);
+	// WARNING: ignoring boundary points
+	// inner points
+	array2d phi=(*m2)[PHI];
+	array2d psi=(*m2)[PSI];
+	array2d c=(*m2)[CO2];
+	array2d q_o2=(*m2)[Q_TMP];
+	array2d res=(*m2)[TMP1];
+	for (int i=1; (i<m2->get_xdim()-1) ; ++i) {
+		for (int j=1; (j<m2->get_ydim()-1) ; ++j) {
+			double loc_res=0.0;
+			loc_res=(c(i+1,j)-2*c(i,j)+c(i-1,j))/(dx*dx)+
+				(c(i,j+1)-2*c(i,j)+c(i,j-1))/(dy*dy)-q_o2(i,j);
+			loc_res=fabs(loc_res);
+			res(i,j)=loc_res;
+		}
+	}
+	global_res=max(res);
+	return global_res;
+}
+
+template<class fid_t>
+void
 eval_glucose_consumption(AMesh2D<fid_t>& m, fid_t const consumption) {
 	m.add_function_ifndef(consumption);
 	// initialize consumption variable
@@ -310,17 +363,17 @@ eval_glucose_consumption(AMesh2D<fid_t>& m, fid_t const consumption) {
 	array2d psi=m[PSI];
 	array2d o2=m[GLC];
 	array2d glc=m[GLC];
-	//double h_a=m.get_attr("host_activity");
-	//double theta=m.get_attr("upkeep_per_cell");
 	double alpha=m.get_attr("o2_uptake");
 	double kappa=m.get_attr("anaerobic_rate");
 	array2d cons=m[consumption];
 	for (int i=0; i<xdim ; ++i) {
 		for (int j=0; j<ydim ; ++j) {
 			cons(i,j)=H(psi(i,j))*(
-				(1.0/6)*alpha*phi1(i,j)*(1-phi1(i,j))*o2(i,j)
-				+(1.0/12)*kappa*N_ATP_PER_GLUCOSE
-					*alpha*phi2(i,j)*(1-phi2(i,j))*glc(i,j)
+				(1.0/6)*alpha*phi1(i,j)*(1-phi1(i,j)-phi2(i,j))
+					*o2(i,j)*glc(i,j)
+				+(1.0/12)*kappa*N_ATP_PER_GLUCOSE*alpha
+					*phi2(i,j)*(1-phi1(i,j)-phi2(i,j))
+					*glc(i,j)
 				);
 		}
 	}
@@ -412,6 +465,24 @@ throw(MeshException) {
 
 template<class fid_t>
 AMesh2D<fid_t>*
+eval_bc_oxygen_diffusion
+(Params const& p, double const dt, AMesh2D<fid_t> const& m1)
+throw(MeshException) {
+	auto_ptr< AMesh2D<fid_t> > m2(m1.clone());
+	eval_bc_oxygen_consumption<fid_t>(*m2,Q_TMP);
+	m2->remove_function_ifdef(D_TMP);
+	m2->add_function(D_TMP,1.0);
+	m2.reset(reaction_diffusion_step<fid_t>
+		(p.c_bc,dt,*m2,CO2,D_TMP,Q_TMP));
+	m2->remove_function_ifdef(Q_TMP);
+	m2->remove_function_ifdef(D_TMP);
+	double res=eval_bc_oxygen_residual((*m2));
+	cerr << "eval_bc_oxygen_diffusion: residual*dt="<< res*dt << "\n";
+	return m2.release();
+}
+
+template<class fid_t>
+AMesh2D<fid_t>*
 eval_glucose_diffusion
 (Params const& p, double const dt, AMesh2D<fid_t> const& m1)
 throw(MeshException) {
@@ -489,5 +560,10 @@ eval_nutrient<int>(const Params& p, const AMesh2D<int>& m1,
 template
 AMesh2D<int>*
 eval_glucose_diffusion
+(Params const& p, double const dt, AMesh2D<int> const& m1);
+
+template
+AMesh2D<int>*
+eval_bc_oxygen_diffusion
 (Params const& p, double const dt, AMesh2D<int> const& m1);
 

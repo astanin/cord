@@ -47,5 +47,11 @@ eval_glucose_diffusion
 (Params const& p, double const dt, AMesh2D<fid_t> const& m1)
 throw(MeshException);
 
+template<class fid_t>
+AMesh2D<fid_t>*
+eval_bc_oxygen_diffusion
+(Params const& p, double const dt, AMesh2D<fid_t> const& m1)
+throw(MeshException);
+
 #endif
 
