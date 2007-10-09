@@ -97,6 +97,37 @@ Building project
 
 	as libfblas.a is in /usr/local/lib on my system.
 
+Building BLAS from source
+
+	If BLAS is not provided in your system (like in Cygwin), you may build
+	it yourself from source. ATLAS may be a better option, but I think
+	BLAS is easier and faster to start with.
+	
+	1. Get BLAS (blas.tgz) from http://www.netlib.org/blas/
+	2. Unpack the BLAS source package and go to inside:
+
+		$ tar zxf blas.tgz
+		$ cd BLAS
+
+	3. Compile all the Fortran files:
+
+		$ g77 -c -O2 *.f
+
+	4. Assemble all the object files produced into library libblas.a.
+	   You may later link to this library statically.
+
+		$ ar rvs libblas.a *.o
+
+	5. Install the library into the system, e.g. copy it to /usr/local/lib
+
+		$ cp libblas.a /usr/local/lib/
+
+	You can obtain better performance with ATLAS. You may find instructions
+	for Cygwin installation in [1]. Most Linux users are likely to be happy
+	with ready-to-use ATLAS packages shipped with their distro.
+
+	[1] http://www.ifp.uiuc.edu/~nakazato/tips/cygwin_atlas.html
+
 Contact information:
 
 	Sergey Astanin <sergey dot astanin at polito dot it>
