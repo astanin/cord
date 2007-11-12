@@ -371,14 +371,17 @@ bc_phi_step
 throw(MeshException) {
 	try {
 	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
-	m2->remove_function_ifdef(D_TMP);
-	m2->add_function_ifndef(D_TMP,0.0);
-	bc_phi_init_pseudo_D<fid_t>(*m2,phi1,phi2,D_TMP);
+	m2->remove_function_ifdef(TMP1);
+	m2->add_function_ifndef(TMP1,0.0);
+	m2->remove_function_ifdef(TMP2);
+	m2->add_function_ifndef(TMP2,0.0);
+	// we need to init D_phi1 and D_phi2 together to be consistent
+	bc_phi_init_pseudo_D<fid_t>(*m2,phi1,phi2,TMP1);
+	bc_phi_init_pseudo_D<fid_t>(*m2,phi2,phi1,TMP1);
 	m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,phi1,
-					D_TMP,NONE,Method::it().rd_solver));
-	bc_phi_init_pseudo_D<fid_t>(*m2,phi2,phi1,D_TMP);
+					TMP1,NONE,Method::it().rd_solver));
 	m2.reset(reaction_diffusion_step<fid_t>(p.phi2_bc,dt,*m2,phi2,
-					D_TMP,NONE,Method::it().rd_solver));
+					TMP2,NONE,Method::it().rd_solver));
 	return m2.release();
 	} catch(MeshException& e) {
 		ostringstream ss;
@@ -683,6 +686,8 @@ AMesh2D<fid_t>*
 extrapolate_subphases(const AMesh2D<fid_t>& m, fid_t var_ls,
 	fid_t var_t1, fid_t var_t2, fid_t var_h) {
 	auto_ptr<AMesh2D<fid_t> > m2(m.clone());
+	m2->remove_function_ifdef(TMP1);
+	m2->add_function_ifndef(TMP1,1.0);
 	array2d psi=(*m2)[var_ls];
 	array2d phi_h=(*m2)[var_h];
 	array2d phi2=(*m2)[var_t2];
@@ -697,9 +702,29 @@ extrapolate_subphases(const AMesh2D<fid_t>& m, fid_t var_ls,
 			}
 		}
 	}
-	// extrapolate conintinually phi1 and phi2 in host domain
-	m2.reset(extrapolate_var(*m2,var_t1,var_ls,-1.0));
-	m2.reset(extrapolate_var(*m2,var_t2,var_ls,-1.0));
+	// init ratio phi1/(phi1+phi2)
+	array2d ratio=(*m2)[TMP1];
+	for (int i=0; i<xdim; ++i) {
+		for (int j=0; j<ydim; ++j) {
+			ratio(i,j)=phi1(i,j)/(phi1(i,j)+phi2(i,j));
+		}
+	}
+	// extrapolate ratio continually in host domain
+	fid_t ratio_var=TMP1;
+	m2.reset(extrapolate_var(*m2,ratio_var,var_ls,-1.0));
+	// reinit phi1 and phi2 in host domain
+	for (int i=0; i<xdim; ++i) {
+		for (int j=0; j<ydim; ++j) {
+			if (psi(i,j) < 0) {
+				phi1(i,j)=ratio(i,j)*phi_h(i,j);
+				phi2(i,j)=(1-ratio(i,j))*phi_h(i,j);
+			}
+		}
+	}
+	m2->remove_function_ifdef(TMP1);
+//	// extrapolate conintinually phi1 and phi2 in host domain
+//	m2.reset(extrapolate_var(*m2,var_t1,var_ls,-1.0));
+//	m2.reset(extrapolate_var(*m2,var_t2,var_ls,-1.0));
 	return m2.release();
 }
 
