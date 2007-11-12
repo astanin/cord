@@ -103,6 +103,34 @@ ${DRAW_PHI_TITLE}
 ENDGRI
 }
 
+function plot_phi2 {
+	f=$1
+	fo=$(echo $TIME|perl -e 'while(<>){printf("Phi2_%07.0f.eps",10*$_);}');
+	gri -b -c0 -output "$fo" << ENDGRI
+set x size $(echo "scale=2;$PLOTHEIGHT*($XMAX-$XMIN)/($YMAX-$YMIN)"|bc -s)
+set y size $PLOTHEIGHT
+set x axis $XMIN $XMAX $(perl -e "printf('%g',($XMAX-$XMIN)*0.1);")
+set y axis $YMIN $YMAX $(perl -e "printf('%g',($YMAX-$YMIN)*0.1);")
+draw axes
+# phi
+set x grid $XMIN $XMAX /$XSIZE
+set y grid $YMIN $YMAX /$YSIZE
+open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NPHI2],\" \"; } else { print \"\n\";} }'|"
+read grid data $XSIZE $YSIZE bycolumns
+close
+${PLOT_PHI2_DATA}
+# psi
+set x grid $XMIN $XMAX /$XSIZE
+set y grid $YMIN $YMAX /$YSIZE
+open "cat $f|grep -v ^#|perl -e 'while(<>){if (\$_ !~ m/^$/ ) { @v=split; print \$v[$NPSI],\" \"; } else { print \"\n\";} }'|"
+read grid data $XSIZE $YSIZE bycolumns
+close
+set line width rapidograph 1
+draw contour 0.0 unlabelled
+${DRAW_PHI2_TITLE}
+ENDGRI
+}
+
 function plot_phi_growth {
 	if [ "x$NGROWTH" == "x" ]; then
 		return
@@ -144,6 +172,11 @@ set line width rapidograph 6x0
 draw contour
 END);
 	PLOT_PHI_DATA=$(cat << END
+set font size 9
+set line width rapidograph 6x0
+draw contour
+END);
+	PLOT_PHI2_DATA=$(cat << END
 set font size 9
 set line width rapidograph 6x0
 draw contour
@@ -202,6 +235,10 @@ END);
 set font size 12
 draw title "Packing density, $TS"
 END);
+		DRAW_PHI2_TITLE=$(cat << END
+set font size 12
+draw title "Packing density (anaerobic), $TS"
+END);
 		DRAW_GROWTH_TITLE=$(cat << END
 set font size 12
 draw title "Rate of growth, $TS"
@@ -209,11 +246,13 @@ END);
 	else
 		DRAW_C_TITLE=""
 		DRAW_PHI_TITLE=""
+		DRAW_PHI2_TITLE=""
 		DRAW_GROWTH_TITLE=""
 	fi
 	plot_c $f;
 	plot_glc $f;
 	plot_phi $f;
+	plot_phi2 $f;
 	plot_phi_growth $f;
 }
 
