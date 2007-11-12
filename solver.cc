@@ -61,6 +61,7 @@ eval_bc_tissue(const Params& p, double const dt, const AMesh2D<fid_t>& m1,
 	// growth-death (ODE)
 	auto_ptr<AMesh2D<fid_t> > mt(step_bc_tumour_growth_death<fid_t>
 					(dt,m1, phi1,phi2,phase,where));
+//	return mt.release();
 	// PDE step
 	auto_ptr<AMesh2D<fid_t> > m2(bc_phi_step<fid_t>
 					(p,dt,*mt,phi1,phi2,phase,where));
@@ -153,12 +154,36 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 			// 1. extrapolate PHI_H, PHI1, PHI2
 			// 2. run modified eval_tissue for all of them
 			// 3. construct new PHI from PHI_H, PHI1, PHI2
+			cerr << dbg_stamp(m1->get_time())
+				<<setprecision(5)<<setiosflags(ios::scientific)
+				<< "before extrapolate_subphases: "
+				<< "max(phi2)= " << max((*m1)[PHI2]) << " "
+				<< "min(phi2)= " << min((*m1)[PHI2])
+				<< "\n";
 			m2.reset(extrapolate_subphases<fid_t>
 					(*m1,PSI,PHI1,PHI2,PHI_H));
+			cerr << dbg_stamp(m1->get_time())
+				<<setprecision(5)<<setiosflags(ios::scientific)
+				<< "after extrapolate_subphases: "
+				<< "max(phi2)= " << max((*m2)[PHI2]) << " "
+				<< "min(phi2)= " << min((*m2)[PHI2])
+				<< "\n";
 			m2.reset(eval_bc_tissue<fid_t>
 					(p,eff_dt,*m2,PHI1,PHI2,PHI_H,PSI,+1));
+			cerr << dbg_stamp(m1->get_time())
+				<<setprecision(5)<<setiosflags(ios::scientific)
+				<< "after eval_bc_tissue: "
+				<< "max(phi2)= " << max((*m2)[PHI2]) << " "
+				<< "min(phi2)= " << min((*m2)[PHI2])
+				<< "\n";
 			reconstruct_total_density<fid_t>
 					(*m2,PSI,PHI,PHI1,PHI2,PHI_H);
+			cerr << dbg_stamp(m1->get_time())
+				<<setprecision(5)<<setiosflags(ios::scientific)
+				<< "after reconstruct_total_density: "
+				<< "max(phi2)= " << max((*m2)[PHI2]) << " "
+				<< "min(phi2)= " << min((*m2)[PHI2])
+				<< "\n";
 		} else {
 			// evaluate tissue behaviour
 			m2.reset(eval_tissue<fid_t>(p,eff_dt,*m1,PHI));
@@ -168,9 +193,9 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 		// nutrient
 		if (use_bicomponenttissue) {
 			// oxygen
-			m2.reset(eval_bc_oxygen_diffusion<fid_t>(p,eff_dt,*m2));
+			m2.reset(eval_bc_o2<fid_t>(p,*m2));
 			// glucose
-			m2.reset(eval_glucose_diffusion<fid_t>(p,eff_dt,*m2));
+			m2.reset(eval_bc_glc<fid_t>(p,*m2));
 		} else {
 			// only oxygen
 			m2.reset(eval_nutrient<fid_t>(p,*m2,Method::it().
