@@ -179,7 +179,7 @@ END);
 	PLOT_PHI2_DATA=$(cat << END
 set font size 9
 set line width rapidograph 6x0
-draw contour
+draw contour 0.00001 1.0 0.05
 END);
 	PLOT_GROWTH_DATA=$(cat << END
 #set font size 9
@@ -339,6 +339,22 @@ splot "$f" u 1:2:$((NPHI2+1)) w l
 END
 }
 
+function gnuplot_plot_phih {
+	f=$1
+	fo=$(echo $TIME|perl -e 'while(<>){printf("PhiH_%07.0f.eps",10*$_);}');
+	gnuplot << END
+set view 45,135
+set xlabel "x"
+set ylabel "y"
+unset zlabel
+unset key
+${PLOT_PHIH_TITLE}
+set output "$fo"
+${PLOT_MODE}
+splot "$f" u 1:2:$((NPHIH+1)) w l
+END
+}
+
 function gnuplot_plot_psi {
 	f=$1
 	fo=$(echo $TIME|perl -e 'while(<>){printf("Phase_%07.0f.eps",10*$_);}');
@@ -369,6 +385,7 @@ function gnuplot_plot {
 		PLOT_PHI_TITLE="set title \"Packing density, $TS\""
 		PLOT_PHI1_TITLE="set title \"Aerobic cells, $TS\""
 		PLOT_PHI2_TITLE="set title \"Anaerobic cells, $TS\""
+		PLOT_PHIH_TITLE="set title \"Host tissue cells, $TS\""
 		PLOT_PSI_TITLE="set title \"Level set function, $TS\""
 	else
 		PLOT_C_TITLE=""
@@ -376,6 +393,7 @@ function gnuplot_plot {
 		PLOT_PHI_TITLE=""
 		PLOT_PHI1_TITLE=""
 		PLOT_PHI2_TITLE=""
+		PLOT_PHIH_TITLE=""
 		PLOT_PSI_TITLE=""
 	fi
 	gnuplot_plot_c $f
@@ -383,6 +401,7 @@ function gnuplot_plot {
 	gnuplot_plot_phi $f
 	gnuplot_plot_phi1 $f
 	gnuplot_plot_phi2 $f
+	gnuplot_plot_phih $f
 	gnuplot_plot_psi $f
 }
 
@@ -453,13 +472,15 @@ while [ $# -gt 0 ]; do
 		foreach $v(@vars){if("phi1" eq $v){print $i,"\n";}++$i;};');
 	NPHI2=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
 		foreach $v(@vars){if("phi2" eq $v){print $i,"\n";}++$i;};');
+	NPHIH=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
+		foreach $v(@vars){if("phi_h" eq $v){print $i,"\n";}++$i;};');
 	NPSI=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
 		foreach $v(@vars){if("psi" eq $v){print $i,"\n";}++$i;};');
 	NGROWTH=$(echo $VARS|perl -e 'my @vars,$i=0;while(<>){@vars=split;}
 		foreach $v(@vars){if("phi_growth" eq $v){print $i,"\n";}++$i;};');
 	echo "time=$TIME";
 	echo "size=${XSIZE}x${YSIZE} [$XMIN:$XMAX]x[$YMIN:$YMAX]";
-	echo "vars: C[$NC] GLC[$NGLC] PHI[$NPHI] PHI1[$NPHI1] PHI2[$NPHI2] PSI[$NPSI] GROWTH[$NGROWTH]";
+	echo "vars: C[$NC] GLC[$NGLC] PHI[$NPHI] PHI1[$NPHI1] PHI2[$NPHI2] PHIH[$NPHIH] PSI[$NPSI] GROWTH[$NGROWTH]";
 
 	if [ "x$PLOTTER" == "xgnuplot" ] ; then
 		gnuplot_plot $f
