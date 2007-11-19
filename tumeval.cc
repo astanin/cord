@@ -516,7 +516,7 @@ int level_set_function_reset(AMesh2D<fid_t>& m) {
 	m.add_function_ifndef(SPSI);
 	double psi;
 	// eps is heuristic parameter
-	double eps=16*(m.get_dx()*m.get_dx()+m.get_dy()*m.get_dy());
+	double eps=200*(m.get_dx()*m.get_dx()+m.get_dy()*m.get_dy());
 	int xdim=m.get_xdim();
 	int ydim=m.get_ydim();
 	array2d psi_a=m[PSI];
@@ -525,8 +525,6 @@ int level_set_function_reset(AMesh2D<fid_t>& m) {
 		for (int j=0; j<ydim; ++j) {
 			psi=psi_a(i,j);
 			spsi_a(i,j)=psi/sqrt(psi*psi+eps);
-//			psi=m.get(PSI,i,j);
-//			m.set(SPSI,i,j,psi/sqrt(psi*psi+eps));
 		}
 	}
 	int count=0;
@@ -632,7 +630,7 @@ extrapolate_var(const AMesh2D<fid_t>& m, fid_t var, fid_t var_ls, double v) {
 	double t=0.0;
 	array2d u=m[var];
 	array2d u2=(*m2)[var];
-	while (t < 1.0) {
+	while (t < 10.0) {
 		// inner points
 		for (int i=1; i<(xdim-1); ++i) {
 			for (int j=1; j<(ydim-1); ++j) {
@@ -715,16 +713,19 @@ extrapolate_subphases(const AMesh2D<fid_t>& m, fid_t var_ls,
 	// reinit phi1 and phi2 in host domain
 	for (int i=0; i<xdim; ++i) {
 		for (int j=0; j<ydim; ++j) {
-			if (psi(i,j) < 0) {
-				phi1(i,j)=ratio(i,j)*phi_h(i,j);
-				phi2(i,j)=(1-ratio(i,j))*phi_h(i,j);
+			if (psi(i,j) < 0) { // host
+				m2->set(var_t1,i,j,ratio(i,j)*phi_h(i,j));
+				m2->set(var_t2,i,j,(1-ratio(i,j))*phi_h(i,j));
+//				if ((i==16)&&(j==0))
+//					cerr << "ratio=" << ratio(i,j)
+//					<< " phi_h=" << phi_h(i,j)
+//					<< " phi1=" << phi1(i,j)
+//					<< " phi2=" << phi2(i,j) << "\n";
 			}
 		}
 	}
+//	cerr << "phi_h=" << m2->get(PHI_H,16,0) << " m2->phi1=" << m2->get(PHI1,16,0) << " phi1()=" << phi1(16,0) << "\n";
 	m2->remove_function_ifdef(TMP1);
-//	// extrapolate conintinually phi1 and phi2 in host domain
-//	m2.reset(extrapolate_var(*m2,var_t1,var_ls,-1.0));
-//	m2.reset(extrapolate_var(*m2,var_t2,var_ls,-1.0));
 	return m2.release();
 }
 
@@ -739,13 +740,25 @@ reconstruct_total_density(AMesh2D<fid_t>& m, fid_t var_ls,
 	array2d phi1=m[var_t1];
 	array2d phi2=m[var_t2];
 	array2d phih=m[var_h];
+	double psi_max=max(psi);
+	double psi_min=min(psi);
 	for (int i=0; i<xdim; ++i) {
 		for (int j=0; j<ydim; ++j) {
-			if (psi(i,j) > 0) { // tumour
-				phi(i,j)=phi1(i,j)+phi2(i,j);
-			} else {
-				phi(i,j)=phih(i,j);
-			}
+//			if (psi(i,j) >= 0) { // tumour
+//				phi(i,j)=phi1(i,j)+phi2(i,j);
+//			} else {
+//				phi(i,j)=phih(i,j);
+//			}
+			// WARNING: we assume that psi is reset to signed distance
+			double w=(psi(i,j)-psi_min)/(psi_max-psi_min); //w=2*(w-0.5); w=w*w*w*0.5+0.5;
+			double w_plus=w;
+			double w_minus=1.0-w_plus;
+			phi(i,j)=w_plus*(phi1(i,j)+phi2(i,j))+w_minus*phih(i,j);
+//			if ((i==16) && (j==0)) {
+//				cerr << "w_plus=" << w_plus << " phi1=" << phi1(i,j)
+//				<< " phi2=" << phi2(i,j) << " phih=" << phih(i,j)
+//				<< " => phi=" << phi(i,j) << "\n";
+//			}
 		}
 	}
 }
