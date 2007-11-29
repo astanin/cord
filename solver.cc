@@ -79,14 +79,16 @@ eval_tissue(const Params& p, double const dt, const AMesh2D<fid_t>& m1,
 	return m2.release();
 }
 
+template<class fid_t>
 void
-validate_var(const string varname, array2d const& var,
+validate_var(AMesh2D<fid_t>& m, const string varname, array2d const& var,
 	double const min, double const max, double const err=1e-6) {
 	if ((blitz::max(var) > (max+err)) || (blitz::min(var) < (min-err))) {
 		ostringstream ss;
 		ss << "solution out of valid range: "
 			<< "max(" << varname << ")= " << blitz::max(var) << " "
 			<< "min(" << varname << ")= " << blitz::min(var);
+		dump_mesh<fid_t>(m,(int)(floor(m.get_time()*1e5)));
 		throw MeshException(ss.str());
 	}
 }
@@ -156,13 +158,10 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 			// 3. construct new PHI from PHI_H, PHI1, PHI2
 			m2.reset(extrapolate_subphases<fid_t>
 					(*m1,PSI,PHI1,PHI2,PHI_H));
-//			cerr << "phi1+phi2=" << m2->get(PHI1,16,0)+m2->get(PHI2,16,0) << " phi_h=" << m2->get(PHI_H,16,0) << " phi=" << m2->get(PHI,16,0) << " psi=" << m2->get(PSI,16,0) << "\n";
 			m2.reset(eval_bc_tissue<fid_t>
 					(p,eff_dt,*m2,PHI1,PHI2,PHI_H,PSI,+1));
-//			cerr << "phi1+phi2=" << m2->get(PHI1,16,0)+m2->get(PHI2,16,0) << " phi_h=" << m2->get(PHI_H,16,0) << " phi=" << m2->get(PHI,16,0) << " psi=" << m2->get(PSI,16,0) << "\n";
 			reconstruct_total_density<fid_t>
 					(*m2,PSI,PHI,PHI1,PHI2,PHI_H);
-//			cerr << "phi1+phi2=" << m2->get(PHI1,16,0)+m2->get(PHI2,16,0) << " phi_h=" << m2->get(PHI_H,16,0) << " phi=" << m2->get(PHI,16,0) << " psi=" << m2->get(PSI,16,0) << "\n";
 		} else {
 			// evaluate tissue behaviour
 			m2.reset(eval_tissue<fid_t>(p,eff_dt,*m1,PHI));
@@ -246,12 +245,12 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 			}
 		}
 		// validate solution range
-		validate_var("phi",(*m1)[PHI],0.0,1.0);
-		validate_var("c",(*m1)[CO2],0.0,1.0,1e-2);
+		validate_var<int>((*m1),"phi",(*m1)[PHI],0.0,1.0);
+		validate_var<int>((*m1),"c",(*m1)[CO2],0.0,1.0,1e-2);
 		if (use_bicomponenttissue) {
-			validate_var("c_g",(*m1)[GLC],0.0,1.0,0.05);
-			validate_var("phi1",(*m1)[PHI1],0.0,1.0,1e-2);
-			validate_var("phi2",(*m1)[PHI2],0.0,1.0,1e-2);
+			validate_var<int>((*m1),"c_g",(*m1)[GLC],0.0,1.0,0.05);
+			validate_var<int>((*m1),"phi1",(*m1)[PHI1],0.0,1.0,1e-2);
+			validate_var<int>((*m1),"phi2",(*m1)[PHI2],0.0,1.0,1e-2);
 		}
 	}
 	return m1.release();
