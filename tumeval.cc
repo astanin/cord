@@ -377,7 +377,7 @@ throw(MeshException) {
 	m2->add_function_ifndef(TMP2,0.0);
 	// we need to init D_phi1 and D_phi2 together to be consistent
 	bc_phi_init_pseudo_D<fid_t>(*m2,phi1,phi2,TMP1);
-	bc_phi_init_pseudo_D<fid_t>(*m2,phi2,phi1,TMP1);
+	bc_phi_init_pseudo_D<fid_t>(*m2,phi2,phi1,TMP2);
 	m2.reset(reaction_diffusion_step<fid_t>(p.phi_bc,dt,*m2,phi1,
 					TMP1,NONE,Method::it().rd_solver));
 	m2.reset(reaction_diffusion_step<fid_t>(p.phi2_bc,dt,*m2,phi2,
@@ -516,7 +516,7 @@ int level_set_function_reset(AMesh2D<fid_t>& m) {
 	m.add_function_ifndef(SPSI);
 	double psi;
 	// eps is heuristic parameter
-	double eps=200*(m.get_dx()*m.get_dx()+m.get_dy()*m.get_dy());
+	double eps=100*(m.get_dx()*m.get_dx()+m.get_dy()*m.get_dy());
 	int xdim=m.get_xdim();
 	int ydim=m.get_ydim();
 	array2d psi_a=m[PSI];
@@ -630,7 +630,7 @@ extrapolate_var(const AMesh2D<fid_t>& m, fid_t var, fid_t var_ls, double v) {
 	double t=0.0;
 	array2d u=m[var];
 	array2d u2=(*m2)[var];
-	while (t < 10.0) {
+	while (t < 2.0) {
 		// inner points
 		for (int i=1; i<(xdim-1); ++i) {
 			for (int j=1; j<(ydim-1); ++j) {
@@ -740,25 +740,16 @@ reconstruct_total_density(AMesh2D<fid_t>& m, fid_t var_ls,
 	array2d phi1=m[var_t1];
 	array2d phi2=m[var_t2];
 	array2d phih=m[var_h];
-	double psi_max=max(psi);
-	double psi_min=min(psi);
 	for (int i=0; i<xdim; ++i) {
 		for (int j=0; j<ydim; ++j) {
-//			if (psi(i,j) >= 0) { // tumour
-//				phi(i,j)=phi1(i,j)+phi2(i,j);
-//			} else {
-//				phi(i,j)=phih(i,j);
-//			}
-			// WARNING: we assume that psi is reset to signed distance
-			double w=(psi(i,j)-psi_min)/(psi_max-psi_min); //w=2*(w-0.5); w=w*w*w*0.5+0.5;
-			double w_plus=w;
-			double w_minus=1.0-w_plus;
-			phi(i,j)=w_plus*(phi1(i,j)+phi2(i,j))+w_minus*phih(i,j);
-//			if ((i==16) && (j==0)) {
-//				cerr << "w_plus=" << w_plus << " phi1=" << phi1(i,j)
-//				<< " phi2=" << phi2(i,j) << " phih=" << phih(i,j)
-//				<< " => phi=" << phi(i,j) << "\n";
-//			}
+			if (psi(i,j) >= 0) { // tumour
+				phi(i,j)=phi1(i,j)+phi2(i,j);
+//				phih(i,j)=0.0;
+			} else {
+				phi(i,j)=phih(i,j);
+//				phi1(i,j)=0.0;
+//				phi2(i,j)=0.0;
+			}
 		}
 	}
 }
