@@ -66,6 +66,12 @@ throw(MeshException) {
 	return pA.release();
 }
 
+template <typename T>
+const T& max(const T& x, const T& y)
+{
+    return x > y ? x : y;
+}
+
 template<class fid_t>
 void
 update_dirichlet_points(AMesh2D<fid_t>& m, const BCSet& bcs, fid_t const var) {
@@ -98,11 +104,11 @@ update_dirichlet_points(AMesh2D<fid_t>& m, const BCSet& bcs, fid_t const var) {
 		}
 	}
 	// corners:
-	m.set(var,0,0,0.5*(m[var](1,0)+m[var](0,1)));
-	m.set(var,xdim-1,0,0.5*(m[var](xdim-2,0)+m[var](xdim-1,1)));
-	m.set(var,0,ydim-1,0.5*(m[var](1,ydim-1)+m[var](0,ydim-2)));
-	m.set(var,xdim-1,ydim-1,0.5*(m[var](xdim-2,ydim-1)
-						+m[var](xdim-1,ydim-2)));
+	m.set(var,0,0,max(m[var](1,0),m[var](0,1)));
+	m.set(var,xdim-1,0,max(m[var](xdim-2,0),m[var](xdim-1,1)));
+	m.set(var,0,ydim-1,max(m[var](1,ydim-1),m[var](0,ydim-2)));
+	m.set(var,xdim-1,ydim-1,max(m[var](xdim-2,ydim-1)
+						,m[var](xdim-1,ydim-2)));
 }
 
 // templates
