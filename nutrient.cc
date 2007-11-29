@@ -71,7 +71,9 @@ double
 bc_o2_uptake_per_cell(double const phi1, double const phi2,
 	double const c_o2, double const c_glc, double const psi,
 	double const glc_o2_rate_ratio, double const o2_uptake) {
-	double consume=-H(psi)*o2_uptake*phi1*f_atp_per_cell(phi1+phi2)*c_glc;
+	double consume=H(psi)*o2_uptake*phi1*f_atp_per_cell(phi1+phi2)*c_glc;
+//	if (psi>0)
+//		std::cerr << "o2_uptake=" << consume << "\n";
 	return consume;
 }
 
@@ -79,10 +81,17 @@ double
 bc_glc_uptake_per_cell(double const phi1, double const phi2,
 	double const c_o2, double const c_glc, double const psi,
 	double const glc_o2_rate_ratio, double const o2_uptake) {
-	double consume=-H(psi)*(
-	o2_uptake*phi1*f_atp_per_cell(phi1+phi2)*c_o2/6.0
-	+o2_uptake*glc_o2_rate_ratio*N_ATP_PER_GLUCOSE*phi2*f_atp_per_cell(phi1+phi2)/12.0
-	);
+	double aerobic=o2_uptake*phi1*f_atp_per_cell(phi1+phi2)*c_o2/6.0;
+	double anaerobic=o2_uptake*glc_o2_rate_ratio*N_ATP_PER_GLUCOSE
+			*phi2*f_atp_per_cell(phi1+phi2)/12.0;
+	double consume=H(psi)*(aerobic+anaerobic);
+//	if (psi>0) {
+//		std::cerr << "glc_uptake=" << consume
+//			<< " (aerobic_uptake=" << -aerobic
+//			<< " anaerobic_uptake=" << -anaerobic
+//			<< " phi1=" << phi1
+//			<< " phi2=" << phi2 << ")\n";
+//	}
 	return consume;
 }
 
@@ -236,11 +245,12 @@ throw(MeshException) {
 	int ydim=m.get_ydim();
 	int i=0, j=0;
 	try {
+		std::cerr << id2str(var) << " evaluation\n";
 		array2d c_arr=m[var];
 		array2d o2_arr=m[CO2];
 		array2d glc_arr=m[GLC];
 		array2d phi1_arr=m[PHI1];
-		array2d phi2_arr=m[PHI1];
+		array2d phi2_arr=m[PHI2];
 		array2d psi_arr=m[PSI];
 		double alpha=m.get_attr("o2_uptake");
 		double kappa=m.get_attr("anaerobic_rate");
@@ -255,7 +265,7 @@ throw(MeshException) {
 				double dy2f=D*1.0/(m.get_dy()*m.get_dy());
 				// fill in laplacian matrix
 				double A_k0_k0=-2.0*(dx2f+dy2f);
-				// WARNING/TODO: valid only for stationary boundary conditions,
+				// WARNING: valid only for stationary boundary conditions
 				if (k0p >= 0) {
 					A.set(k0,k0p, dy2f);
 				} else {
@@ -277,7 +287,8 @@ throw(MeshException) {
 					rhs.at(k0)=-dx2f*c_arr(i-1,j);
 				}
 				// add consumption term
-				double uptake=(bc_uptake(
+				double uptake;
+				uptake=(bc_uptake(
 					phi1_arr(i,j),phi2_arr(i,j),
 					o2_arr(i,j),glc_arr(i,j),psi_arr(i,j),
 					kappa,alpha));
