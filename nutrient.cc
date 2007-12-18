@@ -245,7 +245,6 @@ throw(MeshException) {
 	int ydim=m.get_ydim();
 	int i=0, j=0;
 	try {
-		std::cerr << id2str(var) << " evaluation\n";
 		array2d c_arr=m[var];
 		array2d o2_arr=m[CO2];
 		array2d glc_arr=m[GLC];
