@@ -1,0 +1,27 @@
+#!/bin/sh
+
+FILE=$1
+PPM=${FILE%.gp}.ppm
+RGB=${FILE%.gp}.rgb
+OUT=${FILE%.gp}.eps
+
+./gp2ppm ${FILE} > ${PPM} && cat ${PPM} | sed '1d' > ${RGB} || exit -1
+
+gnuplot - << END
+set output '$OUT'
+set terminal post color
+set multiplot
+unset title
+unset key
+set surface
+unset contour
+unset colorbox
+set view map
+splot [0:1][0:0.5] '$RGB' binary array=100x50 format='%uchar' flipy dx=0.01 dy=0.0104 w image
+unset surface
+set cntrparam levels discrete 0.0
+set contour base
+splot [0:1][0:0.5] '$FILE' u 1:2:8 w l lt 1 lw 3 lc rgb "black"
+unset multiplot
+END
+

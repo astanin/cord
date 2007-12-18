@@ -1,0 +1,43 @@
+#!/bin/sh
+
+FILE=$1
+OUT=${FILE}.m12.eps
+OUT2=${FILE}.mth.eps
+OUT3=${FILE}.2frac.eps
+TMP=/tmp/$1.$!
+
+grep M_1 ${FILE} | sed 's/^t=//;' | awk '{print $1, $4, $6, $8;}' > ${TMP}
+
+gnuplot - << END
+set output '$OUT'
+set terminal post color
+unset title
+set key top left
+set border 3
+set xtics nomirror
+set ytics nomirror
+set xlabel 't'
+set ylabel 'mass'
+plot [][0:*] '$TMP' u 1:2 w l lw 1 lc 0 t 'aerobic', \
+	'$TMP' u 1:3 w l lt 2 lw 2 lc 1 t 'anaerobic'
+
+set output '$OUT2'
+set terminal post color
+set key top right
+set xlabel 't'
+set ylabel 'mass'
+plot [][0:*] '$TMP' u 1:((\$2+\$3)) w l lw 1 lc 0 t 'tumour', '$TMP' u 1:4 w l lt 2 lw 2 lc 1 t 'host'
+
+set output '$OUT3'
+set terminal post color
+set xlabel 't'
+set ylabel 'anaerobic fraction'
+set border 3
+set xtics nomirror
+set ytics nomirror
+unset key
+plot [][0:*] '$TMP' u 1:((\$3/(\$2+\$3))) w l lw 2 t 'phi2/(phi1+phi2)'
+
+END
+
+rm ${TMP}

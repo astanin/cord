@@ -1,0 +1,22 @@
+#!/bin/sh
+
+FILE=$1
+OUT=${FILE}.size.eps
+TMP=/tmp/$1.$!
+
+grep xsize ${FILE} | sed 's/=/= /g;' | awk '{print $2, $5, $7, $9, $11;}' > ${TMP}
+
+gnuplot - << END
+set output '$OUT'
+set terminal post color
+unset title
+set border 3
+set xtics nomirror
+set ytics nomirror
+set key top left
+set xlabel 't'
+plot [][0:] '$TMP' u 1:2 w l lw 1 lc 0 t 'Length', '$TMP' u 1:4 w l lt 2 lw 2 lc 1 t 'Width'
+
+END
+
+rm ${TMP}
