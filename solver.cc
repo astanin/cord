@@ -50,6 +50,29 @@ template<class fid_t>
 double
 estimate_optimal_dt(const AMesh2D<fid_t>& m);
 
+/// in the subdomain where @c phase * @c where  > 0
+template<class fid_t>
+double
+phase_mass(const AMesh2D<fid_t>& m, const fid_t& var,
+		const fid_t& phase, const double where) {
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	double dx=m.get_dx();
+	double dy=m.get_dy();
+	double sum=0.0;
+	array2d value=m[var];
+	array2d psi=m[phase];
+	for (int i=0; i<xdim; ++i) {
+		for (int j=0; j<ydim; ++j) {
+			if (psi(i,j)*where >= 0.0) {
+				sum += value(i,j);
+			}
+		}
+	}
+	sum *= (dx*dy);
+	return sum;
+}
+
 /// @brief multicomponent tissue evaluation
 /// evaluate behaviour of the tissiu compomnent @c density
 /// in the subdomain where @c phase * @c where  > 0
@@ -205,6 +228,15 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 				<<setprecision(5)<<setiosflags(ios::scientific)
 				<< "max(phi_h)= " << max((*m1)[PHI_H]) << " "
 				<< "min(phi_h)= " << min((*m1)[PHI_H])
+				<< "\n";
+			cerr << dbg_stamp(m1->get_time())
+				<<setprecision(5)<<setiosflags(ios::scientific)
+				<< "M_1= "
+				<< phase_mass<fid_t>((*m1),PHI1,PSI,+1) << " "
+				<< "M_2= "
+				<< phase_mass<fid_t>((*m1),PHI2,PSI,+1) << " "
+				<< "M_3= "
+				<< phase_mass<fid_t>((*m1),PHI_H,PSI,-1)
 				<< "\n";
 			}
 			cerr << dbg_stamp(m1->get_time())
