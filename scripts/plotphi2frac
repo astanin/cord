@@ -9,9 +9,9 @@ TITLE="t=$TIME"
 
 gnuplot - << END
 set output '$OUT'
-set terminal post color
+set terminal post landscape color size 16cm, 9cm font 10
 set palette rgbformulae 30,31,32 negative
-set title '$TITLE'
+unset title
 unset key
 
 set multiplot
@@ -20,14 +20,14 @@ set surface
 unset contour
 set view map
 set pm3d interpolate 2,2
-set cbrange [0:0.5]
+set cbrange [0:1.0]
 splot [0:1][0:0.5] '$FILE' u 1:2:(\$8>=0?\$5/\$3:1/0) with pm3d 
 
 unset surface
 set cntrparam levels discrete 0.0
 set contour base
 set style line 99 linetype 1 linecolor 0 linewidth 3
-splot [0:1][0:0.5] '$FILE' u 1:2:8 w l ls 99
+splot [0:1][0:0.5] '$FILE' u 1:2:8 w l lt 1 lw 3 lc 0
 
 unset multiplot
 END

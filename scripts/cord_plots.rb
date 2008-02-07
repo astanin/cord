@@ -18,14 +18,14 @@ class CordPlots
 		@figure_maker = FigureMaker.default
 		t.def_eval_function { |str| eval(str) }
 
-		@phi_range = [0.7, 0.85]
+		@phi_range = [0.73, 0.8]
 		@phi_colormap = t.create_gradient_colormap(
 			'starting_H' => 330,
 			'starting_S' => 0.24,
 			'starting_L' => 0.9,
 			'ending_H' => 358,
 			'ending_S' => 0.45,
-			'ending_L' => 0.5
+			'ending_L' => 0.3
 		)
 
 		@c_range = [0.7, 1.0]
@@ -69,7 +69,7 @@ class CordPlots
 
 	def enter_page
 		t.page_setup(5*72,5*72)
-		t.set_frame_sides(0.15,0.9,0.90,0.10)
+		t.set_frame_sides(0.10,0.95,0.90,0.10)
 		t.set_default_font_size(14)
 	end
 
@@ -77,12 +77,12 @@ class CordPlots
 		@aspect=(@xvar.max-@xvar.min)/(@yvar.max-@yvar.min);
 		if (@aspect >= 1.0)
 			@ml=0.0
-			@mr=0.3
+			@mr=0.15
 			@mlr=0.0
 			@mtb=0.5*(1-(1-@ml-@mr)/@aspect)
 		else
 			@ml=0.0
-			@mr=0.3
+			@mr=0.15
 			@mtb=0.15
 			@mlr=0.5*(1-@ml-@mr-@aspect*(1-2*@mtb))
 		end

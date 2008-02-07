@@ -15,7 +15,7 @@ set xtics nomirror
 set ytics nomirror
 set key top left
 set xlabel 't'
-plot [][0:] '$TMP' u 1:2 w l lw 1 lc 0 t 'Length', '$TMP' u 1:4 w l lt 2 lw 2 lc 1 t 'Width'
+plot [][0:1] '$TMP' u 1:2 w l lw 1 lc 0 t 'Length', '$TMP' u 1:4 w l lt 3 lw 2 lc 1 t 'Width'
 
 END
 
