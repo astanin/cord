@@ -97,6 +97,21 @@ Building project
 
 	as libfblas.a is in /usr/local/lib on my system.
 
+	If you have some of your libraries installed in non-standard
+	path, you can set LDFLAGS shell variable before running configure.
+	For example, if I have popt library in $HOME/usr/lib64, I may
+	run configure like this:
+
+		$ LDFLAGS="-L$HOME/usr/lib64" ./configure
+
+	Another example, if you installed blitz++ library to $HOME/usr,
+	its headers will be in $HOME/usr/include. The compiler will be
+	able to find them if you set CPPFLAGS variable, e.g.:
+
+		$ CPPFLAGS="-I$HOME/usr/include" \
+			 LDFLAGS="-L$HOME/usr/lib" \
+			 ./configure
+
 Building BLAS from source
 
 	If BLAS is not provided in your system (like in Cygwin), you may build
