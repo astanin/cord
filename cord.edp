@@ -8,8 +8,8 @@ real alpha=200; // consumption rate
 
 int N=50; // point per domain side
 real dt=0.5; // time step
-real T=0.5; // evaluate solution until t=T
-int plotevery=0; // save solution every plotevery time steps
+real T=500.0; // evaluate solution until t=T
+int plotevery=10; // save solution every plotevery time steps
 real R0=0.2; // initial radius of the tumour
 
 func real Sigma(real phi) {
@@ -124,29 +124,29 @@ for (real t=0; t<T; t+=dt) {
 	// 	S(\psi_0) = \frac{\psi_0}{\sqrt{\psi_0^2+\epsilon^2}}
 	// and
 	//	\mathbf{w}(\psi) = S(\psi_0) \nabla \psi / | \nabla \psi |
-	real iwidth=1.0/N;
-	Vh Spsi;
-	Spsi=psi/sqrt(psi*psi+iwidth*iwidth);
-	Vh wx, wy, normGradPsi;
-	int iters=0;
-	real res=1e99;
-	while (res > 1e-3) {
-		iters++;
-		oldpsi=psi;
-		cout << "evaluating wx, wy" << endl;
-		wx=Spsi*dx(psi);
-		wy=Spsi*dy(psi);
-		cout << "iteration of psiReinitPG" << endl;
-		macro ww(vh)((vh+0.05*(wx*dx(vh)+wy*dy(vh)))) //;
-		solve psiReinitPG(psi,vh) = int2d(Th)(ww(vh)*psi)
-			+ int2d(Th)(10*dt*ww(vh)*(wx*dx(psi)+wy*dy(psi)))
-			- int2d(Th)(ww(vh)*oldpsi)
-			- int2d(Th)(10*dt*ww(vh)*Spsi);
-		res=sqrt(int2d(Th)(psi-oldpsi)); // L2 norm
-		cout << "res= " << res << endl;
-	}
+//	real iwidth=1.0/N;
+//	Vh Spsi;
+//	Spsi=psi/sqrt(psi*psi+iwidth*iwidth);
+//	Vh wx, wy, normGradPsi;
+//	int iters=0;
+//	real res=1e99;
+//	while (res > 1e-3) {
+//		iters++;
+//		oldpsi=psi;
+//		cout << "evaluating wx, wy" << endl;
+//		wx=Spsi*dx(psi);
+//		wy=Spsi*dy(psi);
+//		cout << "iteration of psiReinitPG" << endl;
+//		macro ww(vh)((vh+0.05*(wx*dx(vh)+wy*dy(vh)))) //;
+//		solve psiReinitPG(psi,vh) = int2d(Th)(ww(vh)*psi)
+//			+ int2d(Th)(10*dt*ww(vh)*(wx*dx(psi)+wy*dy(psi)))
+//			- int2d(Th)(ww(vh)*oldpsi)
+//			- int2d(Th)(10*dt*ww(vh)*Spsi);
+//		res=sqrt(int2d(Th)(psi-oldpsi)); // L2 norm
+//		cout << "res= " << res << endl;
+//	}
+//	cout << "t= " << t << " psi reset in " << iters << " iterations" <<endl;
 	// output
-	cout << "t= " << t << " psi reset in " << iters << " iterations" <<endl;
 	if ((i>0) && (i >= plotevery)) {
 		save(t);
 		i=0;
