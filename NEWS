@@ -1,5 +1,11 @@
+2008-02-25: version 0.3.7: (tag: cord-0.3.7)
+	new glycolytic metabolism model and bipopulation tissue model
+	switch from normal to glycolytic metabolism in hypoxic conditions
+	implemented modified Ghost Fluid method
+	fixed known bugs
+	
 2007-08-28: version 0.3.6: (tag: cord-0.3.6)
-	memory footprint and execution time optimizations
+	memory footprint and execution time optimized
 	UMFPACK solver disabled (seems to have a bug)
 	using .h5 extension for HDF5 files (compatibly with h5tools)
 
