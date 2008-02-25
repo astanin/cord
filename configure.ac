@@ -215,6 +215,8 @@ if test "$use_isofix" == "yes" ; then
 		[Force spatial isotropy of ADI method])
 fi
 
+AC_DEFINE([ENABLE_INNER_VESSELS],[1],[Enable vessels inside domain])
+
 INSTALL_PREFIX=${prefix}
 if test "x$INSTALL_PREFIX" == "xNONE" ; then
 	INSTALL_PREFIX="/usr/local"

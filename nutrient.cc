@@ -58,8 +58,24 @@ best_dt(AMesh2D<fid_t> const& m) throw(MeshException) {
 }
 
 double
-uptake_per_cell(double const phi, double const psi, double const o2_uptake) {
+delta(double const x, double const a=0.05) {
+	return exp(-x*x/(a*a))/(a*sqrt(M_PI));
+}
+
+double
+vessels(double const x, double const y) {
+	double sx=sin(M_PI*x);
+	double sy=sin(M_PI*y);
+	double val=1.0-sx*sx*sy*sy;
+	return (val>0.99?val:0.0);
+}
+
+double
+uptake_per_cell(double const phi, double const psi, double const o2_uptake,	double const x=0, double const y=0) {
 	double consume=H(psi)*phi*f_atp_per_cell(phi)*o2_uptake;
+#ifdef ENABLE_INNER_VESSELS
+	consume+=vessels(x,y)*permability;
+#endif
 	return consume;
 }
 
@@ -100,7 +116,8 @@ double
 uptake_per_cell(AMesh2D<fid_t> const& m, int const i, int const j)
 throw(MeshException) {
 	return uptake_per_cell(m[PHI](i,j),m[PSI](i,j),
-					m.get_attr("o2_uptake"),i,j);
+					m.get_attr("o2_uptake"),
+					m.x(i,j),m.y(i,j));
 }
 
 double
@@ -183,7 +200,12 @@ throw(MeshException) {
 				// add consumption term
 				A.set(k0,k0,A_k0_k0
 				-uptake_per_cell(phi_arr(i,j),psi_arr(i,j),
-						alpha));
+						alpha,m.x(i,j),m.y(i,j)));
+#ifdef ENABLE_INNER_VESSELS
+				rhs.at(k0)=rhs.at(k0)
+					-vessels(m.x(i,j),m.y(i,j))
+					*permability;
+#endif
 			}
 		}
 	} catch (SparseMatrixException& e) {

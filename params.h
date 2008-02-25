@@ -130,6 +130,8 @@ public:
 		{}
 };
 
+double const permability=500; // vessel permability TODO: make configurable
+
 struct MethodParams {
 	/// solver method for systems of linear equations
 	typedef enum {
