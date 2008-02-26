@@ -128,7 +128,7 @@ throw(MeshException) {
 		ss << "step_growth_death: " << id2str(fid2) << " not defined";
 		throw MeshException(ss.str());
 	}
-	if (!m1.defined(CO2)) {
+	if (!m1.defined(O2)) {
 		throw MeshException("step_growth_death: c_o not defined");
 	}
 	if (!m1.defined(GLC)) {
@@ -149,7 +149,7 @@ throw(MeshException) {
 	}
 	array2d m1_phi1=m1[fid1];
 	array2d m1_phi2=m1[fid2];
-	array2d m1_c_o=m1[CO2];
+	array2d m1_c_o=m1[O2];
 	array2d m1_c_g=m1[GLC];
 	array2d m1_psi=m1[PSI];
 	double theta=m1.get_attr("upkeep_per_cell");
@@ -199,7 +199,7 @@ throw(MeshException) {
 		ss << "step_growth_death: " << id2str(fid) << " not defined";
 		throw MeshException(ss.str());
 	}
-	if (!m1.defined(CO2)) {
+	if (!m1.defined(O2)) {
 		throw MeshException("step_growth_death: c not defined");
 	}
 	auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
@@ -207,7 +207,7 @@ throw(MeshException) {
 	m2->add_function_ifndef(gfid);
 	// shortcuts to arrays
 	array2d m2_phi=(*m2)[fid];
-	array2d m2_c=(*m2)[CO2];
+	array2d m2_c=(*m2)[O2];
 	array2d m2_psi=(*m2)[PSI];
 	array2d m2_gphi=(*m2)[gfid];
 	double theta=m2->get_attr("upkeep_per_cell");
@@ -235,7 +235,7 @@ throw(MeshException) {
 			("step_growth_death: cannot alloc gsl_odeiv_step");
 	}
 	array2d m1_phi=m1[fid];
-	array2d m1_c=m1[CO2];
+	array2d m1_c=m1[O2];
 	array2d m1_psi=m1[PSI];
 	double upkeep_per_cell=m1.get_attr("upkeep_per_cell");
 	double growth_rate=m1.get_attr("growth_rate");

@@ -625,7 +625,7 @@ dump2dx(AMesh2D<fid_t> const& m, string const& filename) {
 		fs << "attribute \"ref\" string \"positions\"\n";
 		
 		dump2dx_scalar_field<fid_t>(m,PHI,fs);
-		dump2dx_scalar_field<fid_t>(m,CO2,fs);
+		dump2dx_scalar_field<fid_t>(m,O2,fs);
 		dump2dx_vector_field<fid_t>(m,VX,VY,"v",fs);
 		dump2dx_scalar_field<fid_t>(m,PSI,fs);
 		dump2dx_scalar_field<fid_t>(m,PHI_T,fs);

@@ -39,7 +39,7 @@ string id2str(fid_t& id) {
 		case PHI2:
 			return "phi2";
 			break;
-		case CO2:
+		case O2:
 			return "c";
 			break;
 		case GLC:
@@ -683,10 +683,10 @@ throw(MeshFileException, MeshException) {
 		 	add_function(PSI);
 		}
 		load_dataset_2d(savegroup,"psi",mf[PSI]);
-		if (!defined(CO2)) {
-		 	add_function(CO2);
+		if (!defined(O2)) {
+		 	add_function(O2);
 		}
-		load_dataset_2d(savegroup,"c",mf[CO2]);
+		load_dataset_2d(savegroup,"c",mf[O2]);
 		if (!defined(GLC)) {
 		 	add_function(GLC);
 		}

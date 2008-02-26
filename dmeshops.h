@@ -96,7 +96,7 @@ build_mesh(const Params& p) {
 			}
 		}
 		// initial nutrient distribution
-		m.add_function(CO2,1.0);
+		m.add_function(O2,1.0);
 		// model parameters
 		m.set_attr("phi0", p.phi_stress_free);
 		m.set_attr("o2_uptake",p.o2_uptake);

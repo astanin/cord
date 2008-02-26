@@ -241,8 +241,8 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 			}
 			cerr << dbg_stamp(m1->get_time())
 				<<setprecision(5)<<setiosflags(ios::scientific)
-				<< "max(c)= " << max((*m1)[CO2]) << " "
-				<< "min(c)= " << min((*m1)[CO2])
+				<< "max(c)= " << max((*m1)[O2]) << " "
+				<< "min(c)= " << min((*m1)[O2])
 				<< "\n";
 			if (use_bicomponenttissue) {
 				cerr << dbg_stamp(m1->get_time())
@@ -278,7 +278,7 @@ solve(const Params& p, const AMesh2D<fid_t>& initial) {
 		}
 		// validate solution range
 		validate_var<int>((*m1),"phi",(*m1)[PHI],0.0,1.0);
-		validate_var<int>((*m1),"c",(*m1)[CO2],0.0,1.0,1e-2);
+		validate_var<int>((*m1),"c",(*m1)[O2],0.0,1.0,1e-2);
 		if (use_bicomponenttissue) {
 			validate_var<int>((*m1),"c_g",(*m1)[GLC],0.0,1.0,0.05);
 			validate_var<int>((*m1),"phi1",(*m1)[PHI1],0.0,1.0,1e-2);

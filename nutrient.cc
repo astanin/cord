@@ -136,7 +136,7 @@ throw(MeshException) {
 	double host_activity=m.get_attr("host_activity");
 	double theta=m.get_attr("upkeep_per_cell");
 	double alpha=m.get_attr("o2_uptake");
-	return uptake_term(m[PHI],m[CO2],m[PSI],host_activity,theta,alpha,i,j);
+	return uptake_term(m[PHI],m[O2],m[PSI],host_activity,theta,alpha,i,j);
 }
 
 template<class fid_t>
@@ -148,7 +148,7 @@ throw(MeshException) {
 	int ydim=m.get_ydim();
 	int i=0, j=0;
 	try {
-		array2d c_arr=m[CO2];
+		array2d c_arr=m[O2];
 		array2d phi_arr=m[PHI];
 		array2d psi_arr=m[PSI];
 		double alpha=m.get_attr("o2_uptake");
@@ -175,7 +175,7 @@ throw(MeshException) {
 				// fill in laplacian matrix
 				double A_k0_k0=-2.0*(dx2f+dy2f);
 	// WARNING/TODO: this is valid only for stationary boundary conditions,
-	// should use bc.c()/bc.a() for appropriate bc instead of m.get(CO2)
+	// should use bc.c()/bc.a() for appropriate bc instead of m.get(O2)
 	// from the previous time step
 				if (k0p >= 0) {
 					A.set(k0,k0p, dy2f);
@@ -268,7 +268,7 @@ throw(MeshException) {
 	int i=0, j=0;
 	try {
 		array2d c_arr=m[var];
-		array2d o2_arr=m[CO2];
+		array2d o2_arr=m[O2];
 		array2d glc_arr=m[GLC];
 		array2d phi1_arr=m[PHI1];
 		array2d phi2_arr=m[PHI2];
@@ -374,7 +374,7 @@ throw(MeshException) {
 		auto_ptr<AMesh2D<fid_t> > m2(m1.clone());
 		// initial estimate (previous solution)
 		vector<double> c(kenum.size());
-		array2d c_arr=(*m2)[CO2];
+		array2d c_arr=(*m2)[O2];
 		for (int k=0; k<kenum.size(); ++k) {
 			c.at(k)=c_arr(kenum.i(k),kenum.j(k));
 		}
@@ -394,10 +394,10 @@ throw(MeshException) {
 		for (int k=0; k<(int)c.size(); ++k) {
 			int i=kenum.i(k);
 			int j=kenum.j(k);
-			m2->set(CO2,i,j,c.at(k));
+			m2->set(O2,i,j,c.at(k));
 		}
 		// update Dirichlet boundary points (excluded from SLE)
-		update_dirichlet_points<fid_t>(*m2,p.c_bc,CO2);
+		update_dirichlet_points<fid_t>(*m2,p.c_bc,O2);
 		return m2.release();
 	} catch (MeshException& e) {
 		ostringstream ss;
@@ -420,7 +420,7 @@ throw(MeshException) {
 	// inner points
 	array2d phi=(*m2)[PHI];
 	array2d psi=(*m2)[PSI];
-	array2d c=(*m2)[CO2];
+	array2d c=(*m2)[O2];
 	double h_a=m.get_attr("host_activity");
 	double theta=m.get_attr("upkeep_per_cell");
 	double alpha=m.get_attr("o2_uptake");
@@ -448,7 +448,7 @@ eval_nutrient_init_consumption(AMesh2D<fid_t>& m, fid_t const consumption) {
 	int ydim=m.get_ydim();
 	array2d phi=m[PHI];
 	array2d psi=m[PSI];
-	array2d c=m[CO2];
+	array2d c=m[O2];
 	double h_a=m.get_attr("host_activity");
 	double theta=m.get_attr("upkeep_per_cell");
 	double alpha=m.get_attr("o2_uptake");
@@ -492,15 +492,15 @@ throw(MeshException) {
 		switch (Method::it().rd_solver) {
 		case MP::RDS_EXPLICIT:
 			m2.reset(reaction_diffusion_step<fid_t>(p.c_bc,dt,*m2,
-				CO2,NONE,Q_TMP,MP::RDS_EXPLICIT));
+				O2,NONE,Q_TMP,MP::RDS_EXPLICIT));
 			break;
 		case MP::RDS_IMPLICIT:
 			m2.reset(reaction_diffusion_step<fid_t>(p.c_bc,dt,*m2,
-				CO2,NONE,Q_TMP,MP::RDS_IMPLICIT));
+				O2,NONE,Q_TMP,MP::RDS_IMPLICIT));
 			break;
 		case MP::RDS_ADI:
 			m2.reset(reaction_diffusion_step<fid_t>(p.c_bc,dt,*m2,
-				CO2,NONE,Q_TMP,MP::RDS_ADI));
+				O2,NONE,Q_TMP,MP::RDS_ADI));
 			break;
 		default:
 			throw MeshException("eval_nutrient_iteratively: "
@@ -538,7 +538,7 @@ throw(MeshException) {
 	eval_nutrient_init_consumption<fid_t>(*m2,Q_TMP);
 	m2->remove_function_ifdef(D_TMP);
 	m2->add_function(D_TMP,1.0);
-	m2.reset(reaction_diffusion_step<fid_t>(p.c_bc,dt,*m2,CO2,D_TMP,Q_TMP));
+	m2.reset(reaction_diffusion_step<fid_t>(p.c_bc,dt,*m2,O2,D_TMP,Q_TMP));
 	m2->remove_function_ifdef(Q_TMP);
 	m2->remove_function_ifdef(D_TMP);
 	return m2.release();
@@ -592,7 +592,7 @@ eval_bc_o2(const Params& p, const AMesh2D<fid_t>& m1)
 throw(MeshException) {
 	bc_uptake_function q;
 	q=bc_o2_uptake_per_cell;
-	fid_t var=CO2;
+	fid_t var=O2;
 	return eval_bc_nutrient(p, m1, var, 1.0, p.c_bc, q);
 }
 
@@ -628,8 +628,8 @@ AMesh2D<fid_t>*
 eval_nutrient(const Params& p, const AMesh2D<fid_t>& m1,
 	double const epsilon, double const dt)
 throw(MeshException) {
-	if (!m1.defined(CO2)) {
-		throw MeshException("eval_nutrient: CO2 not defined");
+	if (!m1.defined(O2)) {
+		throw MeshException("eval_nutrient: O2 not defined");
 	}
 	if (!m1.defined(PHI)) {
 		throw MeshException("eval_nutrient: PHI not defined");
