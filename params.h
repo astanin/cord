@@ -38,6 +38,7 @@ typedef enum {
 	PHI2,
 	O2,
 	GLC,
+	VASC,
 	PSI,
 	VX,
 	VY,
@@ -72,6 +73,9 @@ public:
 	string inputfile; ///< filename to read data from
 	string outputfile; ///< filename to save the final data
 #endif
+#ifdef HAVE_LIBNETPBM
+	string loadvascfile; ///< file to load vasculature geometry from
+#endif
 	double dt; ///< time step to be force (dt < 0 implies automatic step)
 	double eval_t; ///< evaluate system behaviour for time @c eval_t
 	int xdim; ///< grid resolution along x-axis (grid points)
@@ -93,6 +97,7 @@ public:
 	double upkeep_per_cell; ///< minimal energy requirement per cell
 	double growth_rate; ///< rate of cells' growth
 	double death_rate; ///< rate of cellular death
+	double permability; ///< vessel permability TODO: make configurable
 	BCSet phi_bc; ///< boundary conditions for phi
 	BCSet c_bc; ///< boundary conditions for oxygen
 	BCSet glc_bc; ///< boundary conditions for glucose
@@ -107,6 +112,9 @@ public:
 #ifdef HAVE_LIBHDF5
 		hdf2dx(0), hdf2gp(0), inputfile(""), outputfile(""),
 #endif
+#ifdef HAVE_LIBNETPBM
+		loadvascfile(""),
+#endif
 		dt(-1.0), eval_t(100.0), xdim(20), ydim(19),
 		xsize(2.0), ysize(2.0), dump_every(1.0), phi_stress_free(0.75),
 		tk1(1.0), ts1(1.0), hk1(1.0), hs1(1.0),
@@ -115,6 +123,7 @@ public:
 		cell_motility(1e-2),
 		o2_uptake(200), upkeep_per_cell(0.15),
 		growth_rate(1.0), death_rate(0.8),
+		permability(500),
 		phi_bc(BC::createDirichletBC(this->phi_stress_free),
 			BC::createDirichletBC(this->phi_stress_free),
 			BC::createNeumannBC(),BC::createNeumannBC()),
@@ -129,8 +138,6 @@ public:
 		conversion_rate(0.0), anaerobic_rate(1.0), D_glc(0.1)
 		{}
 };
-
-double const permability=500; // vessel permability TODO: make configurable
 
 struct MethodParams {
 	/// solver method for systems of linear equations

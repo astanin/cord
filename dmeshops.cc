@@ -77,8 +77,42 @@ int hdf2gp(const Params& p) {
 	return 0;
 }
 
+
+extern "C" {
+#ifdef HAVE_LIBNETPBM
+#include <pgm.h>
+#endif
+}
+
+
+template<class fid_t>
+void
+load_vasculature(DMesh<fid_t> &m, fid_t vasc_fid, string const filename) {
+	FILE* f=fopen(filename.c_str(),"r");
+	if (!f) {
+		ostringstream ss;
+		ss << "Unable to load vasculature from " << filename;
+		throw MeshFileException(ss.str());
+	}
+	int cols, rows;
+	gray maxval;
+	gray** pgm=pgm_readpgm(f, &cols, &rows, &maxval);
+	fclose(f);
+	if ((cols != m.get_xdim()) || (rows != (m.get_ydim()))) {
+		pgm_freearray(pgm,rows); pgm=(gray**)0;
+		ostringstream ss;
+		ss << filename << ": " << cols << "x" << rows
+			<< "; mesh: " << m.get_xdim()  << "x" << m.get_ydim();
+		throw MeshException(ss.str());
+	}
+	pgm_freearray(pgm,rows); pgm=(gray**)0;
+}
+
 template int hdf2gp<int>(const Params& p);
 template int hdf2dx<int>(const Params& p);
+
+template void
+load_vasculature<int>(DMesh<int> &m, int vasc_fid, string const filename);
 
 #endif // ifdef HAVE_LIBHDF5
 

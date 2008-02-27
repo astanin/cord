@@ -2,7 +2,7 @@
 # Process this file with autoconf to produce a configure script.
 
 AC_PREREQ(2.61)
-AC_INIT(cord, 0.3.6, sergey.astanin@polito.it)
+AC_INIT(cord, 0.3.8svn, sergey.astanin@polito.it)
 AC_CONFIG_SRCDIR([amesh2d.h])
 AC_CONFIG_HEADER([config.h])
 AM_INIT_AUTOMAKE
@@ -173,6 +173,9 @@ if test "x$with_hdf5" != "xno" ; then
 		     ])
 fi
 
+AC_CHECK_LIB([netpbm],[main],,
+	AC_MSG_ERROR([Required library netpbm not found]))
+
 AC_SUBST(LIBS)
 
 # Checks for header files.
@@ -249,6 +252,7 @@ echo "    GNU Scientific library: yes" ;
 #	echo "no" ;
 #fi
 echo "    Blitz++ library: yes" ;
+echo "    Netpbm library: yes" ;
 echo -n "    HDF5 data files: " ;
 if test "x$with_hdf5" == "xyes" ; then
 	echo "yes" ;

@@ -56,6 +56,10 @@ hdf2gp(const Params& p);
 using std::numeric_limits;
 
 template<class fid_t>
+void
+load_vasculature(DMesh<fid_t> &m, fid_t vasc_fid, string const filename);
+
+template<class fid_t>
 DMesh<fid_t>
 build_mesh(const Params& p) {
 	DMesh<fid_t> m(p.xdim,p.ydim,0.0,p.xsize,0.0,p.ysize);
@@ -80,6 +84,10 @@ build_mesh(const Params& p) {
 				m.add_function(GLC,1.0);
 			}
 		}
+		// vascular network density
+		if (!m.defined(VASC)) {
+			m.add_function(VASC,0.0);
+		}
 		// levelset potential
 		if (!m.defined(PSI)) {
 			m.add_function(PSI);
@@ -103,6 +111,7 @@ build_mesh(const Params& p) {
 		m.set_attr("upkeep_per_cell",p.upkeep_per_cell);
 		m.set_attr("growth_rate",p.growth_rate);
 		m.set_attr("death_rate",p.death_rate);
+		m.set_attr("permability",p.permability);
 		m.set_attr("cell_motility", p.cell_motility);
 		m.set_attr("tk1",p.tk1);
 		m.set_attr("ts1",p.ts1);
@@ -115,6 +124,11 @@ build_mesh(const Params& p) {
 #ifdef HAVE_LIBHDF5
 	} else {
 		m.load(p.inputfile); 
+	}
+#endif
+#ifdef HAVE_LIBNETPBM
+	if (p.loadvascfile != "") {
+		load_vasculature(m,(int)VASC,p.loadvascfile);
 	}
 #endif
 	return m;

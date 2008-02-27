@@ -71,7 +71,7 @@ vessels(double const x, double const y) {
 }
 
 double
-uptake_per_cell(double const phi, double const psi, double const o2_uptake,	double const x=0, double const y=0) {
+uptake_per_cell(double const phi, double const psi, double const o2_uptake,	double const x=0, double const y=0, double const permability=1.0) {
 	double consume=H(psi)*phi*f_atp_per_cell(phi)*o2_uptake;
 #ifdef ENABLE_INNER_VESSELS
 	consume+=vessels(x,y)*permability;
@@ -117,7 +117,8 @@ uptake_per_cell(AMesh2D<fid_t> const& m, int const i, int const j)
 throw(MeshException) {
 	return uptake_per_cell(m[PHI](i,j),m[PSI](i,j),
 					m.get_attr("o2_uptake"),
-					m.x(i,j),m.y(i,j));
+					m.x(i,j),m.y(i,j),
+					m.get_attr("permability"));
 }
 
 double
@@ -204,7 +205,7 @@ throw(MeshException) {
 #ifdef ENABLE_INNER_VESSELS
 				rhs.at(k0)=rhs.at(k0)
 					-vessels(m.x(i,j),m.y(i,j))
-					*permability;
+					*m.get_attr("permability");
 #endif
 			}
 		}

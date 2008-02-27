@@ -265,12 +265,18 @@ int init_params(Params& p, int argc, const char *argv[]) {
 #endif
 	char *c_eq=(char*)0;
 	char *conffile=(char*)0;
+	char *vascfile=(char*)0;
 	int arg_val_hidden_arg=(POPT_ARG_VAL|POPT_ARGFLAG_ONEDASH)
 					&(~POPT_ARGFLAG_SHOW_DEFAULT);
 	int onedash=POPT_ARGFLAG_ONEDASH;
 	struct poptOption optionsTable[] = {
 		{ "config", 'c', POPT_ARG_STRING|onedash, &conffile, 0,
 			"use alternative configuration file", "filename" },
+#ifdef HAVE_LIBNETPBM
+		{ "vessels", 0, POPT_ARG_STRING|onedash, &vascfile, 0,
+			"load vascular network geometry from PGM image",
+			"image.pgm" },
+#endif
 #ifdef HAVE_LIBHDF5
 		{ "h5todx", 0, arg_val_hidden_arg, &p.hdf2dx, 1,
 			"convert HDF5 data to OpenDX format", 0 },
@@ -382,6 +388,11 @@ int init_params(Params& p, int argc, const char *argv[]) {
 		}
 		if (ofile) {
 			p.outputfile=string(ofile);
+		}
+#endif
+#ifdef HAVE_LIBNETPBM
+		if (vascfile) {
+			p.loadvascfile=string(vascfile);
 		}
 #endif
 		poptFreeContext(con);
