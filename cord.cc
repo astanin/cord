@@ -172,8 +172,11 @@ main(int argc, const char *argv[]) {
 	if (show_version) {
 		using std::cout;
 		cout << PACKAGE << " " << VERSION "\n";
-		cout << "Copyright (C) 2005-2007 Sergey Astanin, Luigi Preziosi, Andrea Tosin\n";
-		cout << "This is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n";
+		cout <<
+"Copyright (C) 2005-2008 Sergey Astanin, Luigi Preziosi, Andrea Tosin\n";
+		cout <<
+"This is free software; see the source for copying conditions.  There is\n"
+"NO warranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.\n";
 		exit(EXIT_SUCCESS);
 	}
 #ifdef HAVE_LIBHDF5
