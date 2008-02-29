@@ -69,6 +69,9 @@ string id2str(fid_t& id) {
 		case TMP2:
 			return "tmp2";
 			break;
+		case VASC:
+			return "vasc";
+			break;
 		default:
 			std::ostringstream ss;
 			ss << "fid_" << id;
@@ -638,6 +641,9 @@ throw(MeshFileException, MeshException) {
 		savegroup.openAttribute("o2_uptake")
 			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
 		set_attr("o2_uptake",attr_value);
+		savegroup.openAttribute("permability")
+			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
+		set_attr("permability",attr_value);
 		savegroup.openAttribute("tk1")
 			.read(H5::PredType::NATIVE_DOUBLE, &attr_value);
 		set_attr("tk1",attr_value);
@@ -711,6 +717,10 @@ throw(MeshFileException, MeshException) {
 //		 	add_function(PHI_GROWTH);
 //		}
 //		load_dataset_2d(savegroup,"phi_growth",mf[PHI_GROWTH]);
+		if (!defined(VASC)) {
+		 	add_function(VASC);
+		}
+		load_dataset_2d(savegroup,"vasc",mf[VASC]);
 	}
 	catch (H5::FileIException filerr) {
 		ostringstream ss;

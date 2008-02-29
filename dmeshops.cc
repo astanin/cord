@@ -77,6 +77,8 @@ int hdf2gp(const Params& p) {
 	return 0;
 }
 
+#endif // ifdef HAVE_LIBHDF5
+
 
 extern "C" {
 #ifdef HAVE_LIBNETPBM
@@ -85,6 +87,7 @@ extern "C" {
 }
 
 
+#ifdef HAVE_LIBNETPBM
 template<class fid_t>
 void
 load_vasculature(DMesh<fid_t> &m, fid_t vasc_fid, string const filename) {
@@ -105,6 +108,19 @@ load_vasculature(DMesh<fid_t> &m, fid_t vasc_fid, string const filename) {
 			<< "; mesh: " << m.get_xdim()  << "x" << m.get_ydim();
 		throw MeshException(ss.str());
 	}
+	array2d vasc=m[vasc_fid];
+	for (int j=0; j<rows; ++j) {
+		for (int i=0; i<cols; ++i) {
+			double val=1.0-pgm[j][i]/255.0;
+			vasc(i,rows-1-j)=val;
+//			if (val > 0.5) {
+//				std::cerr << "·" ;
+//			} else {
+//				std::cerr << " " ;
+//			}
+		}
+//		std::cerr << "\n";
+	}
 	pgm_freearray(pgm,rows); pgm=(gray**)0;
 }
 
@@ -113,7 +129,6 @@ template int hdf2dx<int>(const Params& p);
 
 template void
 load_vasculature<int>(DMesh<int> &m, int vasc_fid, string const filename);
-
-#endif // ifdef HAVE_LIBHDF5
+#endif
 
 

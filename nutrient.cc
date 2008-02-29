@@ -63,18 +63,10 @@ delta(double const x, double const a=0.05) {
 }
 
 double
-vessels(double const x, double const y) {
-	double sx=sin(M_PI*x);
-	double sy=sin(M_PI*y);
-	double val=1.0-sx*sx*sy*sy;
-	return (val>0.99?val:0.0);
-}
-
-double
-uptake_per_cell(double const phi, double const psi, double const o2_uptake,	double const x=0, double const y=0, double const permability=1.0) {
+uptake_per_cell(double const phi, double const psi, double const o2_uptake,	double const vessel_density=0.0, double const permability=1.0) {
 	double consume=H(psi)*phi*f_atp_per_cell(phi)*o2_uptake;
-#ifdef ENABLE_INNER_VESSELS
-	consume+=vessels(x,y)*permability;
+#ifdef HAVE_LIBNETPBM
+	consume+=vessel_density*permability;
 #endif
 	return consume;
 }
@@ -111,16 +103,6 @@ bc_glc_uptake_per_cell(double const phi1, double const phi2,
 	return consume;
 }
 
-template<class fid_t>
-double
-uptake_per_cell(AMesh2D<fid_t> const& m, int const i, int const j)
-throw(MeshException) {
-	return uptake_per_cell(m[PHI](i,j),m[PSI](i,j),
-					m.get_attr("o2_uptake"),
-					m.x(i,j),m.y(i,j),
-					m.get_attr("permability"));
-}
-
 double
 uptake_term(array2d const& phi, array2d const& c, array2d const& psi,
 	double const host_activity, double const theta, double const o2_uptake,
@@ -152,6 +134,7 @@ throw(MeshException) {
 		array2d c_arr=m[O2];
 		array2d phi_arr=m[PHI];
 		array2d psi_arr=m[PSI];
+		array2d vasc_arr=m[VASC];
 		double alpha=m.get_attr("o2_uptake");
 		for (i=1; i<(xdim-1); ++i) {
 			for (j=1; j<(ydim-1); ++j) {
@@ -202,10 +185,9 @@ throw(MeshException) {
 				A.set(k0,k0,A_k0_k0
 				-uptake_per_cell(phi_arr(i,j),psi_arr(i,j),
 						alpha,m.x(i,j),m.y(i,j)));
-#ifdef ENABLE_INNER_VESSELS
+#ifdef HAVE_LIBNETPBM
 				rhs.at(k0)=rhs.at(k0)
-					-vessels(m.x(i,j),m.y(i,j))
-					*m.get_attr("permability");
+				-vasc_arr(i,j)*m.get_attr("permability");
 #endif
 			}
 		}

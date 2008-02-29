@@ -111,7 +111,9 @@ build_mesh(const Params& p) {
 		m.set_attr("upkeep_per_cell",p.upkeep_per_cell);
 		m.set_attr("growth_rate",p.growth_rate);
 		m.set_attr("death_rate",p.death_rate);
+#ifdef HAVE_LIBNETPBM
 		m.set_attr("permability",p.permability);
+#endif
 		m.set_attr("cell_motility", p.cell_motility);
 		m.set_attr("tk1",p.tk1);
 		m.set_attr("ts1",p.ts1);

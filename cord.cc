@@ -74,6 +74,9 @@ print_model_params(const DMesh<fid_t>& m, const Params& p,
 	cerr<<"\toxygen uptake: "<<m.get_attr("o2_uptake")<<"\n";
 	cerr<<"\thost tissue consumes and dies: "
 			<<m.get_attr("host_activity")<<"\n";
+#ifdef HAVE_LIBNETPBM
+	cerr<<"\tpermability: "<<m.get_attr("permability")<<"\n";
+#endif
 	cerr<<"\tnutrient equation: ";
 	switch(p.c_equation) {
 		case Params::EQ_POISSON: cerr << "Poisson\n"; break;

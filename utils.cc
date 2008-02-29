@@ -218,6 +218,11 @@ read_params(dictionary *ini, Params& p) {
 	p.ts1=iniparser_getdouble(ini,"params:tumour_stress_on_stretch",p.ts1);
 	p.hk1=iniparser_getdouble(ini,"params:host_stress_on_compress",p.hk1);
 	p.hs1=iniparser_getdouble(ini,"params:host_stress_on_stretch",p.hs1);
+#ifdef HAVE_LIBNETPBM
+	// inner vascular network
+	p.permability=iniparser_getdouble(ini,"params:vessel_permability",
+			p.permability);
+#endif
 	// time integration related parameters
 	p.dt=iniparser_getdouble(ini,"method:time_step",p.dt);
 	p.eval_t=iniparser_getdouble(ini,"method:time_eval",p.eval_t);
@@ -276,6 +281,9 @@ int init_params(Params& p, int argc, const char *argv[]) {
 		{ "vessels", 0, POPT_ARG_STRING|onedash, &vascfile, 0,
 			"load vascular network geometry from PGM image",
 			"image.pgm" },
+		{ "permability", 'p', POPT_ARG_DOUBLE|onedash,
+			&p.permability, 0,
+			"permability of inner vasculature", "p" },
 #endif
 #ifdef HAVE_LIBHDF5
 		{ "h5todx", 0, arg_val_hidden_arg, &p.hdf2dx, 1,

@@ -32,6 +32,12 @@ using std::string;
 
 #include "singleton.h" 
 
+/* How to add new field functions propertly:
+ * 1. list in the following enum
+ * 2. add human-readable name in id2str
+ * 4. DMesh<fid_t>::save will save it automatically
+ * 3. do load the dataset with the chosen name in DMesh<fid_t>::load
+ */
 typedef enum {
 	PHI=0,
 	PHI1,
@@ -59,6 +65,18 @@ typedef enum {
 	TMP2,
 	NONE=-1
 } fid_enum;
+
+/* How to add new model parameters:
+ * 1. Add a parameter in class Params below (set default value in constructor)
+ * 2. Add command line option in init_params()
+ * 3. Modify configuration file (.ini) and read new option in read_params()
+ * 4. Modife build_mesh() as required
+ * 	to set new parameter as mesh attribute
+ * 	or to change initial condition according to the parameter
+ * 5. all attributes are saved automatically
+ * 6. modify DMesh<fid_t>::load() to read the parameter from the saved file
+ * 7. print model parameter in print_model_params() (optionally)
+ */
 
 /// set of command line parameters
 class Params {
@@ -123,7 +141,7 @@ public:
 		cell_motility(1e-2),
 		o2_uptake(200), upkeep_per_cell(0.15),
 		growth_rate(1.0), death_rate(0.8),
-		permability(500),
+		permability(10.0),
 		phi_bc(BC::createDirichletBC(this->phi_stress_free),
 			BC::createDirichletBC(this->phi_stress_free),
 			BC::createNeumannBC(),BC::createNeumannBC()),
