@@ -184,7 +184,12 @@ throw(MeshException) {
 				// add consumption term
 				A.set(k0,k0,A_k0_k0
 				-uptake_per_cell(phi_arr(i,j),psi_arr(i,j),
-						alpha,m.x(i,j),m.y(i,j)));
+						alpha
+#ifdef HAVE_LIBNETPBM
+						,vasc_arr(i,j),
+						m.get_attr("permability")
+#endif
+						));
 #ifdef HAVE_LIBNETPBM
 				rhs.at(k0)=rhs.at(k0)
 				-vasc_arr(i,j)*m.get_attr("permability");
@@ -200,18 +205,38 @@ throw(MeshException) {
 		throw MeshException(ss.str());
 	}
 	try {
+#ifdef HAVE_LIBNETPBM
+		array2d vasc_arr=m[VASC];
+		double vasc_threshold=0.9;
+#endif
 		// construct equations for boundary points
 		for (i=0; i<xdim; ++i) {
 			int k0, k0m;
 			double dy=m.get_dy();
 			BoundaryCondition bc;
 			// north
+#ifdef HAVE_LIBNETPBM
+			if (vasc_arr(i,ydim-1) > vasc_threshold) {
+				bc=BC::createDirichletBC(1.0);
+			} else {
+				bc=BC::createNeumannBC(0.0);
+			}
+#else
 			bc=bcs.get_north();
+#endif
 			k0 =k(i,ydim-1);
 			k0m=k(i,ydim-2);
 			build_boundary_point_eq(A,rhs,k0,k0m,bc,dy);
 			// south
+#ifdef HAVE_LIBNETPBM
+			if (vasc_arr(i,0) > vasc_threshold) {
+				bc=BC::createDirichletBC(1.0);
+			} else {
+				bc=BC::createNeumannBC(0.0);
+			}
+#else
 			bc=bcs.get_south();
+#endif
 			k0 =k(i,0);
 			k0m=k(i,1);
 			build_boundary_point_eq(A,rhs,k0,k0m,bc,dy);
@@ -221,12 +246,28 @@ throw(MeshException) {
 			double dx=m.get_dx();
 			BoundaryCondition bc;
 			// west
+#ifdef HAVE_LIBNETPBM
+			if (vasc_arr(0,j) > vasc_threshold) {
+				bc=BC::createDirichletBC(1.0);
+			} else {
+				bc=BC::createNeumannBC(0.0);
+			}
+#else
 			bc=bcs.get_west();
+#endif
 			k0 =k(0,j);
 			k0m=k(1,j);
 			build_boundary_point_eq(A,rhs,k0,k0m,bc,dx);
 			// east
+#ifdef HAVE_LIBNETPBM
+			if (vasc_arr(xdim-1,j) > vasc_threshold) {
+				bc=BC::createDirichletBC(1.0);
+			} else {
+				bc=BC::createNeumannBC(0.0);
+			}
+#else
 			bc=bcs.get_east();
+#endif
 			k0 =k(xdim-1,j);
 			k0m=k(xdim-2,j);
 			build_boundary_point_eq(A,rhs,k0,k0m,bc,dx);
