@@ -194,6 +194,10 @@ read_params(dictionary *ini, Params& p) {
 		"params:initial_cord_length",p.initial_cord_length);
 	p.initial_cord_width=iniparser_getdouble(ini,
 		"params:initial_cord_width",p.initial_cord_width);
+	p.initial_cord_length=iniparser_getdouble(ini,
+		"params:initial_cord_x",p.initial_cord_x);
+	p.initial_cord_width=iniparser_getdouble(ini,
+		"params:initial_cord_y",p.initial_cord_y);
 	p.phi_stress_free=iniparser_getdouble(ini,
 		"params:phi_stress_free", p.phi_stress_free);
 	p.cell_motility=iniparser_getdouble(ini,
@@ -286,14 +290,14 @@ int init_params(Params& p, int argc, const char *argv[]) {
 			"permability of inner vasculature", "p" },
 #endif
 #ifdef HAVE_LIBHDF5
-		{ "h5todx", 0, arg_val_hidden_arg, &p.hdf2dx, 1,
-			"convert HDF5 data to OpenDX format", 0 },
-		{ "h5togp", 0, arg_val_hidden_arg, &p.hdf2gp, 1,
-			"convert HDF5 data to gnuplot format", 0 },
 		{ "load", 'i', POPT_ARG_STRING|onedash, &ifile, 0,
 			"start with given initial conditions", "filename.h5" },
 		{ "save", 'o', POPT_ARG_STRING|onedash, &ofile, 0,
 			"save the final state as HDF5 file","filename.h5"},
+		{ "h5todx", 0, arg_val_hidden_arg, &p.hdf2dx, 1,
+			"convert HDF5 data to OpenDX format (use with -i)", 0},
+		{ "h5togp", 0, arg_val_hidden_arg, &p.hdf2gp, 1,
+			"convert HDF5 data to gnuplot format (use with -i)", 0},
 #endif // ifdef HAVE_LIBHDF5
 		{ "dt", 'd', POPT_ARG_DOUBLE|onedash, &p.dt, 0,
 			"evaluate with specified time step", "timestep" },
