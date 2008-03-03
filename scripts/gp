@@ -1,0 +1,63 @@
+#!/bin/sh 
+
+function usage() {
+	echo "usage:"
+	echo "gp [-eps|-jpeg] ncolumn file1 [file2...]"
+	echo "    where <ncolumn> is column number or variable name"
+}
+
+if [ $# -le 1 ]; then
+	usage
+	exit -1
+fi
+
+while [ "x${1:0:1}" == "x-" ] ; do
+	if [ "$1" == "-eps" ] ; then
+		out=eps;
+	elif [ "$1" == "-jpeg" -o "$1" == "-jpg" ] ; then
+		out=jpeg;
+	elif [ "$1" == "-png" ] ; then
+		out=png;
+	else
+		usage
+		exit -1
+	fi
+	shift
+done
+
+column=$1
+shift
+
+while [ $# -gt 0 ]; do
+	f=$1;
+	shift;
+
+	# define datafile column and key
+	vars=(`head -5 ${f}|tail -1|tr -d '#'`)
+	if [ $(($column)) -eq 0 ] ; then
+		# column is 0 or a string
+		i=0 ; while [ ${vars[$i]} != $column ] ; do i=$((i+1)) ; done ;
+		key="$column"
+		column=$(($i+1))
+	else
+		key="${vars[$((column-1))]}"
+	fi
+
+	# extract time
+	t=$(head -1 ${f} | cut -d ' ' -f 2)
+	t=$(LANG=C awk -v t=$t 'BEGIN{ printf("t=%4.1f\n",t); }')
+
+	if [ "x${out}" == "xeps" ] ; then
+		term="set terminal post color eps enhanced;
+		set output '${f/\.*/.eps}';"
+	elif [ "x${out}" == "xjpeg" ] ; then
+		term="set terminal jpeg; set output '${f/\.*/.jpg}';"
+	elif [ "x${out}" == "xpng" ] ; then
+		term="set terminal png; set output '${f/\.*/.png}';"
+	fi
+
+	echo "set pm3d; set view map;
+	set title '$t';
+	$term
+	splot '$f' u 1:2:$column t '$key' w pm3d ls 6" | gnuplot -persist - ;
+done
