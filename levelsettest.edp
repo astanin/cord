@@ -1,0 +1,82 @@
+int N=16;
+int maxiter=5;
+real dt=0.01;
+real T=1.0;
+real reinitDt=0.1*dt;
+real eps1=1e-4;
+
+// domain geometry
+int South=100, East=101, North=102, West=103;
+
+border south(t=0,1) {x=t; y=0; label=South;}
+border east(t=0,1) {x=1.0; y=t; label=East;}
+border north(t=0,1) {x=1-t; y=1.0; label=North;}
+border west(t=0,1) {x=0; y=1-t; label=West;}
+
+mesh Th=buildmesh(south(N)+east(N)+north(N)+west(N));
+fespace Vh(Th,P2);
+fespace V2h(Th,[P2,P2]);
+
+// variables
+Vh vh; // test function
+V2h [uxh,uyh]; // test function
+
+Vh phi; // cell volume fraction
+phi=(sin(pi*x)*sin(pi*(y-0.25))-0.9);
+
+Vh phinext, nabla, S, nx, ny; // functions for level-set re-initialization
+Vh phiinit;
+
+V2h [ux,uy]; // velocity
+//[ux,uy] = [ sin(pi*(y-0.5)), -sin(pi*(x-0.5))];
+[ux,uy] = [ sin(2*pi*y)*0.3, -0.5 ];
+
+func bool reinitLS() {
+	Vh h1=hTriangle;
+	real h=h1[].max;
+	int i;
+	for (i=0; i<maxiter; i=i+1) {
+		nabla=(dx(phi))^2+(dy(phi))^2;
+		// approximation of sign(phi)
+		S=phi/(sqrt(phi^2+h*h*nabla));
+		// approximation of the normal
+		nx=dx(phi)/(sqrt(nabla+eps1^2));
+		ny=dy(phi)/(sqrt(nabla+eps1^2));
+		phinext=convect([-S*nx,-S*ny],reinitDt,phi);
+		phinext=phinext+reinitDt*S;
+		phi=phinext;
+	}
+}
+
+plot([ux,uy],wait=1,nbarrow=0,value=1);
+
+real[int] isolevels = [-0.001,0.0,0.001];
+plot(phi,wait=0,viso=isolevels);
+
+reinitLS();
+phiinit=phi;
+
+for (real t=0; t<T; t+=dt) {
+//	// Computation of the normal
+//	nabla=(dx(phi))^2+(dy(phi))^2;
+//	nx=dx(phi)/(sqrt(nabla+eps1^2));
+//	ny=dy(phi)/(sqrt(nabla+eps1^2));
+	phinext=convect([-ux,-uy],dt,phi);
+	phi=phinext;
+	plot(phi,wait=0,viso=isolevels);
+}
+
+reinitLS();
+for (real t=0; t<T; t+=dt) {
+//	// Computation of the normal
+//	nabla=(dx(phi))^2+(dy(phi))^2;
+//	nx=dx(phi)/(sqrt(nabla+eps1^2));
+//	ny=dy(phi)/(sqrt(nabla+eps1^2));
+	phinext=convect([ux,uy],dt,phi);
+	phi=phinext;
+	plot(phi,wait=0,viso=isolevels);
+}
+
+plot(phi,phiinit,wait=1,viso=isolevels,value=1);
+
+
