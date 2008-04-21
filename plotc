@@ -1,0 +1,43 @@
+#!/bin/sh
+
+FILE=$1
+OUT=${FILE%.gp}.eps
+DOMAIN="[0:1][0:1]"
+
+TIME=$(head -1 ${FILE}|tail -1|LC_ALL=C awk '{print $2}'|\
+	perl -e 'while(<>){printf("%g\n",$_);}');
+TITLE="t=$TIME"
+
+gnuplot - << END
+set output '$OUT'
+set terminal post landscape color size 9cm, 9cm font 9
+set lmargin 0
+unset title
+set size square
+
+set multiplot
+
+set surface
+unset contour
+set view map
+set xtics nomirror scale 0.3
+set ytics nomirror scale 0.3
+set cbtics nomirror scale 0.5
+set pm3d interpolate 2,2
+set cbrange [0:1.0]
+set cblabel 'c' offset -1.0
+#set palette rgbformulae 3,3,2
+f(x)=(floor(10.0*((x))))/10.0
+set palette functions f(gray),f(gray),1
+splot $DOMAIN '$FILE' u 1:2:3 t '' with pm3d 
+
+unset surface
+set cntrparam levels discrete 0.0
+set contour base
+unset key
+set style line 99 linetype 1 linecolor 0 linewidth 3
+splot $DOMAIN '$FILE' u 1:2:5 w l lt 99
+
+unset multiplot
+END
+
