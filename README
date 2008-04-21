@@ -1,0 +1,9 @@
+This is an alternative implementation of the numerical method for the basic
+model of tumour cord growth (one aerobic population) written for FreeFEM++.
+
+I wrote it mostly to learn about FreeFEM++ and to compare the results.
+
+About FreeFEM++: http://www.freefem.org/ff++/
+
+--
+S.A.
