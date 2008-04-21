@@ -1,16 +1,25 @@
 // Basic model of cord growth (oxygen-limited metabolism)
 // FreeFEM++ version (P1 elements, SUPG for level set advection)
+// 
+// Sergey Astanin, 2008
+// http://code.google.com/p/cord/
 
 real mu=0.02; // cell motility
 real phi0=0.75; // stress-free phi
 real theta=0.15; // survival ATP production level
 real alpha=200; // consumption rate
 
-int N=50; // point per domain side
+int N=50; // points per domain side
 real dt=0.5; // time step
-real T=500.0; // evaluate solution until t=T
+real T=200.0; // evaluate solution until t=T
 int plotevery=10; // save solution every plotevery time steps
 real R0=0.2; // initial radius of the tumour
+
+real reinitPeriod=10.0; // how often re-initialize level set function
+real reinitDt=0.1*dt; // level set re-initialization time step
+real epsLS=0.01; // level set function regularization parameter
+int maxiter=100; // maximum number of iterations in level set re-init procedure
+real maxresidual=5e-2; // accuracy of the level set re-init procedure
 
 func real Sigma(real phi) {
 	return phi-phi0;
@@ -48,12 +57,15 @@ func real Gamma(real phi, real c) {
 int South=100, East=101, North=102, West=103;
 
 border south(t=0,1) {x=t; y=0; label=South;}
-border east(t=0,1) {x=1.0; y=t; label=East;}
-border north(t=0,1) {x=1-t; y=1.0; label=North;}
-border west(t=0,1) {x=0; y=1-t; label=West;}
+border east(t=0,1) {x=1; y=t; label=East;}
+border north(t=0,1) {x=(1-t); y=1; label=North;}
+border west(t=0,1) {x=0; y=(1-t); label=West;}
 
 mesh Th=buildmesh(south(N)+east(N)+north(N)+west(N));
 fespace Vh(Th,P1);
+
+Vh ht=hTriangle;
+real h=ht[].max;
 
 // variables
 Vh vh; // test function
@@ -66,6 +78,8 @@ c=1.0;
 
 Vh psi, oldpsi; // level set functions (positive for tumour)
 psi=1-sqrt((x*x+y*y)/(R0*R0));
+
+Vh nabla2, S, nx, ny, residual; // temporary functions for level set re-init
 
 Vh vx, vy;
 
@@ -86,11 +100,48 @@ problem psiEqPG(psi,vh) = int2d(Th)(w(vh)*psi/dt)
 	+ int2d(Th)(w(vh)*(vx*dx(psi)+vy*dy(psi)))
 	- int2d(Th)(w(vh)*oldpsi/dt);
 
+// to restore psi to signed distance
+// iterate until steady state the solution of
+// \partial_t \psi + \mathbf{w}(\psi) \cdot \nabla \psi = S(\psi_0)
+// where
+// 	S(\psi_0) = \frac{\psi_0}{\sqrt{\psi_0^2+\epsilon^2}}
+// and
+//	\mathbf{w}(\psi) = S(\psi_0) \nabla \psi / | \nabla \psi |
+//
+// This FreeFem++ code was partially borrowed from the reinitialization
+// routines written by G. Allaire, B. Boutin, C. Dousset, O. Pantz.
+// See: http://www.cmap.polytechnique.fr/~allaire/freefem_en.html
+func bool reinitLS() {
+	// nabla2=(grad(psi)^2)
+	nabla2=(dx(psi))^2+(dy(psi))^2;
+	// approximation of sign(psi)
+	S=psi/(sqrt(psi^2+h*h*nabla2));
+	residual=-S*(sqrt(nabla2)-1);
+	int i=0;
+	while (((residual[].max) > maxresidual) && (i<maxiter)) {
+		// approximation of the normal
+		nx=dx(psi)/(sqrt(nabla2+epsLS^2));
+		ny=dy(psi)/(sqrt(nabla2+epsLS^2));
+		// advect level set function
+		oldpsi=psi;
+		psi=convect([-S*nx,-S*ny],reinitDt,oldpsi);
+		psi=psi+reinitDt*S;
+		// evaluate residual
+		nabla2=(dx(psi))^2+(dy(psi))^2;
+//		residual=-S*(sqrt(nabla2)-1);
+		residual=psi-oldpsi;
+		i=i+1;
+	}
+	cout << "reinitialized in " << i << " iterations, "
+		<< "||residual||_max =" << residual[].max << "\n";
+}
+
+
 // print all mesh functions to gnuplot-compatible file
 func bool save(real t) {
 	string name="mesh_" + t + ".gp";
 	ofstream file(name);
-	for (real xx=0; xx<=1.0+1.0/N; xx+=1.0/N) {
+	for (real xx=0; xx<=1.0+1.0/(N); xx+=1.0/(N)) {
 		for (real yy=0; yy<=1.0+1.0/N; yy+=1.0/N) {
 			file << xx << " " << yy << " "
 				<< c(xx,yy) << " "
@@ -105,7 +156,10 @@ func bool save(real t) {
 
 int i=0; // time steps after the last save
 save(0.0);
-for (real t=0; t<T; t+=dt) {
+reinitLS(); // reinitialize
+real lastReinit=0;
+for (real t=0; t<=T; t+=dt) {
+	cout <<  "t=" << t << "\n";
 	// phi step
 	oldphi=phi;
 	phiEq;
@@ -117,37 +171,13 @@ for (real t=0; t<T; t+=dt) {
 	// advect level set function
 	oldpsi=psi;
 	psiEqPG;
-	// to restore psi to signed distance
-	// iterate until steady state the solution of
-	// \partial_t \psi + \mathbf{w}(\psi) \cdot \nabla \psi = S(\psi_0)
-	// where
-	// 	S(\psi_0) = \frac{\psi_0}{\sqrt{\psi_0^2+\epsilon^2}}
-	// and
-	//	\mathbf{w}(\psi) = S(\psi_0) \nabla \psi / | \nabla \psi |
-//	real iwidth=1.0/N;
-//	Vh Spsi;
-//	Spsi=psi/sqrt(psi*psi+iwidth*iwidth);
-//	Vh wx, wy, normGradPsi;
-//	int iters=0;
-//	real res=1e99;
-//	while (res > 1e-3) {
-//		iters++;
-//		oldpsi=psi;
-//		cout << "evaluating wx, wy" << endl;
-//		wx=Spsi*dx(psi);
-//		wy=Spsi*dy(psi);
-//		cout << "iteration of psiReinitPG" << endl;
-//		macro ww(vh)((vh+0.05*(wx*dx(vh)+wy*dy(vh)))) //;
-//		solve psiReinitPG(psi,vh) = int2d(Th)(ww(vh)*psi)
-//			+ int2d(Th)(10*dt*ww(vh)*(wx*dx(psi)+wy*dy(psi)))
-//			- int2d(Th)(ww(vh)*oldpsi)
-//			- int2d(Th)(10*dt*ww(vh)*Spsi);
-//		res=sqrt(int2d(Th)(psi-oldpsi)); // L2 norm
-//		cout << "res= " << res << endl;
-//	}
-//	cout << "t= " << t << " psi reset in " << iters << " iterations" <<endl;
+// or	psi=convect([-vx,-vy],dt,oldpsi);
+	if ((t-lastReinit) >= reinitPeriod) {
+		reinitLS();
+		lastReinit=t;
+	}
 	// output
-	if ((i>0) && (i >= plotevery)) {
+	if ((i>0) && (i >= (plotevery-1))) {
 		save(t);
 		i=0;
 	}
