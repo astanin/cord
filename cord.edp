@@ -1,0 +1,156 @@
+// Basic model of cord growth (oxygen-limited metabolism)
+// FreeFEM++ version (P1 elements, SUPG for level set advection)
+
+real mu=0.02; // cell motility
+real phi0=0.75; // stress-free phi
+real theta=0.15; // survival ATP production level
+real alpha=200; // consumption rate
+
+int N=50; // point per domain side
+real dt=0.5; // time step
+real T=500.0; // evaluate solution until t=T
+int plotevery=10; // save solution every plotevery time steps
+real R0=0.2; // initial radius of the tumour
+
+func real Sigma(real phi) {
+	return phi-phi0;
+}
+
+func real dSigma(real phi) {
+	return 1.0;
+}
+
+func real Dphi(real phi) {
+	return mu*phi*(Sigma(phi)+phi*dSigma(phi));
+}
+
+func real H(real u) {
+	if (u > 0) {
+		return 1.0;
+	} else if (u < 0) {
+		return 0.0;
+	} else {
+		return 0.5;
+	}
+}
+
+// growth/death rate
+func real Gamma(real phi, real c) {
+	real atp=(1-phi)*c-theta;
+	if (atp > 0) {
+		return phi*atp;
+	} else {
+		return 0.8*phi*atp;
+	}
+}
+
+// domain geometry
+int South=100, East=101, North=102, West=103;
+
+border south(t=0,1) {x=t; y=0; label=South;}
+border east(t=0,1) {x=1.0; y=t; label=East;}
+border north(t=0,1) {x=1-t; y=1.0; label=North;}
+border west(t=0,1) {x=0; y=1-t; label=West;}
+
+mesh Th=buildmesh(south(N)+east(N)+north(N)+west(N));
+fespace Vh(Th,P1);
+
+// variables
+Vh vh; // test function
+
+Vh phi, oldphi; // cell volume fraction
+phi=phi0;
+
+Vh c; // oxygen concentration
+c=1.0;
+
+Vh psi, oldpsi; // level set functions (positive for tumour)
+psi=1-sqrt((x*x+y*y)/(R0*R0));
+
+Vh vx, vy;
+
+problem phiEq(phi,vh,solver=CG) = int2d(Th)(phi*vh/dt
+	+ Dphi(oldphi)*(dx(phi)*dx(vh)+dy(phi)*dy(vh))) // diffusion term
+	- int2d(Th)(H(psi)*Gamma(oldphi,c)*vh) // growth term 
+	- int2d(Th)(oldphi*vh/dt)
+	+ on(North,phi=phi0);
+
+problem cEq(c,vh,solver=CG) = int2d(Th)(dx(c)*dx(vh)+dy(c)*dy(vh)) // Laplace
+	+ int2d(Th)(H(psi)*alpha*(1-phi)*c*vh) // consumption
+	+ on(South,c=1.0);
+
+// use SUPG method for psi level set advection
+real pgtau=0.1; // test function bias factor
+macro w(vh)((vh+pgtau*(vx*dx(vh)+vy*dy(vh)))) //; // biased test function
+problem psiEqPG(psi,vh) = int2d(Th)(w(vh)*psi/dt)
+	+ int2d(Th)(w(vh)*(vx*dx(psi)+vy*dy(psi)))
+	- int2d(Th)(w(vh)*oldpsi/dt);
+
+// print all mesh functions to gnuplot-compatible file
+func bool save(real t) {
+	string name="mesh_" + t + ".gp";
+	ofstream file(name);
+	for (real xx=0; xx<=1.0+1.0/N; xx+=1.0/N) {
+		for (real yy=0; yy<=1.0+1.0/N; yy+=1.0/N) {
+			file << xx << " " << yy << " "
+				<< c(xx,yy) << " "
+				<< phi(xx,yy) << " "
+				<< psi(xx,yy) <<
+				endl;
+		}
+		file << endl;
+	}
+	return true;
+}
+
+int i=0; // time steps after the last save
+save(0.0);
+for (real t=0; t<T; t+=dt) {
+	// phi step
+	oldphi=phi;
+	phiEq;
+	// c step
+	cEq;
+	// interpolate velocity field
+	vx=-mu*(Sigma(phi)+phi*dSigma(phi))*dx(phi);
+	vy=-mu*(Sigma(phi)+phi*dSigma(phi))*dy(phi);
+	// advect level set function
+	oldpsi=psi;
+	psiEqPG;
+	// to restore psi to signed distance
+	// iterate until steady state the solution of
+	// \partial_t \psi + \mathbf{w}(\psi) \cdot \nabla \psi = S(\psi_0)
+	// where
+	// 	S(\psi_0) = \frac{\psi_0}{\sqrt{\psi_0^2+\epsilon^2}}
+	// and
+	//	\mathbf{w}(\psi) = S(\psi_0) \nabla \psi / | \nabla \psi |
+//	real iwidth=1.0/N;
+//	Vh Spsi;
+//	Spsi=psi/sqrt(psi*psi+iwidth*iwidth);
+//	Vh wx, wy, normGradPsi;
+//	int iters=0;
+//	real res=1e99;
+//	while (res > 1e-3) {
+//		iters++;
+//		oldpsi=psi;
+//		cout << "evaluating wx, wy" << endl;
+//		wx=Spsi*dx(psi);
+//		wy=Spsi*dy(psi);
+//		cout << "iteration of psiReinitPG" << endl;
+//		macro ww(vh)((vh+0.05*(wx*dx(vh)+wy*dy(vh)))) //;
+//		solve psiReinitPG(psi,vh) = int2d(Th)(ww(vh)*psi)
+//			+ int2d(Th)(10*dt*ww(vh)*(wx*dx(psi)+wy*dy(psi)))
+//			- int2d(Th)(ww(vh)*oldpsi)
+//			- int2d(Th)(10*dt*ww(vh)*Spsi);
+//		res=sqrt(int2d(Th)(psi-oldpsi)); // L2 norm
+//		cout << "res= " << res << endl;
+//	}
+//	cout << "t= " << t << " psi reset in " << iters << " iterations" <<endl;
+	// output
+	if ((i>0) && (i >= plotevery)) {
+		save(t);
+		i=0;
+	}
+	i++;
+}
+save(T);
