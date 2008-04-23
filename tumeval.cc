@@ -489,54 +489,69 @@ throw(MeshException) {
 }
 
 template<class fid_t>
-double level_set_function_reset_step(AMesh2D<fid_t>& m,
-	fid_t const& var, fid_t const& dvar) {
+double level_set_function_reset_step(AMesh2D<fid_t>& m, fid_t const& var,
+		fid_t const& var_next) {
 	using namespace blitz;
-	m.remove_function_ifdef(dvar);
-	m.add_function_ifndef(dvar,0.0);
 	int xdim=m.get_xdim();
 	int ydim=m.get_ydim();
 	double dx=m.get_dx();
 	double dy=m.get_dy();
+	double epsLS=0.001;
+	double dt=0.01*sqrt(dx*dx+dy*dy);
+	double maxres=0.0;
 	array2d var_a=m[var];
+	array2d var2_a=m[var_next];
 	array2d spsi_a=m[SPSI];
-	array2d dpsi_a=m[dvar];
 	for (int i=1; i<(xdim-1); ++i) {
 		for (int j=1; j<(ydim-1); ++j) {
-			double dpx=var_a(i+1,j)-var_a(i,j);
-			double dmx=var_a(i,j)-var_a(i-1,j);
-			double dpy=var_a(i,j+1)-var_a(i,j);
-			double dmy=var_a(i,j)-var_a(i,j-1);
 			// grad(psi2)
-			double gx=0.5*(dpx+fabs(dpx)+dmx-fabs(dmx))/dx;
-			double gy=0.5*(dpy+fabs(dpy)+dmy-fabs(dmy))/dy;
-			// d(psi2)/dt
-			dpsi_a(i,j)=spsi_a(i,j)*(1-sqrt(gx*gx+gy*gy));
-		}
-	}
-	double maxdvar=max(fabs(m[dvar]));
-	double dt=0.2*(dx+dy)/maxdvar;
-	for (int i=1; i<(xdim-1); ++i) {
-		for (int j=1; j<(ydim-1); ++j) {
-			var_a(i,j)=var_a(i,j)+dt*dpsi_a(i,j);
+			double gx=(var_a(i+1,j)-var_a(i-1,j))/dx;
+			double gy=(var_a(i+1,j)-var_a(i-1,j))/dx;
+			double absg=sqrt(gx*gx+gy*gy+epsLS*epsLS);
+			double nx=gx/absg; // norm_x
+			double ny=gy/absg; // norm_y
+			double vx=-spsi_a(i,j)*nx;
+			double vy=-spsi_a(i,j)*ny;
+			double dvardx= -(
+				(var_a(i,j)-var_a(i-1,j))*0.5*(vx+fabs(vx))/dx
+				+(var_a(i+1,j)-var_a(i,j))*0.5*(vx-fabs(vx))/dx
+				+(var_a(i,j)-var_a(i,j-1))*0.5*(vy+fabs(vy))/dy
+				+(var_a(i,j+1)-var_a(i,j))*0.5*(vy-fabs(vy))/dy
+				) + spsi_a(i,j);
+			var2_a(i,j)=var_a(i,j)+dt*dvardx;
+			if (fabs(dvardx) > maxres) {
+				maxres=fabs(dvardx);
+			}
+//			if ((i==5) && (j==5)) {
+//				cerr << "S(psi0) = " << spsi_a(i,j)
+//				<< " grad(psi) = (" << gx << "," << gy << ")"
+//				<< " dvardx*dt = " << dvardx*dt << "\n";
+//				cerr << "dt = " << dt << "\n";
+//			}
 		}
 	}
 	// zero flux on all boundaries
 	for (int i=1; i<(xdim-1); ++i) {
-		var_a(i,0)=var_a(i,1);
-		var_a(i,ydim-1)=var_a(i,ydim-2);
+		var2_a(i,0)=var_a(i,1);
+		var2_a(i,ydim-1)=var_a(i,ydim-2);
 	}
 	for (int j=1; j<(ydim-1); ++j) {
-		var_a(0,j)=var_a(1,j);
-		var_a(xdim-1,j)=var_a(xdim-2,j);
+		var2_a(0,j)=var_a(1,j);
+		var2_a(xdim-1,j)=var_a(xdim-2,j);
 	}
 	// avoid extremums in corner points
-	var_a(0,0)=0.5*(var_a(1,0)+var_a(0,1));
-	var_a(xdim-1,0)=0.5*(var_a(xdim-2,0)+var_a(xdim-1,1));
-	var_a(0,ydim-1)=0.5*(var_a(1,ydim-1)+var_a(0,ydim-2));
-	var_a(xdim-1,ydim-1)=0.5*(var_a(xdim-2,ydim-1)+var_a(xdim-1,ydim-2));
-	m.remove_function_ifdef(dvar);
-	return maxdvar;
+	var2_a(0,0)=0.5*(var2_a(1,0)+var2_a(0,1));
+	var2_a(xdim-1,0)=0.5*(var2_a(xdim-2,0)+var2_a(xdim-1,1));
+	var2_a(0,ydim-1)=0.5*(var2_a(1,ydim-1)+var2_a(0,ydim-2));
+	var2_a(xdim-1,ydim-1)=0.5*(var2_a(xdim-2,ydim-1)+var2_a(xdim-1,ydim-2));
+//	double diff=0;
+//	for (int i=0; i<(xdim); ++i) {
+//		for (int j=0; j<(ydim); ++j) {
+//			diff+=fabs(var2_a(i,j)-var_a(i,j));
+//		}
+//	}
+//	cerr << "changes to PSI: " << diff << "(" << diff1 << ")\n";
+	return maxres;
 }
 
 /** find steady state solution of
@@ -544,13 +559,13 @@ double level_set_function_reset_step(AMesh2D<fid_t>& m,
  */
 template<class fid_t>
 int level_set_function_reset(AMesh2D<fid_t>& m) {
-	m.remove_function_ifdef(PSI2);
-	m.add_function_ifndef(PSI2);
 	m.remove_function_ifdef(SPSI);
 	m.add_function_ifndef(SPSI);
 	double psi;
 	// eps is heuristic parameter
-	double eps=100*(m.get_dx()*m.get_dx()+m.get_dy()*m.get_dy());
+	double dx=m.get_dx();
+	double dy=m.get_dy();
+	double eps=256*(dx*dx+dy*dy);
 	int xdim=m.get_xdim();
 	int ydim=m.get_ydim();
 	array2d psi_a=m[PSI];
@@ -562,18 +577,27 @@ int level_set_function_reset(AMesh2D<fid_t>& m) {
 		}
 	}
 	int count=0;
-	do {
-		eps=level_set_function_reset_step<fid_t>(m,PSI2,DPSI2_DT);
-		++count;
-	} while (eps < Method::it().sle_solver_accuracy);
-	array2d psi2_a=m[PSI2];
-	for (int i=0; i<xdim; ++i) {
-		for (int j=0; j<ydim; ++j) {
-			psi_a(i,j)=psi2_a(i,j);
-		}
-	}
+	double res=1e99;
 	m.remove_function_ifdef(PSI2);
+	m.add_function_ifndef(PSI2,0.0);
+	array2d psi2_a=m[PSI2];
+	do {
+		res=level_set_function_reset_step<fid_t>(m,PSI,PSI2);
+		// copy PSI2 to PSI
+		for (int i=0; i<xdim; ++i) {
+			for (int j=0; j<ydim; ++j) {
+				psi_a(i,j)=psi2_a(i,j);
+			}
+		}
+		if (!count) {
+			cerr << "residual = " << res << "\n";
+		}
+		++count;
+	} while ((res > Method::it().sle_solver_accuracy) &&
+		(count < 10*Method::it().sle_solver_max_iters));
+	cerr << "residual = " << res << "\n";
 	m.remove_function_ifdef(SPSI);
+	m.remove_function_ifdef(PSI2);
 	return count;
 }
 
@@ -607,16 +631,16 @@ throw(MeshException) {
 	for (int i=0; i<nsubsteps; ++i) {
 		substep_level_set(subdt,*m2);
 	}
-	if (Method::it().level_set_reset) {
-		int count;
-		count=level_set_function_reset<fid_t>(*m2);
-		if (verbose > 1) {
-			cerr << dbg_stamp(m1.get_time())
-				<< "step_level_set: "
-				"reset in " << count
-				<< " iters\n";
-		}
-	}
+//	if (Method::it().level_set_reset) {
+//		int count;
+//		count=level_set_function_reset<fid_t>(*m2);
+//		if (verbose > 1) {
+//			cerr << dbg_stamp(m1.get_time())
+//				<< "step_level_set: "
+//				"reset in " << count
+//				<< " iters\n";
+//		}
+//	}
 	return m2.release();
 	} catch (MeshException& e) {
 		ostringstream ss;

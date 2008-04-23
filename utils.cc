@@ -698,26 +698,34 @@ template<class fid_t>
 double get_y_size(const AMesh2D<fid_t>& m) {
 	double psi1=0, psi2=0;
 	psi1=m.get(PSI,0,0);
-	for (int j=1; j<(m.get_ydim()); ++j) {
-		psi2=m.get(PSI,0,j);
-		if ((psi1>=0) && (psi2<0)) {
-			double y1, y2;
-			double stepratio;
-			double y0;
-			y1=m.y(0,j-1);
-			y2=m.y(0,j);
-			stepratio=psi1/(fabs(psi1)+fabs(psi2));
-			y0=y1+stepratio*(y2-y1);
-			return y0;
+	double ysize_i=m.y(0,0), ysize_max=ysize_i;
+	for (int i=0; i<(m.get_xdim()); ++i) {
+		bool found=false;
+		for (int j=1; j<(m.get_ydim()); ++j) {
+			psi2=m.get(PSI,i,j);
+			if ((psi1>=0) && (psi2<0)) {
+				double y1, y2;
+				double stepratio;
+				double y0;
+				y1=m.y(i,j-1);
+				y2=m.y(i,j);
+				stepratio=psi1/(fabs(psi1)+fabs(psi2));
+				y0=y1+stepratio*(y2-y1);
+				// return y0;
+				ysize_i=y0;
+				found=true;
+			}
+			psi1=psi2;
 		}
-		psi1=psi2;
-		psi2=1e99; // reset
+		if (!found) {
+			ysize_max=1e99;
+			break;
+		}
+		if (ysize_i > ysize_max) {
+			ysize_max=ysize_i;
+		}
 	}
-	if (fabs(psi1) < 1e-99) { // almost zero
-		return m.y(0,m.get_ydim()-1);
-	} else {
-		return 1e99; // infinite size, out of range value
-	}
+	return ysize_max;
 }
 
 /// norm-I: max(abs(f))

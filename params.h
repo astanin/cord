@@ -53,7 +53,7 @@ typedef enum {
 	NEWPSI,
 	SPSI,
 	PSI2,
-	DPSI2_DT,
+//	DPSI2_DT,
 	TMP1,
 	TMP2,
 	NONE=-1
