@@ -425,20 +425,54 @@ throw(MeshException) {
 	}
 	// apply boundary conditions
 	// WARNING: valid for rectangular grid only
-	for (int j=1; j<(m.get_ydim()-1); ++j) {
+	int xdim=m.get_xdim();
+	int ydim=m.get_ydim();
+	for (int j=1; j<(ydim-1); ++j) {
 		double psi_in;
+		double vdotgradpsi, vy;
+		// west
 		psi_in=newpsi_a(1,j);
-		newpsi_a(0,j)=psi_in;
-		psi_in=newpsi_a(m.get_xdim()-2,j);
-		newpsi_a(m.get_xdim()-1,j)=psi_in;
+		vy=vy_a(0,j);
+		vdotgradpsi= +0.5*(vy+fabs(vy))*
+				(psi_a(0,j)-psi_a(0,j-1))/dy
+				+0.5*(vy-fabs(vy))*
+				(psi_a(0,j+1)-psi_a(0,j))/dy;
+		newpsi_a(0,j)=psi_in-dt*vdotgradpsi;
+		// east
+		psi_in=newpsi_a(xdim-2,j);
+		vy=vy_a(xdim-1,j);
+		vdotgradpsi= +0.5*(vy+fabs(vy))*
+				(psi_a(xdim-1,j)-psi_a(xdim-1,j-1))/dy
+				+0.5*(vy-fabs(vy))*
+				(psi_a(xdim-1,j+1)-psi_a(xdim-1,j))/dy;
+		newpsi_a(xdim-1,j)=psi_in-dt*vdotgradpsi;
 	}
-	for (int i=0; i<m.get_xdim(); ++i) {
+	for (int i=1; i<(xdim-1); ++i) {
 		double psi_in;
+		double vdotgradpsi, vx;
+		// south
 		psi_in=newpsi_a(i,1);
-		newpsi_a(i,0)=psi_in;
-		psi_in=newpsi_a(i,m.get_ydim()-2);
-		newpsi_a(i,m.get_ydim()-1)=psi_in;
+		vx=vx_a(i,0);
+		vdotgradpsi=0.5*(vx+fabs(vx))*
+				(psi_a(i,0)-psi_a(i-1,0))/dx
+				+0.5*(vx-fabs(vx))*
+				(psi_a(i+1,0)-psi_a(i,0))/dx;
+		newpsi_a(i,0)=psi_in-dt*vdotgradpsi;
+		// north
+		psi_in=newpsi_a(i,ydim-2);
+		vx=vx_a(i,ydim-1);
+		vdotgradpsi=0.5*(vx+fabs(vx))*
+				(psi_a(i,ydim-1)-psi_a(i-1,ydim-1))/dx
+				+0.5*(vx-fabs(vx))*
+				(psi_a(i+1,ydim-1)-psi_a(i,ydim-1))/dx;
+		newpsi_a(i,ydim-1)=psi_in-dt*vdotgradpsi;
 	}
+	// corners
+	newpsi_a(0,0)=0.5*(newpsi_a(1,0)+newpsi_a(0,1));
+	newpsi_a(xdim-1,0)=0.5*(newpsi_a(xdim-2,0)+newpsi_a(xdim-1,1));
+	newpsi_a(0,ydim-1)=0.5*(newpsi_a(1,ydim-1)+newpsi_a(0,ydim-2));
+	newpsi_a(xdim-1,ydim-1)=0.5*(newpsi_a(xdim-2,ydim-1)
+					+newpsi_a(xdim-1,ydim-2));
 	// overwrite old psi
 	for (int i=0; i < (m.get_xdim()); ++i) {
 		for (int j=0; j < (m.get_ydim()); ++j) {
