@@ -1,0 +1,45 @@
+#!/bin/sh
+
+NAVG1=1
+NAVG2=1
+TAVGSWITCH=200
+
+
+GNUPLOTFILE=/tmp/width.gnuplot
+#echo "set terminal x11 enhanced" > $GNUPLOTFILE
+echo "set terminal post color eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
+echo "set output 'bi1D-width-various-k.eps'" >>  $GNUPLOTFILE
+echo "set xlabel 't'" >> $GNUPLOTFILE
+echo "set ylabel 'width'" >> $GNUPLOTFILE
+#echo "set grid'" >> $GNUPLOTFILE
+echo -n "plot [0:*][0:*] " >> $GNUPLOTFILE
+
+FIRST=yes
+
+for f in `ls -v "$@"` ; do
+	sizefile=${f/log/size}
+	grep xsize "$f" | sed 's/[a-z]\+=//g' | tr -d ':' | \
+		 LANG=C awk -v N1=$NAVG1 -v N2=$NAVG2 -v T=$TAVGSWITCH \
+		 'BEGIN { i=0; tsum=0.0; sum=0.0; vsum=0.0; } \
+			 { if ( $1 < T ) N=N1 ; else N=N2 ; \
+			  tsum+=$1 ; sum+=$4; vsum+=$5 ; i+=1 ; \
+			  if ( i == N ) { \
+				  print tsum/N, sum/N, vsum/N ; \
+				  tsum = sum = vsum = 0.0 ; i=0 ; \
+			  } \
+		  }' > ${sizefile}
+#		 awk '{print $1,$4,$5;}' > ${sizefile}
+	tag=`echo $f | cut -d '_' -f 3 ` ;
+	echo $tag ; 
+	if [ "x$FIRST" == "xyes" ] ; then
+		FIRST=no ;
+	else
+		echo -n "," >> $GNUPLOTFILE ;
+	fi
+	echo -n "'$sizefile' u 1:2 every 1 w l t '$tag' " \
+		>> $GNUPLOTFILE
+done
+echo >> $GNUPLOTFILE
+
+gnuplot -persist - < $GNUPLOTFILE
+

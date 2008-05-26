@@ -1,0 +1,36 @@
+#!/bin/sh
+
+NAVG1=1
+NAVG2=1
+TAVGSWITCH=200
+
+
+GNUPLOTFILE=/tmp/width.gnuplot
+echo "set terminal post color eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
+echo "set output 'bi1D-2frac-various-a.eps'" >>  $GNUPLOTFILE
+echo "set xlabel 't'" >> $GNUPLOTFILE
+echo "set ylabel 'anaerobic fraction, %'" >> $GNUPLOTFILE
+echo "set key bottom right" >> $GNUPLOTFILE
+#echo "set grid'" >> $GNUPLOTFILE
+echo -n "plot [0:*][0:*] " >> $GNUPLOTFILE
+
+FIRST=yes
+
+for f in `ls -v "$@"` ; do
+	massfile=${f/log/mass}
+	grep M_1 "$f" | tr -d 't:=' | \
+		 LANG=C awk '{print $1,100*$5/($3+$5);}' > ${massfile}
+	tag=`echo $f | cut -d '_' -f 3 | sed 's#a#{/Symbol a}#'` ;
+	echo $tag ; 
+	if [ "x$FIRST" == "xyes" ] ; then
+		FIRST=no ;
+	else
+		echo -n "," >> $GNUPLOTFILE ;
+	fi
+	echo -n "'$massfile' u 1:2 every 1 w l t '$tag' " \
+		>> $GNUPLOTFILE
+done
+echo >> $GNUPLOTFILE
+
+gnuplot -persist - < $GNUPLOTFILE
+

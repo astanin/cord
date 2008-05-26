@@ -1,0 +1,71 @@
+#!/bin/sh
+
+TINFTY=400
+
+
+#### cleanup file with data points
+
+sizefile=/tmp/size_infty
+[ -f $sizefile ] && rm $sizefile ;
+
+#### prepare a gnuplot script
+
+GNUPLOTFILE=/tmp/width.gnuplot
+#echo "set terminal x11 enhanced" > $GNUPLOTFILE
+echo "set terminal post eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
+echo "set output 'bi1D-width-infty-various-k.eps'" >>  $GNUPLOTFILE
+echo "set xlabel 'k'" >> $GNUPLOTFILE
+echo "set ylabel 'width_{/Symbol \245}'" >> $GNUPLOTFILE
+# echo "set grid ; " >> $GNUPLOTFILE
+#echo "set logscale xy 2 " >> $GNUPLOTFILE
+
+#### populate file with data points, evaluate AVG and STDEV
+
+for f in `ls -v "$@"` ; do
+	tag=$(echo $f | cut -d '_' -f 3 | cut -d '=' -f 2 ) ;
+	avg=$(grep xsize "$f" | sed 's/[a-z]\+=//g' | tr -d ':' | \
+		 LANG=C awk -v T=$TINFTY -v a=$tag \
+		 'BEGIN { i=0; wsum=0.0; } \
+			 { if ( $1 > T ) { \
+				  wsum+=$4 ; i+=1 ; \
+			  } } \
+		END { print wsum/i ; } ');
+	stdev=$(grep xsize "$f" | sed 's/[a-z]\+=//g' | tr -d ':' | \
+		 LANG=C awk -v T=$TINFTY -v a=$tag -v avg=$avg \
+		 'BEGIN { i=0; sum=0.0; } \
+			 { if ( $1 > T ) { \
+				  sum+=($4-avg)*($4-avg) ; i+=1 ; \
+			  } } \
+		END { print sqrt(sum/i) ; } ');
+	echo $tag $avg $stdev >> ${sizefile}
+done
+
+#### fit function parameters to data points
+
+echo "A = 1" >  /tmp/size_infty.par
+echo "B = -0.5" >> /tmp/size_infty.par
+gnuplot <<END
+f(x) = A*x**(B)
+fit f(x) '$sizefile' u 1:2:3 via '/tmp/size_infty.par'
+update '/tmp/size_infty.par'
+END
+sed -e 's/ //g;' -i /tmp/size_infty.par
+source /tmp/size_infty.par
+export A
+export B
+
+#### reduce precision for on-screen display
+
+frac=${A##[0-9-+]*.}
+Aout=${A%%.[0-9]*}.${frac:0:2}
+frac=${B##[0-9-+]*.}
+Bout=${B%%.[0-9]*}.${frac:0:2}
+export Aout
+export Bout
+
+####  plot data points and fitted curve
+
+echo "plot [0.5:4.5] '$sizefile' u 1:2:(\$3) with yerrorbars t '', $A*x**($B) w l t '$Aout {k}^{$Bout}" >> $GNUPLOTFILE
+
+gnuplot -persist - < $GNUPLOTFILE
+

@@ -1,0 +1,65 @@
+#!/bin/sh
+
+TINFTY=400
+
+
+#### cleanup file with data points
+
+massfile=/tmp/mass_infty
+[ -f $massfile ] && rm $massfile ;
+
+#### prepare a gnuplot script
+
+GNUPLOTFILE=/tmp/width.gnuplot
+echo "set terminal post eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
+echo "set output 'bi1D-2frac-infty-various-nu.eps'" >>  $GNUPLOTFILE
+echo "set xlabel '{/Symbol n}'" >> $GNUPLOTFILE
+echo "set ylabel 'anaerobic fraction, %'" >> $GNUPLOTFILE
+#echo "set grid ; set key ;" >> $GNUPLOTFILE
+echo "set log x 10 ;" >> $GNUPLOTFILE
+
+#### populate file with data points, evaluate AVG and STDEV
+
+for f in `ls -v "$@"` ; do
+	tag=$(echo $f | cut -d '_' -f 3 | cut -d '=' -f 2 ) ;
+	m12=$(grep M_1 $f | tail -1 | tr -d 't=:' | \
+       		LANG=C awk '{ print 100*$5/($3+$5); }')
+	echo $tag $m12 >> ${massfile}
+done
+
+#### fit function parameters to data points
+
+echo "A = 1" >  /tmp/mass_infty.par
+echo "B = 1" >> /tmp/mass_infty.par
+echo "C = 1" >> /tmp/mass_infty.par
+gnuplot <<END
+f(x) = A*x*x + B*x + C
+fit f(x) '$massfile' via '/tmp/mass_infty.par'
+update '/tmp/mass_infty.par'
+END
+sed -e 's/ //g;' -i /tmp/mass_infty.par
+source /tmp/mass_infty.par
+export A
+export B
+export C
+
+#### reduce precision for on-screen display
+
+frac=${A##[0-9-+]*.}
+Aout=${A%%.[0-9]*}.${frac:0:2}
+frac=${B##[0-9-+]*.}
+Bout=${B%%.[0-9]*}.${frac:0:2}
+frac=${C##[0-9-+]*.}
+Cout=${B%%.[0-9]*}.${frac:0:2}
+export Aout
+export Bout
+export Cout
+
+
+####  plot data points and fitted curve
+
+#echo "plot '$massfile' u 1:2 w p pt 2 ps 1 t '', $A*x*x+($B)*x+($C) w l t '$Aout {/Symbol n}^2 +{$Bout}{/Symbol n} + {$Cout}" >> $GNUPLOTFILE
+echo "plot '$massfile' u 1:2 w lp pt 2 ps 1 t ''" >> $GNUPLOTFILE
+
+gnuplot -persist - < $GNUPLOTFILE
+
