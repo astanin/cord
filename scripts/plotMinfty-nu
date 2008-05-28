@@ -33,7 +33,7 @@ echo "A = 1" >  /tmp/mass_infty.par
 echo "B = 1" >> /tmp/mass_infty.par
 echo "C = 1" >> /tmp/mass_infty.par
 gnuplot <<END
-f(x) = A*x*x + B*x + C
+f(x) = A*sqrt(x) + B
 fit f(x) '$massfile' via '/tmp/mass_infty.par'
 update '/tmp/mass_infty.par'
 END
@@ -58,8 +58,8 @@ export Cout
 
 ####  plot data points and fitted curve
 
-#echo "plot '$massfile' u 1:2 w p pt 2 ps 1 t '', $A*x*x+($B)*x+($C) w l t '$Aout {/Symbol n}^2 +{$Bout}{/Symbol n} + {$Cout}" >> $GNUPLOTFILE
-echo "plot '$massfile' u 1:2 w lp pt 2 ps 1 t ''" >> $GNUPLOTFILE
+echo "plot '$massfile' u 1:2 w p pt 2 ps 1 t '', $A*sqrt(x)+($B) w l t '$Aout sqrt({/Symbol n}) +{$Bout}" >> $GNUPLOTFILE
+#echo "plot '$massfile' u 1:2 w lp pt 2 ps 1 t ''" >> $GNUPLOTFILE
 
 gnuplot -persist - < $GNUPLOTFILE
 

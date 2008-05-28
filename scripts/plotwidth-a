@@ -7,7 +7,7 @@ TAVGSWITCH=200
 
 GNUPLOTFILE=/tmp/width.gnuplot
 #echo "set terminal x11 enhanced" > $GNUPLOTFILE
-echo "set terminal post color eps enhanced" > $GNUPLOTFILE
+echo "set terminal post color eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
 echo "set output 'bi1D-width-various-a.eps'" >>  $GNUPLOTFILE
 echo "set xlabel 't'" >> $GNUPLOTFILE
 echo "set ylabel 'width'" >> $GNUPLOTFILE
