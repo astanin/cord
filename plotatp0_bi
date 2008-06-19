@@ -1,0 +1,45 @@
+#!/bin/sh
+
+FILE=$1
+OUT=${FILE%.gp}.eps
+DOMAIN="[0:1][0:0.5]"
+THETA=0.15
+
+TIME=$(head -1 ${FILE}|tail -1|LC_ALL=C awk '{print $2}'|\
+	perl -e 'while(<>){printf("%g\n",$_);}');
+TITLE="t=$TIME"
+
+gnuplot - << END
+set output '$OUT'
+set terminal post landscape color size 10cm, 5.5cm font 9
+set lmargin 0
+unset title
+set size ratio -1
+
+set multiplot
+
+set surface
+unset contour
+set view map
+set xtics nomirror scale 0.3
+set ytics nomirror scale 0.3
+set cbtics nomirror scale 0.5
+set pm3d interpolate 2,2
+set cblabel 'ATP deficit' offset -1.0
+#set palette rgbformulae 33,13,10 negative
+f(x)=(ceil(10.0*((x))))/10.0
+set palette model HSV functions 1.0-0.5*f(gray),(1-f(gray))*0.8,0.6+0.4*f(gray)
+set pm3d interpolate 2,2
+set cbrange [-0.1:0]
+splot $DOMAIN '$FILE' u 1:2:((1.0-\$4-\$5)*\$6*\$7-$THETA) t '' with pm3d 
+
+unset surface
+set cntrparam levels discrete 0.0
+set contour base
+unset key
+set style line 99 linetype 1 linecolor 0 linewidth 3
+splot $DOMAIN '$FILE' u 1:2:8 w l lt 99
+
+unset multiplot
+END
+
