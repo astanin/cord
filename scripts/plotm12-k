@@ -6,11 +6,14 @@ TAVGSWITCH=200
 
 
 GNUPLOTFILE=/tmp/width.gnuplot
-echo "set terminal post color eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
+echo "set terminal post mono eps enhanced font \"Helvetica,10\" size 6cm, 4cm" > $GNUPLOTFILE
+#echo "set terminal post color eps enhanced font \"Helvetica,10\" size 6cm, 4cm" > $GNUPLOTFILE
+#echo "set terminal post color eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
 echo "set output 'bi1D-2frac-various-k.eps'" >>  $GNUPLOTFILE
 echo "set xlabel 't'" >> $GNUPLOTFILE
 echo "set ylabel 'anaerobic fraction, %'" >> $GNUPLOTFILE
 echo "set key bottom right" >> $GNUPLOTFILE
+echo "set border lw 0.5" >> $GNUPLOTFILE
 #echo "set grid'" >> $GNUPLOTFILE
 echo -n "plot [0:*][0:*] " >> $GNUPLOTFILE
 

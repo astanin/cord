@@ -11,12 +11,14 @@ massfile=/tmp/mass_infty
 #### prepare a gnuplot script
 
 GNUPLOTFILE=/tmp/width.gnuplot
-echo "set terminal post eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
+echo "set terminal post mono eps enhanced font \"Helvetica,10\" size 6cm, 4cm" > $GNUPLOTFILE
+#echo "set terminal post eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
 echo "set output 'bi1D-2frac-infty-various-k.eps'" >>  $GNUPLOTFILE
 echo "set xlabel 'k'" >> $GNUPLOTFILE
 echo "set ylabel 'anaerobic fraction, %'" >> $GNUPLOTFILE
+echo "set key bottom righ" >> $GNUPLOTFILE
 #echo "set grid ; set key ;" >> $GNUPLOTFILE
-#echo "set log x ;" >> $GNUPLOTFILE
+#echo "set log y 2 ;" >> $GNUPLOTFILE
 
 #### populate file with data points, evaluate AVG and STDEV
 
@@ -24,16 +26,18 @@ for f in `ls -v "$@"` ; do
 	tag=$(echo $f | cut -d '_' -f 3 | cut -d '=' -f 2 ) ;
 	m12=$(grep M_1 $f | tail -1 | tr -d 't=:' | \
        		LANG=C awk '{ print 100*$5/($3+$5); }')
-	echo $tag $m12 >> ${massfile}
+	weight=$(LANG=C awk -v k=$tag 'BEGIN { print (0.18*k);}')
+	echo $tag $m12 $weight >> ${massfile}
 done
 
 #### fit function parameters to data points
 
-echo "A = 1" >  /tmp/mass_infty.par
+echo "A = 0.3" >  /tmp/mass_infty.par
 echo "B = 1" >> /tmp/mass_infty.par
+echo "C = 1" >> /tmp/mass_infty.par
 gnuplot <<END
-f(x) = A*tanh(B*(x-0.5))
-fit f(x) '$massfile' via '/tmp/mass_infty.par'
+f(x) = 100*(A+B*tanh(x)**C)
+fit f(x) '$massfile' using 1:2 via '/tmp/mass_infty.par'
 update '/tmp/mass_infty.par'
 END
 sed -e 's/ //g;' -i /tmp/mass_infty.par
@@ -44,19 +48,19 @@ export C
 
 #### reduce precision for on-screen display
 
-frac=${A##[0-9-+]*.}
-Aout=${A%%.[0-9]*}.${frac:0:2}
-frac=${B##[0-9-+]*.}
-Bout=${B%%.[0-9]*}.${frac:0:2}
-frac=${C##[0-9-+]*.}
-Cout=${B%%.[0-9]*}.${frac:0:2}
+LANG=C
+Aout=$(printf "%.2f" $A)
+Bout=$(printf "%.2f" $B)
+Cout=$(printf "%.2f" $C)
 export Aout
 export Bout
 export Cout
 
 ####  plot data points and fitted curve
 
-echo "plot [0.1:4.5][0:100] '$massfile' u 1:2 w p pt 2 ps 1 t '', $A*tanh($B*(x-0.5)) w l t '$Aout tanh ($Bout (k-0.5))" >> $GNUPLOTFILE
+echo "set key bottom right" >> $GNUPLOTFILE
+echo "set border lw 0.5" >> $GNUPLOTFILE
+echo "plot [0.1:4.5][0:*] '$massfile' u 1:2 w p pt 2 ps 0.5 t '', 100*($A+$B*tanh(x)**$C) w l t '100 {/Symbol \327} ($Aout+$Bout tanh^{$Cout}(k))'" >> $GNUPLOTFILE
 
 gnuplot -persist - < $GNUPLOTFILE
 

@@ -11,8 +11,10 @@ sizefile=/tmp/size_infty
 #### prepare a gnuplot script
 
 GNUPLOTFILE=/tmp/width.gnuplot
+echo "set terminal post mono eps enhanced font \"Helvetica,10\" size 6cm, 4cm" > $GNUPLOTFILE
 #echo "set terminal x11 enhanced" > $GNUPLOTFILE
-echo "set terminal post eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
+#echo "set terminal post color eps enhanced font \"Helvetica,10\" size 6cm, 4cm" > $GNUPLOTFILE
+#echo "set terminal post eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
 echo "set output 'bi1D-width-infty-various-a.eps'" >>  $GNUPLOTFILE
 echo "set xlabel '{/Symbol a}'" >> $GNUPLOTFILE
 echo "set ylabel 'width_{/Symbol \245}'" >> $GNUPLOTFILE
@@ -65,7 +67,9 @@ export Bout
 
 ####  plot data points and fitted curve
 
-echo "plot '$sizefile' u 1:2:(\$3) with yerrorbars t '', $A*x**($B) w l t '$Aout {/Symbol a}^{$Bout}" >> $GNUPLOTFILE
+echo "set key top right" >> $GNUPLOTFILE
+echo "set border lw 0.5" >> $GNUPLOTFILE
+echo "plot '$sizefile' u 1:2:(\$3) with yerrorbars t '' ps 0.25 lw 0.75, $A*x**($B) w l t '$Aout {/Symbol a}^{$Bout}" >> $GNUPLOTFILE
 
 gnuplot -persist - < $GNUPLOTFILE
 

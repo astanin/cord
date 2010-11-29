@@ -11,7 +11,8 @@ massfile=/tmp/mass_infty
 #### prepare a gnuplot script
 
 GNUPLOTFILE=/tmp/width.gnuplot
-echo "set terminal post eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
+echo "set terminal post mono eps enhanced font \"Helvetica,10\" size 6cm, 4cm" > $GNUPLOTFILE
+#echo "set terminal post eps enhanced font \"Helvetica,18\"" > $GNUPLOTFILE
 echo "set output 'bi1D-2frac-infty-various-nu.eps'" >>  $GNUPLOTFILE
 echo "set xlabel '{/Symbol n}'" >> $GNUPLOTFILE
 echo "set ylabel 'anaerobic fraction, %'" >> $GNUPLOTFILE
@@ -58,7 +59,9 @@ export Cout
 
 ####  plot data points and fitted curve
 
-echo "plot '$massfile' u 1:2 w p pt 2 ps 1 t '', $A*sqrt(x)+($B) w l t '$Aout sqrt({/Symbol n}) +{$Bout}" >> $GNUPLOTFILE
+echo "set key top left" >> $GNUPLOTFILE
+echo "set border lw 0.5" >> $GNUPLOTFILE
+echo "plot [1e-7:*][:] '$massfile' u 1:2 w p pt 2 ps 0.5 t '', $A*sqrt(x)+($B) w l t '$Aout sqrt({/Symbol n}) +{$Bout}" >> $GNUPLOTFILE
 #echo "plot '$massfile' u 1:2 w lp pt 2 ps 1 t ''" >> $GNUPLOTFILE
 
 gnuplot -persist - < $GNUPLOTFILE
