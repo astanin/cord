@@ -29,8 +29,10 @@
 #include <exception>
 #include <map>
 #include <memory>
+#include <cstdlib>
 
 using std::auto_ptr;
+using std::abs;
 
 extern "C" {
 #if HAVE_UFSPARSE_UMFPACK_H
