@@ -18,13 +18,14 @@
  * Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
  */
 
-#include <stdlib.h>
+#include <cstring>
 
 #include <math.h>
 #include "dmesh.h"
 #include "gfm.h"
 
 using std::make_pair;
+using std::memcpy;
 
 template<class fid_t>
 string id2str(fid_t& id) {
