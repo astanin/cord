@@ -1,153 +1,159 @@
 Tumour cord growth model
 
-	The model simulates avascular tumour growth in the presence of blood
-	vessels. A special case of tumour cords is addressed. The model has
-	been developed at Politecnico di Torino, Italy.  Research and
-	development was funded within the 5th Marie Curie Research Training
-	Network.
+    The model simulates avascular tumour growth in the presence of blood
+    vessels. A special case of tumour cords is addressed. The model has
+    been developed at Politecnico di Torino, Italy.  Research and
+    development was funded within the 5th Marie Curie Research Training
+    Network.
 
-	The code is distributed under the terms of the GNU General Public
-	License version 2 or later. See COPYING for details. iniParser and
-	LSolver distributed with the code are not covered by this license.
+    The code is distributed under the terms of the GNU General Public
+    License version 2 or later. See COPYING for details. iniParser and
+    LSolver distributed with the code are not covered by this license.
 
-	Running simulations is typically something like this:
-	$ cord -v -t 100.0 -d 0.5 --dump-period 10.0 2>log ; tail log
+    Running simulations is typically something like this:
+    $ cord -v -t 100.0 -d 0.5 --dump-period 10.0 2>log ; tail log
 
-	Model and method parameters are defined in cord.ini file. By default
-	the file in the current directory is used. If it is not found, the
-	programme looks for a file installed with the $prefix/share/cord.
-	If neither file is found, the default values are used.
+    Model and method parameters are defined in cord.ini file. By default
+    the file in the current directory is used. If it is not found, the
+    programme looks for a file installed with the $prefix/share/cord.
+    If neither file is found, the default values are used.
 
-	Command line options override settings given in the cord.ini file.
+    Command line options override settings given in the cord.ini file.
 
-	For more information about options see
-	$ cord --help
+    For more information about options see
+    $ cord --help
 
-	Results are saved in HDF5.0 files. OpenDX (.dx) and Gnuplot (.gp) 
-	files may be generated for visualization.
-	
-	OpenDX (.dx) files may be generated from HDF files like this:
-	$ cord_h5todx *.h5
+    Results are saved in HDF5.0 files. OpenDX (.dx) and Gnuplot (.gp)
+    files may be generated for visualization.
 
-	Gnuplot (.gp) files may be generated from HDF files like this:
-	$ cord_h5togp *.h5
+    OpenDX (.dx) files may be generated from HDF files like this:
+    $ cord_h5todx *.h5
 
-	To produce visualizations from Gnuplot (.gp) files using Tioga:
-	$ cord_gp2pdf *.gp
+    Gnuplot (.gp) files may be generated from HDF files like this:
+    $ cord_h5togp *.h5
 
-	To produce visualizations from Gnuplot (.gp) files using GRI:
-	$ cord_gp2eps -gri *.gp
+    To produce visualizations from Gnuplot (.gp) files using Tioga:
+    $ cord_gp2pdf *.gp
 
-	To produce visualizations from Gnuplot (.gp) files using gnuplot:
-	$ cord_gp2eps -gnuplot *.gp
+    To produce visualizations from Gnuplot (.gp) files using GRI:
+    $ cord_gp2eps -gri *.gp
 
-	With HDF5 utils you can also convert HDF data to VTK format, suitable
-	for further processing with VTK or MayaVi. To extract packing density
-	profile (variable phi) from the data file do
-	$ h5tovtk -d '/mesh/phi' file.h5
+    To produce visualizations from Gnuplot (.gp) files using gnuplot:
+    $ cord_gp2eps -gnuplot *.gp
 
-	to extract oxygen distribution (variable c) do
-	$ h5tovtk -d '/mesh/c' file.h5
+    With HDF5 utils you can also convert HDF data to VTK format, suitable
+    for further processing with VTK or MayaVi. To extract packing density
+    profile (variable phi) from the data file do
+    $ h5tovtk -d '/mesh/phi' file.h5
 
-	and to extract level set function (variable psi) do
-	$ h5tovtk -d '/mesh/psi' file.h5
+    to extract oxygen distribution (variable c) do
+    $ h5tovtk -d '/mesh/c' file.h5
+
+    and to extract level set function (variable psi) do
+    $ h5tovtk -d '/mesh/psi' file.h5
 
 Requirements
-	
-	This programme depends on the following libraries:
 
-	* libpopt (command line parsing, required)
-	* Blitz++ (internal matrix representation, required)
-	* BLAS (either ATLAS, or netlib's BLAS, or GotoBLAS, required)
-	* GNU Scientific Library (ODE solver, numerical integration, required)
-	* UMFPACK/libufsparse (generic SLE solver, optional, recommended)
-	* LAPACK (tridiagonal solver, optional)
-	* libhdf5 (data file format, optional)
+    This programme depends on the following libraries:
 
-	The programme is written in C++, and was primarily developed with
-	GNU C++ compiler version 3.4. Version 4.1 seems to be OK too.
-	
-	Currently the source is distributed together with LSolver package
-	written by C. Badura (lsolver/ subdirectory) and iniParser by N.
-	Devillard (iniparser/ subdirectory).
-	
-	Tested in:
+    * libpopt (command line parsing, required)
+    * Blitz++ (internal matrix representation, required)
+    * BLAS (either ATLAS, or netlib's BLAS, or GotoBLAS, required)
+    * GNU Scientific Library (ODE solver, numerical integration, required)
+    * UMFPACK/libufsparse (generic SLE solver, optional, recommended)
+    * LAPACK (tridiagonal solver, optional)
+    * libhdf5 (data file format, optional)
 
-	* Debian GNU/Linux (etch) i386
-	* Windows XP SP2 + Cygwin
+    The programme is written in C++, and was primarily developed with
+    GNU C++ compiler version 3.4.
+
+    Currently the source is distributed together with LSolver package
+    written by C. Badura (lsolver/ subdirectory) and iniParser by N.
+    Devillard (iniparser/ subdirectory).
+
+    Tested in:
+
+    * Debian GNU/Linux (etch) i386
+    * Windows XP SP2 + Cygwin
 
 
 Building project
 
-	The project uses GNU autoconf/automake build system. You may build and
-	install it running `./configure' script, `make' and `make install'.
-	See INSTALL file for more details.
+    The project uses GNU autoconf/automake build system. The typical
+    steps to bootstrap the built system are:
 
-	Make sure that you have all the dependencies installed (see above).
+       $ autoheader
+       $ aclocal
+       $ automake --add-missing
+       $ autoconf
 
-	On my Debian system I usually run `configure' as
-		
-		$ ./configure --with-atlas=/usr/bin/sse2
+    You may build and install it running `./configure' script,
+    `make' and `make install'.  See INSTALL file for more details.
 
-	as SSE2-optimized ATLAS libraries are installed in /usr/bin/sse2 on
-	my system. Alternatively, you may build the package against legacy
-	BLAS from netlib.org. I do it in my Cygwin installation this way:
-		
-		$ ./configure --with-fblas
+    Make sure that you have all the dependencies installed (see above).
 
-	as libfblas.a is in /usr/local/lib on my system.
+    On my Debian system I usually run `configure' as
 
-	If you have some of your libraries installed in non-standard
-	path, you can set LDFLAGS shell variable before running configure.
-	For example, if I have popt library in $HOME/usr/lib64, I may
-	run configure like this:
+        $ ./configure --with-atlas=/usr/bin/sse2
 
-		$ LDFLAGS="-L$HOME/usr/lib64" ./configure
+    as SSE2-optimized ATLAS libraries are installed in /usr/bin/sse2 on
+    my system. Alternatively, you may build the package against legacy
+    BLAS from netlib.org. I do it in my Cygwin installation this way:
 
-	Another example, if you installed blitz++ library to $HOME/usr,
-	its headers will be in $HOME/usr/include. The compiler will be
-	able to find them if you set CPPFLAGS variable, e.g.:
+        $ ./configure --with-fblas
 
-		$ CPPFLAGS="-I$HOME/usr/include" \
-			 LDFLAGS="-L$HOME/usr/lib" \
-			 ./configure
+    as libfblas.a is in /usr/local/lib on my system.
+
+    If you have some of your libraries installed in non-standard
+    path, you can set LDFLAGS shell variable before running configure.
+    For example, if I have popt library in $HOME/usr/lib64, I may
+    run configure like this:
+
+        $ LDFLAGS="-L$HOME/usr/lib64" ./configure
+
+    Another example, if you installed blitz++ library to $HOME/usr,
+    its headers will be in $HOME/usr/include. The compiler will be
+    able to find them if you set CPPFLAGS variable, e.g.:
+
+        $ CPPFLAGS="-I$HOME/usr/include" \
+             LDFLAGS="-L$HOME/usr/lib" \
+             ./configure
 
 Building BLAS from source
 
-	If BLAS is not provided in your system (like in Cygwin), you may build
-	it yourself from source. ATLAS may be a better option, but I think
-	BLAS is easier and faster to start with.
-	
-	1. Get BLAS (blas.tgz) from http://www.netlib.org/blas/
-	2. Unpack the BLAS source package and go to inside:
+    If BLAS is not provided in your system (like in Cygwin), you may
+    build it yourself from source. ATLAS is a better option, but I
+    BLAS is easier to start with.
 
-		$ tar zxf blas.tgz
-		$ cd BLAS
+    1. Get BLAS (blas.tgz) from http://www.netlib.org/blas/
+    2. Unpack the BLAS source package and go to inside:
 
-	3. Compile all the Fortran files:
+        $ tar zxf blas.tgz
+        $ cd BLAS
 
-		$ g77 -c -O2 *.f
+    3. Compile all the Fortran files:
 
-	4. Assemble all the object files produced into library libblas.a.
-	   You may later link to this library statically.
+        $ g77 -c -O2 *.f
 
-		$ ar rvs libblas.a *.o
+    4. Assemble all the object files produced into library libblas.a.
+       You may later link to this library statically.
 
-	5. Install the library into the system, e.g. copy it to /usr/local/lib
+        $ ar rvs libblas.a *.o
 
-		$ cp libblas.a /usr/local/lib/
+    5. Install the library into the system, e.g. copy it to /usr/local/lib
 
-	You can obtain better performance with ATLAS. You may find instructions
-	for Cygwin installation in [1]. Most Linux users are likely to be happy
-	with ready-to-use ATLAS packages shipped with their distro.
+        $ cp libblas.a /usr/local/lib/
 
-	[1] http://www.ifp.uiuc.edu/~nakazato/tips/cygwin_atlas.html
+    You can obtain better performance with ATLAS. You may find instructions
+    for Cygwin installation in [1]. Most Linux users are likely to be happy
+    with ready-to-use ATLAS packages shipped with their distro.
+
+    [1] http://www.ifp.uiuc.edu/~nakazato/tips/cygwin_atlas.html
 
 Contact information:
 
-	Sergey Astanin <sergey dot astanin at polito dot it>
-	Luigi Preziosi <luigi dot preziosi at polito dot it>
-	Andrea Tosin   <andrea dot tosin at polito dot it>
+    Sergey Astanin <sergey dot astanin at polito dot it>
+    Luigi Preziosi <luigi dot preziosi at polito dot it>
+    Andrea Tosin   <andrea dot tosin at polito dot it>
 
-	http://calvino.polito.it/~mcrtn/
-
+    http://calvino.polito.it/~mcrtn/
