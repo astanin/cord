@@ -1,4 +1,5 @@
 # AUTOMAKE_OPTIONS = foreign
+AUTOMAKE_OPTIONS = subdir-objects
 
 AM_CPPFLAGS = -I./iniparser/src
 
