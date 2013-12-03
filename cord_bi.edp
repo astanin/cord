@@ -1,6 +1,6 @@
 // Bi-population model of cord growth (switch to glycolysis in one population)
 // FreeFEM++ version (P1 elements, SUPG for level set advection)
-// 
+//
 // Sergey Astanin, 2008
 // http://code.google.com/p/cord/
 
@@ -79,9 +79,9 @@ phi1=phi0;
 Vh phi2, oldphi2; // anaerobic cells' volume fraction
 phi2=0;
 
-Vh o2; // oxygen concentration
+Vh o2, oldo2; // oxygen concentration
 o2=1.0;
-Vh glc; // glucose concentration
+Vh glc, oldglc; // glucose concentration
 glc=1.0;
 
 Vh psi, oldpsi; // level set functions (positive for tumour)
@@ -94,15 +94,18 @@ Vh vx, vy; // velocity of the cells
 
 Vh r, oldr; // aerobic phase ratio
 
-problem o2Eq(o2,vh,solver=CG) = int2d(Th)(dx(o2)*dx(vh)+dy(o2)*dy(vh))//Laplace
-	+ int2d(Th)(H(psi)*alpha*phi1*(1-phi1-phi2)*o2*glc*vh)//consumption
+problem o2Eq(o2,vh,solver=CG) =
+    int2d(Th)(o2*vh/dt) - int2d(Th)(oldo2*vh/dt) // time derivative
+    + int2d(Th)(dx(o2)*dx(vh)+dy(o2)*dy(vh))//Laplace
+	+ int2d(Th)(H(psi)*alpha*phi1*(1-phi1-phi2)*oldo2*glc*vh)//consumption
 	+ on(South,o2=1.0);
 
 problem glcEq(glc,vh,solver=CG) =
-	int2d(Th)(Dglc*(dx(glc)*dx(vh)+dy(glc)*dy(vh)))//Laplace
+    int2d(Th)(glc*vh/dt) - int2d(Th)(oldglc*vh/dt) // time derivative
+	+ int2d(Th)(Dglc*(dx(glc)*dx(vh)+dy(glc)*dy(vh)))//Laplace
 	+ int2d(Th)(H(psi)*(
-		alpha*phi1*(1-phi1-phi2)*o2*glc/6.0
-		+k*alpha*phi2*(1-phi1-phi2)*glc*NATP/12.0
+		alpha*phi1*(1-phi1-phi2)*o2*oldglc/6.0
+		+k*alpha*phi2*(1-phi1-phi2)*oldglc*NATP/12.0
 		)*vh)//consumption
 	+ on(South,glc=1.0);
 
@@ -283,6 +286,8 @@ for (real t=0; t<=T; t+=dt) {
 		phi2EqAdv;
 		restoreReal();
 	// nutrients
+        oldo2 = o2;
+        oldglc = glc;
 		o2Eq;
 		glcEq;
 	// tumour--host interface
