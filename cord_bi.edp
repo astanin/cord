@@ -32,25 +32,25 @@ int maxiter=100; // maximum number of iterations in level set re-init procedure
 real maxresidual=5e-2; // accuracy of the level set re-init procedure
 
 func real Sigma(real phi) {
-	return phi-phi0;
+    return phi-phi0;
 }
 
 func real dSigma(real phi) {
-	return 1.0;
+    return 1.0;
 }
 
 func real Dphi(real phi) {
-	return K*phi*(Sigma(phi)+phi*dSigma(phi));
+    return K*phi*(Sigma(phi)+phi*dSigma(phi));
 }
 
 func real H(real u) {
-	if (u > 0) {
-		return 1.0;
-	} else if (u < 0) {
-		return 0.0;
-	} else {
-		return 0.5;
-	}
+    if (u > 0) {
+        return 1.0;
+    } else if (u < 0) {
+        return 0.0;
+    } else {
+        return 0.5;
+    }
 }
 
 // domain geometry
@@ -97,165 +97,165 @@ Vh r, oldr; // aerobic phase ratio
 problem o2Eq(o2,vh,solver=CG) =
     int2d(Th)(o2*vh/dt) - int2d(Th)(oldo2*vh/dt) // time derivative
     + int2d(Th)(dx(o2)*dx(vh)+dy(o2)*dy(vh))//Laplace
-	+ int2d(Th)(H(psi)*alpha*phi1*(1-phi1-phi2)*oldo2*glc*vh)//consumption
-	+ on(South,o2=1.0);
+    + int2d(Th)(H(psi)*alpha*phi1*(1-phi1-phi2)*oldo2*glc*vh)//consumption
+    + on(South,o2=1.0);
 
 problem glcEq(glc,vh,solver=CG) =
     int2d(Th)(glc*vh/dt) - int2d(Th)(oldglc*vh/dt) // time derivative
-	+ int2d(Th)(Dglc*(dx(glc)*dx(vh)+dy(glc)*dy(vh)))//Laplace
-	+ int2d(Th)(H(psi)*(
-		alpha*phi1*(1-phi1-phi2)*o2*oldglc/6.0
-		+k*alpha*phi2*(1-phi1-phi2)*oldglc*NATP/12.0
-		)*vh)//consumption
-	+ on(South,glc=1.0);
+    + int2d(Th)(Dglc*(dx(glc)*dx(vh)+dy(glc)*dy(vh)))//Laplace
+    + int2d(Th)(H(psi)*(
+        alpha*phi1*(1-phi1-phi2)*o2*oldglc/6.0
+        +k*alpha*phi2*(1-phi1-phi2)*oldglc*NATP/12.0
+        )*vh)//consumption
+    + on(South,glc=1.0);
 
 // use SUPG method for psi level set advection
 real pgtau=0.1; // test function bias factor
 macro w(vh)((vh+pgtau*(vx*dx(vh)+vy*dy(vh)))) //; // biased test function
 problem psiEqPG(psi,vh) = int2d(Th)(w(vh)*psi/dt)
-	+ int2d(Th)(w(vh)*(vx*dx(psi)+vy*dy(psi)))
-	- int2d(Th)(w(vh)*oldpsi/dt);
+    + int2d(Th)(w(vh)*(vx*dx(psi)+vy*dy(psi)))
+    - int2d(Th)(w(vh)*oldpsi/dt);
 
 // growth/death rate (host)
 func real Gamma(real phi, real o, real g) {
-	return 0.0;
-	real atp=(1-phi)*o*g-theta;
-	if (atp > 0) {
-		return 0.0;
-	} else {
-		return epsilon*phi*atp;
-	}
+    return 0.0;
+    real atp=(1-phi)*o*g-theta;
+    if (atp > 0) {
+        return 0.0;
+    } else {
+        return epsilon*phi*atp;
+    }
 }
 
 problem phiEq(phi,vh,solver=CG) = int2d(Th)(phi*vh/dt
-	+ Dphi(oldphi)*(dx(phi)*dx(vh)+dy(phi)*dy(vh))) // diffusion term
-	- int2d(Th)(dt*Gamma(oldphi,o2,glc)*(vh)) //growth
-	- int2d(Th)(oldphi*vh/dt)
-	+ on(North,phi=phi0)
-	+ on(East,phi=phi0);
+    + Dphi(oldphi)*(dx(phi)*dx(vh)+dy(phi)*dy(vh))) // diffusion term
+    - int2d(Th)(dt*Gamma(oldphi,o2,glc)*(vh)) //growth
+    - int2d(Th)(oldphi*vh/dt)
+    + on(North,phi=phi0)
+    + on(East,phi=phi0);
 
 // growth/death rate (aerobic tumour)
 func real Gamma1(real phi1, real phi2, real o, real g) {
-	real atp=(1-phi1-phi2)*o*g-theta;
-	if (atp > 0) {
-		return phi1*atp;
-	} else {
-		return epsilon*phi1*atp-nu*phi1;
-	}
+    real atp=(1-phi1-phi2)*o*g-theta;
+    if (atp > 0) {
+        return phi1*atp;
+    } else {
+        return epsilon*phi1*atp-nu*phi1;
+    }
 }
 
 real eps=0.01;
 problem phi1EqAdv(phi1,vh) = int2d(Th)(vh*phi1)
-	+ int2d(Th)(eps*(dx(phi1)*dx(vh)+dy(phi1)*dy(vh))) //art.diffusion
-	- int2d(Th)(vh*convect([vx,vy],-dt,oldphi1)) //convection (no div(v))
+    + int2d(Th)(eps*(dx(phi1)*dx(vh)+dy(phi1)*dy(vh))) //art.diffusion
+    - int2d(Th)(vh*convect([vx,vy],-dt,oldphi1)) //convection (no div(v))
     + int2d(Th)(dt*vh*phi1*(dx(vx) + dy(vy))) // phi1*div(v)
-	- int2d(Th)(dt*H(psi)*Gamma1(oldphi1,oldphi2,o2,glc)*(vh)) //growth
-	+ on(North,phi1=phi0)
-	+ on(East,phi1=phi0);
+    - int2d(Th)(dt*H(psi)*Gamma1(oldphi1,oldphi2,o2,glc)*(vh)) //growth
+    + on(North,phi1=phi0)
+    + on(East,phi1=phi0);
 
 // growth/death rate (anaerobic tumour)
 func real Gamma2(real phi1, real phi2, real o, real g) {
-	real atp2=k*(1-phi1-phi2)*g-theta;
-	real atp1=(1-phi1-phi2)*o*g-theta;
-	real switched=0;
-	if (atp1 < 0) {
-		switched=nu*phi1;
-	}
-	if (atp2 > 0) {
-		return phi2*atp2+switched;
-	} else {
-		return epsilon*phi2*atp2+switched;
-	}
+    real atp2=k*(1-phi1-phi2)*g-theta;
+    real atp1=(1-phi1-phi2)*o*g-theta;
+    real switched=0;
+    if (atp1 < 0) {
+        switched=nu*phi1;
+    }
+    if (atp2 > 0) {
+        return phi2*atp2+switched;
+    } else {
+        return epsilon*phi2*atp2+switched;
+    }
 }
 
 problem phi2EqAdv(phi2,vh) = int2d(Th)(vh*phi2)
-	+ int2d(Th)(eps*(dx(phi2)*dx(vh)+dy(phi2)*dy(vh))) //art.diffusion
-	- int2d(Th)(vh*convect([vx,vy],-dt,oldphi2)) //convection (no div(v))
+    + int2d(Th)(eps*(dx(phi2)*dx(vh)+dy(phi2)*dy(vh))) //art.diffusion
+    - int2d(Th)(vh*convect([vx,vy],-dt,oldphi2)) //convection (no div(v))
     + int2d(Th)(dt*vh*phi2*(dx(vx) + dy(vy))) // phi2*div(v)
-	- int2d(Th)(dt*H(psi)*Gamma2(oldphi1,oldphi2,o2,glc)*(vh)) //growth
-	+ on(North,phi2=0)
-	+ on(East,phi2=0);
+    - int2d(Th)(dt*H(psi)*Gamma2(oldphi1,oldphi2,o2,glc)*(vh)) //growth
+    + on(North,phi2=0)
+    + on(East,phi2=0);
 
 // to restore psi to signed distance
 // iterate until steady state the solution of
 // \partial_t \psi + \mathbf{w}(\psi) \cdot \nabla \psi = S(\psi_0)
 // where
-// 	S(\psi_0) = \frac{\psi_0}{\sqrt{\psi_0^2+\epsilon^2}}
+//  S(\psi_0) = \frac{\psi_0}{\sqrt{\psi_0^2+\epsilon^2}}
 // and
-//	\mathbf{w}(\psi) = S(\psi_0) \nabla \psi / | \nabla \psi |
+//  \mathbf{w}(\psi) = S(\psi_0) \nabla \psi / | \nabla \psi |
 //
 // This FreeFem++ code was partially borrowed from the reinitialization
 // routines written by G. Allaire, B. Boutin, C. Dousset, O. Pantz.
 // See: http://www.cmap.polytechnique.fr/~allaire/freefem_en.html
 func bool reinitLS() {
-	// nabla2=(grad(psi)^2)
-	nabla2=(dx(psi))^2+(dy(psi))^2;
-	// approximation of sign(psi)
-	S=psi/(sqrt(psi^2+h*h*nabla2));
-	residual=-S*(sqrt(nabla2)-1);
-	int i=0;
-	while (((residual[].max) > maxresidual) && (i<maxiter)) {
-		// approximation of the normal
-		nx=dx(psi)/(sqrt(nabla2+epsLS^2));
-		ny=dy(psi)/(sqrt(nabla2+epsLS^2));
-		// advect level set function
-		oldpsi=psi;
-		psi=convect([-S*nx,-S*ny],reinitDt,oldpsi);
-		psi=psi+reinitDt*S;
-		// evaluate residual
-		nabla2=(dx(psi))^2+(dy(psi))^2;
-//		residual=-S*(sqrt(nabla2)-1);
-		residual=psi-oldpsi;
-		i=i+1;
-	}
-	cout << "reinitialized in " << i << " iterations, "
-		<< "||residual||_max =" << residual[].max << "\n";
+    // nabla2=(grad(psi)^2)
+    nabla2=(dx(psi))^2+(dy(psi))^2;
+    // approximation of sign(psi)
+    S=psi/(sqrt(psi^2+h*h*nabla2));
+    residual=-S*(sqrt(nabla2)-1);
+    int i=0;
+    while (((residual[].max) > maxresidual) && (i<maxiter)) {
+        // approximation of the normal
+        nx=dx(psi)/(sqrt(nabla2+epsLS^2));
+        ny=dy(psi)/(sqrt(nabla2+epsLS^2));
+        // advect level set function
+        oldpsi=psi;
+        psi=convect([-S*nx,-S*ny],reinitDt,oldpsi);
+        psi=psi+reinitDt*S;
+        // evaluate residual
+        nabla2=(dx(psi))^2+(dy(psi))^2;
+//      residual=-S*(sqrt(nabla2)-1);
+        residual=psi-oldpsi;
+        i=i+1;
+    }
+    cout << "reinitialized in " << i << " iterations, "
+        << "||residual||_max =" << residual[].max << "\n";
 }
 
 
 // print all mesh functions to gnuplot-compatible file
 func bool save(real t) {
-	string name="mesh_" + t + ".gp";
-	ofstream file(name);
-	file << "# phi phi1 phi2 o2 glc psi r" << endl;
-	for (real xx=0; xx<=1.0+1.0/(2*Nx); xx+=1.0/(2*Nx)) {
-		for (real yy=0; yy<=1.0+1.0/(2*Ny); yy+=1.0/(2*Ny)) {
-			file << xx << " " << yy << " "
-				<< phi(xx,yy) << " "
-				<< phi1(xx,yy) << " "
-				<< phi2(xx,yy) << " "
-				<< o2(xx,yy) << " "
-				<< glc(xx,yy) << " "
-				<< psi(xx,yy) << " "
-				<< r(xx,yy) <<
-				endl;
-		}
-		file << endl;
-	}
-	return true;
+    string name="mesh_" + t + ".gp";
+    ofstream file(name);
+    file << "# phi phi1 phi2 o2 glc psi r" << endl;
+    for (real xx=0; xx<=1.0+1.0/(2*Nx); xx+=1.0/(2*Nx)) {
+        for (real yy=0; yy<=1.0+1.0/(2*Ny); yy+=1.0/(2*Ny)) {
+            file << xx << " " << yy << " "
+                << phi(xx,yy) << " "
+                << phi1(xx,yy) << " "
+                << phi2(xx,yy) << " "
+                << o2(xx,yy) << " "
+                << glc(xx,yy) << " "
+                << psi(xx,yy) << " "
+                << r(xx,yy) <<
+                endl;
+        }
+        file << endl;
+    }
+    return true;
 }
 
 func bool evalGhost() {
-	// phi in tumour
-		phi=H(psi)*(oldphi1+oldphi2)+H(-psi)*(oldphi);
-	// phi1 & phi2 in host
-		// approximation of the normal (only in host)
-		nabla2=(dx(psi))^2+(dy(psi))^2;
-		nx=H(-psi)*dx(psi)/(sqrt(nabla2+epsLS^2));
-		ny=H(-psi)*dy(psi)/(sqrt(nabla2+epsLS^2));
-		// phase ratio
-		r=H(psi)*(oldphi2/(oldphi1+oldphi2));
-		oldr=r;
-		r=convect([-nx,-ny],20.0,oldr);
-		// define ghost phi1 and phi2
-		phi1=H(psi)*(oldphi1)+H(-psi)*((1-r)*oldphi);
-		phi2=H(psi)*(oldphi2)+H(-psi)*((r)*oldphi);
-	return true;
+    // phi in tumour
+    phi=H(psi)*(oldphi1+oldphi2)+H(-psi)*(oldphi);
+    // phi1 & phi2 in host
+        // approximation of the normal (only in host)
+    nabla2=(dx(psi))^2+(dy(psi))^2;
+    nx=H(-psi)*dx(psi)/(sqrt(nabla2+epsLS^2));
+    ny=H(-psi)*dy(psi)/(sqrt(nabla2+epsLS^2));
+    // phase ratio
+    r=H(psi)*(oldphi2/(oldphi1+oldphi2));
+    oldr=r;
+    r=convect([-nx,-ny],20.0,oldr);
+    // define ghost phi1 and phi2
+    phi1=H(psi)*(oldphi1)+H(-psi)*((1-r)*oldphi);
+    phi2=H(psi)*(oldphi2)+H(-psi)*((r)*oldphi);
+    return true;
 }
 
 func bool restoreReal() {
-	phi=H(psi)*(phi1+phi2)+H(-psi)*(phi);
-	return true;
+    phi=H(psi)*(phi1+phi2)+H(-psi)*(phi);
+    return true;
 }
 
 real[int] zerols=[0.0,0.01];
@@ -266,48 +266,48 @@ reinitLS(); // reinitialize
 plot(Th,psi,viso=zerols);
 real lastReinit=0;
 for (real t=0; t<=T; t+=dt) {
-	cout <<  "t=" << t << "\n";
-	// adapt mesh
-		Th=adaptmesh(Th,1-sqrt(abs(psi)),
-			nbvx=N*N,ratio=1.5,hmin=1.0/(2*N),hmax=4*1.0/N);
-		if (t==0) {
-			plot(Th,psi,viso=zerols);
-		}
-	// phi step
-		// interpolate velocity field
-		phiSigma=H(psi)*((phi1+phi2)*Sigma(phi1+phi2))+
-				H(-psi)*(phi)*Sigma(phi);
-		vx=-K*dx(phiSigma);
-		vy=-K*dy(phiSigma);
-		oldphi=phi;
-		oldphi1=phi1;
-		oldphi2=phi2;
-		evalGhost();
-		phiEq;
-		phi1EqAdv;
-		phi2EqAdv;
-		restoreReal();
-	// nutrients
-        oldo2 = o2;
-        oldglc = glc;
-		o2Eq;
-		glcEq;
-	// tumour--host interface
-		// advect level set function
-		oldpsi=psi;
-		psiEqPG;
-		// or	psi=convect([-vx,-vy],dt,oldpsi);
-		if ((t-lastReinit) >= reinitPeriod) {
-			reinitLS();
-			lastReinit=t;
-		}
-	// output
-		if ((i>0) && (i >= (plotevery))) {
-			save(t);
-			i=0;
-		}
-		i++;
-	// plot real-time
-		plot(Th,psi,viso=zerols);
+    cout <<  "t=" << t << "\n";
+    // adapt mesh
+    Th=adaptmesh(Th,1-sqrt(abs(psi)),
+                 nbvx=N*N,ratio=1.5,hmin=1.0/(2*N),hmax=4*1.0/N);
+    if (t==0) {
+        plot(Th,psi,viso=zerols);
+    }
+    // phi step
+    // interpolate velocity field
+    phiSigma=H(psi)*((phi1+phi2)*Sigma(phi1+phi2))+
+        H(-psi)*(phi)*Sigma(phi);
+    vx=-K*dx(phiSigma);
+    vy=-K*dy(phiSigma);
+    oldphi=phi;
+    oldphi1=phi1;
+    oldphi2=phi2;
+    evalGhost();
+    phiEq;
+    phi1EqAdv;
+    phi2EqAdv;
+    restoreReal();
+    // nutrients
+    oldo2 = o2;
+    oldglc = glc;
+    o2Eq;
+    glcEq;
+    // tumour--host interface
+    // advect level set function
+    oldpsi=psi;
+    psiEqPG;
+    // or   psi=convect([-vx,-vy],dt,oldpsi);
+    if ((t-lastReinit) >= reinitPeriod) {
+        reinitLS();
+        lastReinit=t;
+    }
+    // output
+    if ((i>0) && (i >= (plotevery))) {
+        save(t);
+        i=0;
+    }
+    i++;
+    // plot real-time
+    plot(Th,psi,viso=zerols);
 }
 save(T);
