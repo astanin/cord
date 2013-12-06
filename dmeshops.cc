@@ -82,7 +82,7 @@ int hdf2gp(const Params& p) {
 
 extern "C" {
 #ifdef HAVE_LIBNETPBM
-#include <pgm.h>
+#include <netpbm/pgm.h>
 #endif
 }
 
