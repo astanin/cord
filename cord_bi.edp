@@ -148,6 +148,7 @@ real eps=0.01;
 problem phi1EqAdv(phi1,vh) = int2d(Th)(vh*phi1)
 	+ int2d(Th)(eps*(dx(phi1)*dx(vh)+dy(phi1)*dy(vh))) //art.diffusion
 	- int2d(Th)(vh*convect([vx,vy],-dt,oldphi1)) //convection (no div(v))
+    + int2d(Th)(dt*vh*phi1*(dx(vx) + dy(vy))) // phi1*div(v)
 	- int2d(Th)(dt*H(psi)*Gamma1(oldphi1,oldphi2,o2,glc)*(vh)) //growth
 	+ on(North,phi1=phi0)
 	+ on(East,phi1=phi0);
@@ -170,6 +171,7 @@ func real Gamma2(real phi1, real phi2, real o, real g) {
 problem phi2EqAdv(phi2,vh) = int2d(Th)(vh*phi2)
 	+ int2d(Th)(eps*(dx(phi2)*dx(vh)+dy(phi2)*dy(vh))) //art.diffusion
 	- int2d(Th)(vh*convect([vx,vy],-dt,oldphi2)) //convection (no div(v))
+    + int2d(Th)(dt*vh*phi2*(dx(vx) + dy(vy))) // phi2*div(v)
 	- int2d(Th)(dt*H(psi)*Gamma2(oldphi1,oldphi2,o2,glc)*(vh)) //growth
 	+ on(North,phi2=0)
 	+ on(East,phi2=0);
