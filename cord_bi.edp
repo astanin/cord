@@ -72,6 +72,7 @@ real h=ht[].max;
 // variables
 Vh vh; // test function
 
+Vh dphih;  // nonlinear diffusion coefficient for phi
 Vh phi, oldphi; // host cells' volume fraction
 phi=phi0;
 Vh phi1, oldphi1; // aerobic cells' volume fraction
@@ -128,7 +129,7 @@ func real Gamma(real phi, real o, real g) {
 }
 
 problem phiEq(phi,vh,solver=CG) = int2d(Th)(phi*vh/dt
-    + Dphi(oldphi)*(dx(phi)*dx(vh)+dy(phi)*dy(vh))) // diffusion term
+    + dphih * (dx(phi)*dx(vh)+dy(phi)*dy(vh))) // diffusion term
     - int2d(Th)(dt*Gamma(oldphi,o2,glc)*(vh)) //growth
     - int2d(Th)(oldphi*vh/dt)
     + on(North,phi=phi0)
@@ -265,33 +266,44 @@ plot(Th,psi,viso=zerols);
 reinitLS(); // reinitialize
 plot(Th,psi,viso=zerols);
 real lastReinit=0;
+int sweeps=3; // number of linearized iterations per time step
+
+
 for (real t=0; t<=T; t+=dt) {
     cout <<  "t=" << t << "\n";
+
     // adapt mesh
-    Th=adaptmesh(Th,1-sqrt(abs(psi)),
-                 nbvx=N*N,ratio=1.5,hmin=1.0/(2*N),hmax=4*1.0/N);
+    Th=adaptmesh(Th,1-sqrt(abs(psi)), nbvx=N*N,ratio=1.5,hmin=1.0/(2*N),hmax=4*1.0/N);
+
     if (t==0) {
         plot(Th,psi,viso=zerols);
     }
+
     // phi step
-    // interpolate velocity field
-    phiSigma=H(psi)*((phi1+phi2)*Sigma(phi1+phi2))+
-        H(-psi)*(phi)*Sigma(phi);
-    vx=-K*dx(phiSigma);
-    vy=-K*dy(phiSigma);
     oldphi=phi;
     oldphi1=phi1;
     oldphi2=phi2;
-    evalGhost();
-    phiEq;
-    phi1EqAdv;
-    phi2EqAdv;
-    restoreReal();
+    for (int j=0; j<sweeps; j++) {
+        // interpolate velocity field
+        phiSigma=H(psi)*((phi1+phi2)*Sigma(phi1+phi2))+ H(-psi)*(phi)*Sigma(phi);
+        vx=-K*dx(phiSigma);
+        vy=-K*dy(phiSigma);
+        // estimate diffusion coefficient for phi
+        dphih = Dphi(phi1);
+        // ghost-fluid method for phi, phi1, phi2
+        evalGhost();
+        phiEq;     // oldphi, dphih(phi) -> phi (new estimation)
+        phi1EqAdv; // oldphi1, oldphi2, vx(phi1), vy(phi1) -> phi1 (new estimation)
+        phi2EqAdv; // oldphi1, oldphi2, vx(phi1), vy(phi1) -> phi2 (new estimation)
+        restoreReal();
+    }
+
     // nutrients
     oldo2 = o2;
     oldglc = glc;
     o2Eq;
     glcEq;
+
     // tumour--host interface
     // advect level set function
     oldpsi=psi;
@@ -301,13 +313,16 @@ for (real t=0; t<=T; t+=dt) {
         reinitLS();
         lastReinit=t;
     }
+
     // output
     if ((i>0) && (i >= (plotevery))) {
         save(t);
         i=0;
     }
+
     i++;
     // plot real-time
     plot(Th,psi,viso=zerols);
 }
+
 save(T);
